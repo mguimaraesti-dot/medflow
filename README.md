@@ -10,7 +10,7 @@ TypeScript · Next.js 15 (App Router) · React 19 · TailwindCSS v4 · shadcn/ui
 
 ## Status
 
-🚧 **Task 2 em andamento** — `schema.prisma` completo do domínio financeiro e `prisma/seed.ts` prontos. Falta rodar a migration e o seed contra um banco real (ver abaixo).
+✅ **Task 2 concluída** — `schema.prisma` completo, migration inicial aplicada e seed rodado com sucesso contra o banco real do Supabase.
 Próxima etapa: Task 3 — Core (Repository Interfaces, Errors, Logger, DTOs, Validators).
 
 ## Como rodar localmente
@@ -35,6 +35,8 @@ npx prisma db seed        # popula roles, permissões, organização, admin, cat
 ```
 
 O seed exige, além das variáveis já citadas acima, mais quatro no `.env`: `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_NAME` e `SEED_ORGANIZATION_NAME`. Ele é idempotente — pode rodar `npx prisma db seed` quantas vezes quiser sem duplicar dados.
+
+> Problemas de conexão com o Supabase (timeout, `prepared statement already exists`, IPv6)? Ver [`docs/decisions/troubleshooting-supabase-prisma.md`](./docs/decisions/troubleshooting-supabase-prisma.md).
 
 ## Scripts
 
