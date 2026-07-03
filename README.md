@@ -10,8 +10,8 @@ TypeScript · Next.js 15 (App Router) · React 19 · TailwindCSS v4 · shadcn/ui
 
 ## Status
 
-✅ **Task 2 concluída** — `schema.prisma` completo, migration inicial aplicada e seed rodado com sucesso contra o banco real do Supabase.
-Próxima etapa: Task 3 — Core (Repository Interfaces, Errors, Logger, DTOs, Validators).
+✅ **Task 3 concluída** — Core (Errors, Logger, DTOs, Validators) e interfaces de repositório das features da Sprint 1 (`cash-flow`, `cash-register`).
+Próxima etapa: Task 4 — Autenticação.
 
 ## Como rodar localmente
 
