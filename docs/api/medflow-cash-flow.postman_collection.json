@@ -1,0 +1,183 @@
+{
+  "info": {
+    "name": "MedFlow — Task 5A (Fluxo de Caixa)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Endpoints do motor financeiro (Sprint 1). Rode 'Login' primeiro — a sessão vai no cookie automaticamente para as próximas chamadas, desde que o cookie jar do Postman esteja habilitado para o baseUrl."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "cashFlowEntryId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{seedAdminEmail}}\",\n  \"password\": \"{{seedAdminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cash Register",
+      "item": [
+        {
+          "name": "Abrir caixa (primeiro uso — com saldo inicial)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"openingBalance\": 500\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-register"]
+            }
+          }
+        },
+        {
+          "name": "Abrir caixa (dias seguintes — sem body)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-register"]
+            }
+          }
+        },
+        {
+          "name": "Status do caixa hoje",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-register/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-register", "today"]
+            }
+          }
+        },
+        {
+          "name": "Fechar caixa",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-register/close",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-register", "close"]
+            }
+          }
+        },
+        {
+          "name": "Reabrir caixa (Admin, com justificativa)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Correção de lançamento esquecido pela secretária\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-register/:id/reopen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-register", ":id", "reopen"],
+              "variable": [
+                { "key": "id", "value": "COLE_O_ID_DO_CASH_REGISTER_DAY_AQUI" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cash Flow",
+      "item": [
+        {
+          "name": "Listar lançamentos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-flow?page=1&pageSize=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-flow"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Registrar entrada (IN)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"IN\",\n  \"amount\": 200.5,\n  \"categoryId\": \"COLE_O_ID_DE_UMA_CATEGORIA_IN\",\n  \"paymentMethodId\": \"COLE_O_ID_DE_UMA_FORMA_DE_PAGAMENTO\",\n  \"description\": \"Consulta particular\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-flow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-flow"]
+            }
+          }
+        },
+        {
+          "name": "Registrar saída (OUT)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"OUT\",\n  \"amount\": 45.9,\n  \"categoryId\": \"COLE_O_ID_DE_UMA_CATEGORIA_OUT\",\n  \"paymentMethodId\": \"COLE_O_ID_DE_UMA_FORMA_DE_PAGAMENTO\",\n  \"description\": \"Material de limpeza\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-flow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-flow"]
+            }
+          }
+        },
+        {
+          "name": "Estornar lançamento",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{baseUrl}}/api/cash-flow/:id/reverse",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cash-flow", ":id", "reverse"],
+              "variable": [{ "key": "id", "value": "{{cashFlowEntryId}}" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

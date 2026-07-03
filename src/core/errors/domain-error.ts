@@ -79,6 +79,15 @@ export class CashRegisterAlreadyOpenError extends DomainError {
   }
 }
 
+export class FirstUseRequiresOpeningBalanceError extends DomainError {
+  readonly code = "FIRST_USE_REQUIRES_OPENING_BALANCE";
+  readonly httpStatus = 400;
+
+  constructor() {
+    super("Informe o saldo inicial do caixa (primeiro uso do sistema).");
+  }
+}
+
 export class CashRegisterNotOpenError extends DomainError {
   readonly code = "CASH_REGISTER_NOT_OPEN";
   readonly httpStatus = 409;
