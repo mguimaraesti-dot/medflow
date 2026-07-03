@@ -1,6 +1,7 @@
 // Este arquivo é a fonte de verdade do modelo de dados do MedFlow.
-// Task 1: apenas a configuração base (generator + datasource).
-// Task 2: entram os models do domínio financeiro (ver MedFlow-Sprint1-Revisada.md).
+// Domínio financeiro completo (ver docs/sprints/MedFlow-Sprint1-Revisada.md
+// e docs/standards/MedFlow-Coding-Standards.md para as regras por trás
+// de cada decisão de modelagem abaixo).
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +11,373 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL") // conexão via pooler (pgbouncer), usada em runtime
   directUrl = env("DIRECT_URL")   // conexão direta, usada pelo Prisma para migrations
+}
+
+// ============================================================
+// TENANT (estrutural apenas — sem funcionalidade multiempresa na V1)
+// ============================================================
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  cnpj      String?  @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  cashRegisterDays CashRegisterDay[]
+  cashFlowEntries  CashFlowEntry[]
+  accountsPayable  AccountsPayable[]
+  categories       Category[]
+  paymentMethods   PaymentMethod[]
+  suppliers        Supplier[]
+  recurringBills   RecurringBill[]
+  settings         OrganizationSettings?
+
+  @@map("organizations")
+}
+
+// Configurações da clínica — evita espalhar "settings" por várias tabelas
+// conforme o sistema cresce (ex: horários usados nos alertas do Dashboard).
+model OrganizationSettings {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  tradeName      String?
+  legalName      String?
+  cnpj           String?
+  phone          String?
+  whatsapp       String?
+  email          String?
+
+  currency       String       @default("BRL")
+  timezone       String       @default("America/Sao_Paulo")
+  openingTime    String       @default("08:00") // usado no alerta "caixa não aberto"
+  closingTime    String       @default("18:00") // usado no alerta "caixa não fechado"
+
+  logoUrl        String?
+  primaryColor   String       @default("#0F172A")
+  theme          String       @default("system") // "light" | "dark" | "system"
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("organization_settings")
+}
+
+// ============================================================
+// RBAC
+// ============================================================
+enum RoleName {
+  ADMIN
+  OWNER
+  SECRETARY
+  FINANCE
+  ACCOUNTANT
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        RoleName     @unique
+  description String?
+  permissions Permission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id    String @id @default(cuid())
+  key   String @unique
+  // ex: "cashflow:create", "cashflow:reverse", "cash-register:open",
+  //     "cash-register:close", "cash-register:reopen",
+  //     "payable:create", "payable:pay", "users:manage"
+  roles Role[]
+
+  @@map("permissions")
+}
+
+model User {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  name           String
+  email          String        @unique
+  supabaseAuthId String        @unique
+
+  roleId         String
+  role           Role          @relation(fields: [roleId], references: [id])
+
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  auditLogs         AuditLog[]
+  cashFlowEntries   CashFlowEntry[]     @relation("EntryCreatedBy")
+  openedRegisters   CashRegisterDay[]   @relation("RegisterOpenedBy")
+  closedRegisters   CashRegisterDay[]   @relation("RegisterClosedBy")
+  reopenedRegisters CashRegisterDay[]   @relation("RegisterReopenedBy")
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+// ============================================================
+// AUDITORIA
+// ============================================================
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  REVERSAL
+  CASH_REGISTER_OPENED
+  CASH_REGISTER_CLOSED
+  CASH_REGISTER_REOPENED
+  PAYMENT_CONFIRMED
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+
+  entity    String
+  entityId  String
+  action    AuditAction
+  reason    String?     // usado obrigatoriamente em CASH_REGISTER_REOPENED
+  before    Json?
+  after     Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// CADASTROS FINANCEIROS BASE
+// ============================================================
+enum CategoryType {
+  IN
+  OUT
+}
+
+model Category {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name           String
+  type           CategoryType
+  color          String       @default("#64748B") // hex, usado no Dashboard e nos badges
+  icon           String?      // nome do ícone lucide-react (ex: "zap", "home", "wallet")
+  displayOrder   Int          @default(0)
+  active         Boolean      @default(true)
+
+  cashFlowEntries  CashFlowEntry[]
+  accountsPayable  AccountsPayable[]
+  recurringBills   RecurringBill[]
+
+  @@unique([organizationId, name, type])
+  @@map("categories")
+}
+
+model PaymentMethod {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name           String       // Dinheiro, PIX, Cartão Débito, Cartão Crédito, Boleto, Transferência
+  displayOrder   Int          @default(0)
+  active         Boolean      @default(true)
+
+  cashFlowEntries CashFlowEntry[]
+
+  @@unique([organizationId, name])
+  @@map("payment_methods")
+}
+
+model Supplier {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  name           String
+  document       String?      // CPF/CNPJ, opcional na Sprint 1
+  active         Boolean      @default(true)
+
+  accountsPayable AccountsPayable[]
+  recurringBills  RecurringBill[]
+
+  @@index([organizationId])
+  @@map("suppliers")
+}
+
+// ============================================================
+// CAIXA DIÁRIO
+// ============================================================
+enum CashRegisterStatus {
+  OPEN
+  CLOSED
+}
+
+model CashRegisterDay {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+
+  date           DateTime            @db.Date
+  status         CashRegisterStatus  @default(OPEN)
+
+  openingBalance Decimal             @db.Decimal(14, 2)
+  totalIn        Decimal?            @db.Decimal(14, 2)
+  totalOut       Decimal?            @db.Decimal(14, 2)
+  closingBalance Decimal?            @db.Decimal(14, 2)
+
+  openedByUserId String
+  openedBy       User                @relation("RegisterOpenedBy", fields: [openedByUserId], references: [id])
+  openedAt       DateTime            @default(now())
+
+  closedByUserId String?
+  closedBy       User?               @relation("RegisterClosedBy", fields: [closedByUserId], references: [id])
+  closedAt       DateTime?
+
+  reopenedByUserId String?
+  reopenedBy       User?             @relation("RegisterReopenedBy", fields: [reopenedByUserId], references: [id])
+  reopenedAt       DateTime?
+  reopenCount      Int               @default(0)
+
+  cashFlowEntries CashFlowEntry[]
+
+  @@unique([organizationId, date])
+  @@index([organizationId, status])
+  @@map("cash_register_days")
+}
+
+// ============================================================
+// FLUXO DE CAIXA (imutável — correções via estorno)
+// ============================================================
+enum CashFlowType {
+  IN
+  OUT
+}
+
+model CashFlowEntry {
+  id                 String            @id @default(cuid())
+  organizationId     String
+  organization       Organization      @relation(fields: [organizationId], references: [id])
+
+  cashRegisterDayId  String
+  cashRegisterDay    CashRegisterDay   @relation(fields: [cashRegisterDayId], references: [id])
+
+  type               CashFlowType
+  amount             Decimal           @db.Decimal(14, 2)
+  description        String?
+  occurredAt         DateTime          @default(now())
+
+  categoryId         String
+  category           Category          @relation(fields: [categoryId], references: [id])
+
+  paymentMethodId    String
+  paymentMethod      PaymentMethod     @relation(fields: [paymentMethodId], references: [id])
+
+  // vínculo opcional com Contas a Pagar (usado a partir da Sprint 2)
+  accountsPayableId  String?
+  accountsPayable    AccountsPayable?  @relation(fields: [accountsPayableId], references: [id])
+
+  createdByUserId    String
+  createdBy          User              @relation("EntryCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt          DateTime          @default(now())
+
+  // estorno
+  isReversed         Boolean           @default(false)
+  reversalOfEntryId  String?           @unique
+  reversalOfEntry    CashFlowEntry?    @relation("EntryReversal", fields: [reversalOfEntryId], references: [id])
+  reversedByEntry    CashFlowEntry?    @relation("EntryReversal")
+
+  @@index([organizationId, cashRegisterDayId])
+  @@index([categoryId])
+  @@map("cash_flow_entries")
+}
+
+// ============================================================
+// CONTAS A PAGAR (schema completo agora; feature implementada na Sprint 2)
+// ============================================================
+enum PayableStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model AccountsPayable {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+
+  publicToken    String        @unique @default(uuid()) // link seguro futuro (WhatsApp)
+
+  supplierId     String
+  supplier       Supplier      @relation(fields: [supplierId], references: [id])
+
+  categoryId     String
+  category       Category      @relation(fields: [categoryId], references: [id])
+
+  description    String
+  amount         Decimal       @db.Decimal(14, 2)
+  dueDate        DateTime      @db.Date
+
+  barcode        String?
+  digitableLine  String?
+  pixKey         String?
+  qrCodeUrl      String?
+  boletoPdfUrl   String?
+
+  status         PayableStatus @default(PENDING)
+
+  recurringBillId String?
+  recurringBill    RecurringBill? @relation(fields: [recurringBillId], references: [id])
+
+  createdByUserId String        // quem cadastrou (ex: Secretária)
+  paidByUserId    String?       // quem confirmou o pagamento (Financeiro/Proprietário)
+  paidAt          DateTime?
+
+  cashFlowEntries CashFlowEntry[]
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId, status])
+  @@index([dueDate])
+  @@map("accounts_payable")
+}
+
+model RecurringBill {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  supplierId     String
+  supplier       Supplier     @relation(fields: [supplierId], references: [id])
+
+  categoryId     String
+  category       Category     @relation(fields: [categoryId], references: [id])
+
+  description    String
+  amount         Decimal      @db.Decimal(14, 2)
+  dueDay         Int          // dia do mês (1–28, evita problema em fevereiro)
+  active         Boolean      @default(true)
+
+  payables       AccountsPayable[]
+
+  createdAt      DateTime     @default(now())
+
+  @@map("recurring_bills")
 }

@@ -10,8 +10,8 @@ TypeScript · Next.js 15 (App Router) · React 19 · TailwindCSS v4 · shadcn/ui
 
 ## Status
 
-🚧 **Task 1 concluída** — bootstrap do projeto (infraestrutura base, sem regras de negócio ainda).
-Próxima etapa: Task 2 — modelagem do banco (`schema.prisma`, migrations, seed).
+🚧 **Task 2 em andamento** — `schema.prisma` completo do domínio financeiro e `prisma/seed.ts` prontos. Falta rodar a migration e o seed contra um banco real (ver abaixo).
+Próxima etapa: Task 3 — Core (Repository Interfaces, Errors, Logger, DTOs, Validators).
 
 ## Como rodar localmente
 
@@ -25,6 +25,16 @@ npm run dev
 Abra [http://localhost:3000](http://localhost:3000).
 
 > ⚠️ Neste momento (Task 1) o schema do Prisma não tem modelos ainda — `npx prisma generate`/`migrate` só farão sentido a partir da Task 2. Além disso, os binários de engine do Prisma são baixados de `binaries.prisma.sh` na primeira execução: rode isso em um ambiente com acesso normal à internet.
+
+## Banco de dados
+
+```bash
+npx prisma generate       # gera o Prisma Client a partir do schema
+npx prisma migrate dev --name init   # cria a migration inicial e aplica no banco
+npx prisma db seed        # popula roles, permissões, organização, admin, categorias e formas de pagamento
+```
+
+O seed exige, além das variáveis já citadas acima, mais quatro no `.env`: `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_NAME` e `SEED_ORGANIZATION_NAME`. Ele é idempotente — pode rodar `npx prisma db seed` quantas vezes quiser sem duplicar dados.
 
 ## Scripts
 
