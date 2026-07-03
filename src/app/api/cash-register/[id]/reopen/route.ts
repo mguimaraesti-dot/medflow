@@ -5,6 +5,7 @@ import { handleApiError } from "@/core/errors/error-handler";
 import { generateRequestId } from "@/core/utils/request-id";
 import { reopenCashRegisterSchema } from "@/features/cash-register/application/dtos/reopen-cash-register.dto";
 import { reopenCashRegisterUseCase } from "@/features/cash-register/application/reopen-cash-register.use-case";
+import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
@@ -26,7 +27,7 @@ export async function POST(
       cashRegisterDayRepository,
     });
 
-    return NextResponse.json({ data: result });
+    return NextResponse.json({ data: toCashRegisterDayResponseDTO(result) });
   } catch (error) {
     return handleApiError(error, {
       requestId,

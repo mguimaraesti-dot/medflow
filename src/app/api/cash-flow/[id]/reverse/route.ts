@@ -5,6 +5,7 @@ import { handleApiError } from "@/core/errors/error-handler";
 import { generateRequestId } from "@/core/utils/request-id";
 import { reverseCashFlowEntrySchema } from "@/features/cash-flow/application/dtos/reverse-cash-flow-entry.dto";
 import { reverseCashFlowEntryUseCase } from "@/features/cash-flow/application/reverse-cash-flow-entry.use-case";
+import { toCashFlowEntryResponseDTO } from "@/features/cash-flow/application/dtos/cash-flow-entry.response-dto";
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 
@@ -29,7 +30,12 @@ export async function POST(
       cashRegisterDayRepository,
     });
 
-    return NextResponse.json({ data: result });
+    return NextResponse.json({
+      data: {
+        original: toCashFlowEntryResponseDTO(result.original),
+        reversal: toCashFlowEntryResponseDTO(result.reversal),
+      },
+    });
   } catch (error) {
     return handleApiError(error, {
       requestId,

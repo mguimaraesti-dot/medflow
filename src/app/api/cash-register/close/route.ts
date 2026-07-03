@@ -5,6 +5,7 @@ import { handleApiError } from "@/core/errors/error-handler";
 import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
 import { closeCashRegisterUseCase } from "@/features/cash-register/application/close-cash-register.use-case";
+import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
 
@@ -29,7 +30,7 @@ export async function POST() {
       },
     );
 
-    return NextResponse.json({ data: result });
+    return NextResponse.json({ data: toCashRegisterDayResponseDTO(result) });
   } catch (error) {
     return handleApiError(error, {
       requestId,

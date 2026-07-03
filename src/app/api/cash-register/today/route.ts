@@ -4,6 +4,7 @@ import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { handleApiError } from "@/core/errors/error-handler";
 import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
+import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
@@ -26,7 +27,11 @@ export async function GET() {
         today,
       );
 
-    return NextResponse.json({ data: cashRegisterDay });
+    return NextResponse.json({
+      data: cashRegisterDay
+        ? toCashRegisterDayResponseDTO(cashRegisterDay)
+        : null,
+    });
   } catch (error) {
     return handleApiError(error, {
       requestId,

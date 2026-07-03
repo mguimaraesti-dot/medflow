@@ -6,6 +6,7 @@ import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
 import { openCashRegisterSchema } from "@/features/cash-register/application/dtos/open-cash-register.dto";
 import { openCashRegisterUseCase } from "@/features/cash-register/application/open-cash-register.use-case";
+import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
@@ -29,7 +30,10 @@ export async function POST(request: NextRequest) {
       { cashRegisterDayRepository },
     );
 
-    return NextResponse.json({ data: result }, { status: 201 });
+    return NextResponse.json(
+      { data: toCashRegisterDayResponseDTO(result) },
+      { status: 201 },
+    );
   } catch (error) {
     return handleApiError(error, {
       requestId,
