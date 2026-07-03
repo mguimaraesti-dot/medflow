@@ -109,3 +109,36 @@ export class CashRegisterReopenReasonRequiredError extends DomainError {
     super("É obrigatório informar o motivo da reabertura do caixa.");
   }
 }
+
+// ---------------------------------------------------------------
+// Autenticação
+// ---------------------------------------------------------------
+
+export class InvalidCredentialsError extends DomainError {
+  readonly code = "INVALID_CREDENTIALS";
+  readonly httpStatus = 401;
+
+  constructor() {
+    // Mensagem deliberadamente genérica — nunca revela se o e-mail
+    // existe ou se foi a senha que errou (US01, critério de aceite).
+    super("E-mail ou senha inválidos.");
+  }
+}
+
+export class UserInactiveError extends DomainError {
+  readonly code = "USER_INACTIVE";
+  readonly httpStatus = 403;
+
+  constructor() {
+    super("Este usuário está inativo. Contate um administrador.");
+  }
+}
+
+export class UnauthenticatedError extends DomainError {
+  readonly code = "UNAUTHENTICATED";
+  readonly httpStatus = 401;
+
+  constructor() {
+    super("É necessário estar autenticado para realizar esta ação.");
+  }
+}
