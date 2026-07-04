@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Info, Clock } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 import { useDashboardAlerts } from "./use-dashboard-alerts";
 import { cn } from "@/shared/lib/utils";
 
@@ -31,11 +31,6 @@ export function AlertsBanner() {
           <span>{alert.message}</span>
         </div>
       ))}
-
-      <div className="text-muted-foreground flex items-center gap-2 rounded-md border border-dashed p-3 text-sm opacity-60">
-        <Clock className="h-4 w-4 shrink-0" />
-        <span>Contas vencidas — disponível a partir da Sprint 2.</span>
-      </div>
     </div>
   );
 }

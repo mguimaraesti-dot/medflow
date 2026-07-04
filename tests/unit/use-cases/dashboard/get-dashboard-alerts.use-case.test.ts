@@ -3,11 +3,13 @@ import { getDashboardAlertsUseCase } from "@/features/dashboard/application/get-
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
+import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 
 function buildDeps(overrides: {
   todayRegister?: unknown;
   settings?: unknown;
   reversedCount?: number;
+  overdueCount?: number;
 }) {
   const cashRegisterDayRepository = {
     findByOrganizationAndDate: vi
@@ -27,10 +29,21 @@ function buildDeps(overrides: {
       ),
   } as unknown as OrganizationSettingsRepository;
 
+  const accountsPayableRepository = {
+    list: vi.fn().mockResolvedValue({
+      items: [],
+      total: overrides.overdueCount ?? 0,
+      page: 1,
+      pageSize: 1,
+      totalPages: 1,
+    }),
+  } as unknown as AccountsPayableRepository;
+
   return {
     cashRegisterDayRepository,
     cashFlowEntryRepository,
     organizationSettingsRepository,
+    accountsPayableRepository,
   };
 }
 
@@ -128,6 +141,22 @@ describe("getDashboardAlertsUseCase", () => {
     });
 
     expect(result.alerts).toEqual([]);
+  });
+
+  it("contas vencidas > 0: emite alerta com a contagem correta na mensagem", async () => {
+    const deps = buildDeps({
+      todayRegister: { status: "CLOSED" },
+      settings: { openingTime: "08:00", closingTime: "18:00" },
+      overdueCount: 3,
+    });
+
+    const result = await getDashboardAlertsUseCase("org-1", {
+      ...deps,
+      referenceDate: new Date("2026-07-15T12:00:00.000Z"),
+    });
+
+    const alert = result.alerts.find((a) => a.code === "OVERDUE_PAYABLES");
+    expect(alert?.message).toBe("Existem 3 contas a pagar vencidas.");
   });
 
   it("organizationSettings nulo: usa fallback (08:00/18:00) sem lançar erro", async () => {

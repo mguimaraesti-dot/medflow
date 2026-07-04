@@ -10,11 +10,11 @@ import { createCashFlowEntrySchema } from "../application/dtos/create-cash-flow-
 import { useCreateCashFlowEntry } from "./use-create-cash-flow-entry";
 import { useCategories } from "@/features/categories/presentation/use-categories";
 import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
-import { CategoryCombobox } from "./category-combobox";
-import { PaymentMethodPicker } from "./payment-method-picker";
+import { CategoryCombobox } from "@/shared/components/category-combobox";
 import { ApiError } from "@/shared/lib/api-client";
 import { SegmentedControl } from "@/shared/components/segmented-control";
 import { CurrencyInput } from "@/shared/components/currency-input";
+import { PaymentMethodPicker } from "@/shared/components/payment-method-picker";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";

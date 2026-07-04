@@ -119,6 +119,15 @@ export class CashRegisterReopenReasonRequiredError extends DomainError {
   }
 }
 
+export class PayableAlreadyProcessedError extends DomainError {
+  readonly code = "PAYABLE_ALREADY_PROCESSED";
+  readonly httpStatus = 409;
+
+  constructor(accountsPayableId: string) {
+    super("Esta conta já foi paga ou cancelada.", { accountsPayableId });
+  }
+}
+
 // ---------------------------------------------------------------
 // Autenticação
 // ---------------------------------------------------------------

@@ -10,6 +10,8 @@ import { RevenueByCategoryChart } from "./revenue-by-category-chart";
 import { RevenueByHourChart } from "./revenue-by-hour-chart";
 import { useCashFlowEntries } from "./use-cash-flow-entries";
 import { useCashFlowInsights } from "./use-cash-flow-insights";
+import { useUpcomingPayables } from "./use-upcoming-payables";
+import { UpcomingDuesCard } from "@/shared/components/upcoming-dues-card";
 
 export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const { data: today } = useCashRegisterToday();
@@ -18,6 +20,7 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
     { enabled: Boolean(today?.id) },
   );
   const { data: insights } = useCashFlowInsights();
+  const { data: upcomingPayables } = useUpcomingPayables();
   const isRegisterOpen = today?.status === "OPEN";
 
   const can = (permission: string) => permissions.includes(permission);
@@ -34,10 +37,13 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
         disabled={!isRegisterOpen || !can(PERMISSIONS.CASH_FLOW_CREATE)}
       />
 
-      <CashFlowTimeline
-        entries={todayEntries?.items ?? []}
-        cashRegisterDay={today}
-      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <CashFlowTimeline
+          entries={todayEntries?.items ?? []}
+          cashRegisterDay={today}
+        />
+        <UpcomingDuesCard payables={upcomingPayables ?? []} />
+      </div>
 
       {insights && (
         <div className="grid gap-6 lg:grid-cols-2">

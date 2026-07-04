@@ -1,6 +1,7 @@
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
+import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type {
   DashboardAlerts,
   DashboardAlert,
@@ -10,6 +11,7 @@ interface Deps {
   cashRegisterDayRepository: CashRegisterDayRepository;
   cashFlowEntryRepository: CashFlowEntryRepository;
   organizationSettingsRepository: OrganizationSettingsRepository;
+  accountsPayableRepository: AccountsPayableRepository;
   /** Injetado só para permitir teste determinístico — em produção é sempre `new Date()`. */
   referenceDate?: Date;
 }
@@ -24,11 +26,7 @@ function isAfterTime(now: Date, hhmm: string): boolean {
   return nowMinutes >= hours * 60 + minutes;
 }
 
-/**
- * US10 — Alertas do Dashboard. "Contas vencidas" não é emitido aqui
- * nesta sprint (sem dado ainda, US10: "preparado no componente mas
- * inativo até a Sprint 2") — só existe como placeholder visual.
- */
+/** US10 — Alertas do Dashboard. */
 export async function getDashboardAlertsUseCase(
   organizationId: string,
   deps: Deps,
@@ -39,18 +37,23 @@ export async function getDashboardAlertsUseCase(
   const endOfToday = new Date(today);
   endOfToday.setUTCHours(23, 59, 59, 999);
 
-  const [todayRegister, settings, reversedCount] = await Promise.all([
-    deps.cashRegisterDayRepository.findByOrganizationAndDate(
-      organizationId,
-      today,
-    ),
-    deps.organizationSettingsRepository.findByOrganization(organizationId),
-    deps.cashFlowEntryRepository.countReversedToday(
-      organizationId,
-      today,
-      endOfToday,
-    ),
-  ]);
+  const [todayRegister, settings, reversedCount, overduePayables] =
+    await Promise.all([
+      deps.cashRegisterDayRepository.findByOrganizationAndDate(
+        organizationId,
+        today,
+      ),
+      deps.organizationSettingsRepository.findByOrganization(organizationId),
+      deps.cashFlowEntryRepository.countReversedToday(
+        organizationId,
+        today,
+        endOfToday,
+      ),
+      deps.accountsPayableRepository.list(
+        { organizationId, status: "OVERDUE" },
+        { page: 1, pageSize: 1 },
+      ),
+    ]);
 
   const openingTime = settings?.openingTime ?? DEFAULT_OPENING_TIME;
   const closingTime = settings?.closingTime ?? DEFAULT_CLOSING_TIME;
@@ -79,6 +82,15 @@ export async function getDashboardAlertsUseCase(
       code: "REVERSED_ENTRIES_TODAY",
       severity: "info",
       message: `Existem ${reversedCount} lançamento${plural} estornado${plural} hoje.`,
+    });
+  }
+
+  if (overduePayables.total > 0) {
+    const plural = overduePayables.total > 1 ? "s" : "";
+    alerts.push({
+      code: "OVERDUE_PAYABLES",
+      severity: "warning",
+      message: `Existem ${overduePayables.total} conta${plural} a pagar vencida${plural}.`,
     });
   }
 

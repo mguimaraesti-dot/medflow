@@ -7,11 +7,13 @@ import { AlertsBanner } from "./alerts-banner";
 import { KpiCard } from "@/shared/components/kpi-card";
 import { CashFlowChart } from "./cash-flow-chart";
 import { RecentEntriesList } from "./recent-entries-list";
-import { UpcomingDuesPlaceholderCard } from "./upcoming-dues-placeholder-card";
+import { useUpcomingPayables } from "./use-upcoming-payables";
+import { UpcomingDuesCard } from "@/shared/components/upcoming-dues-card";
 import { formatCurrencyBRL } from "@/shared/lib/format";
 
 export function DashboardScreen({ permissions }: { permissions: string[] }) {
   const { data: summary, isLoading } = useDashboardSummary();
+  const { data: upcomingPayables } = useUpcomingPayables();
 
   const can = (permission: string) => permissions.includes(permission);
 
@@ -62,7 +64,7 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <RecentEntriesList entries={summary.recentEntries} />
-            <UpcomingDuesPlaceholderCard />
+            <UpcomingDuesCard payables={upcomingPayables ?? []} />
           </div>
         </>
       )}

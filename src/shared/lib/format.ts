@@ -31,3 +31,19 @@ export function formatTimeBR(value: string | Date): string {
     minute: "2-digit",
   }).format(date);
 }
+
+/**
+ * Datas *sem hora* (ex: `dueDate`, `@db.Date` no schema) chegam como
+ * meia-noite UTC — formatar no timezone local do navegador desloca o
+ * dia pra trás em fusos atrás de UTC (ex: America/Sao_Paulo). Força
+ * `timeZone: "UTC"` pra mostrar sempre o dia exato armazenado.
+ */
+export function formatDateOnlyBR(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}

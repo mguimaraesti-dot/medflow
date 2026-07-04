@@ -7,6 +7,7 @@ import { cn } from "@/shared/lib/utils";
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/cash-flow", label: "Fluxo de Caixa" },
+  { href: "/accounts-payable", label: "Contas a Pagar" },
 ] as const;
 
 export function NavLinks() {

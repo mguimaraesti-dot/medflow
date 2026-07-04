@@ -8,11 +8,13 @@ import { getDashboardAlertsUseCase } from "@/features/dashboard/application/get-
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
 import { PrismaOrganizationSettingsRepository } from "@/features/organization-settings/infrastructure/prisma-organization-settings.repository";
+import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
 const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
 const organizationSettingsRepository =
   new PrismaOrganizationSettingsRepository();
+const accountsPayableRepository = new PrismaAccountsPayableRepository();
 
 export async function GET() {
   const requestId = generateRequestId();
@@ -27,6 +29,7 @@ export async function GET() {
       cashRegisterDayRepository,
       cashFlowEntryRepository,
       organizationSettingsRepository,
+      accountsPayableRepository,
     });
 
     return NextResponse.json({ data: result });
