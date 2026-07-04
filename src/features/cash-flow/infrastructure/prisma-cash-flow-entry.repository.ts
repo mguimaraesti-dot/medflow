@@ -7,12 +7,30 @@ import type {
   CreateCashFlowEntryInput,
   ListCashFlowEntriesFilter,
   CashFlowEntrySums,
+  CashFlowEntryProjection,
+  CashFlowEntryInsightProjection,
 } from "../domain/cash-flow-entry.repository";
 import type { CashFlowEntry } from "../domain/cash-flow-entry.entity";
 
+const CREATED_BY_INCLUDE = { createdBy: { select: { name: true } } } as const;
+
+type RowWithCreatedBy = Prisma.CashFlowEntryGetPayload<{
+  include: typeof CREATED_BY_INCLUDE;
+}>;
+
+/** Achata `row.createdBy.name` no campo denormalizado do domínio — nunca expõe o tipo do Prisma. */
+function toDomainEntry(row: RowWithCreatedBy): CashFlowEntry {
+  const { createdBy, ...entry } = row;
+  return { ...entry, createdByUserName: createdBy.name };
+}
+
 export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
   async findById(id: string): Promise<CashFlowEntry | null> {
-    return prisma.cashFlowEntry.findUnique({ where: { id } });
+    const row = await prisma.cashFlowEntry.findUnique({
+      where: { id },
+      include: CREATED_BY_INCLUDE,
+    });
+    return row ? toDomainEntry(row) : null;
   }
 
   async list(
@@ -26,11 +44,18 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
       }),
       ...(filter.type && { type: filter.type }),
       ...(filter.categoryId && { categoryId: filter.categoryId }),
+      ...((filter.dateFrom || filter.dateTo) && {
+        occurredAt: {
+          ...(filter.dateFrom && { gte: filter.dateFrom }),
+          ...(filter.dateTo && { lte: filter.dateTo }),
+        },
+      }),
     };
 
-    const [items, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       prisma.cashFlowEntry.findMany({
         where,
+        include: CREATED_BY_INCLUDE,
         orderBy: { occurredAt: "desc" },
         skip: (pagination.page - 1) * pagination.pageSize,
         take: pagination.pageSize,
@@ -38,11 +63,11 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
       prisma.cashFlowEntry.count({ where }),
     ]);
 
-    return buildPaginatedResult(items, total, pagination);
+    return buildPaginatedResult(rows.map(toDomainEntry), total, pagination);
   }
 
   async create(data: CreateCashFlowEntryInput): Promise<CashFlowEntry> {
-    return prisma.cashFlowEntry.create({
+    const row = await prisma.cashFlowEntry.create({
       data: {
         organizationId: data.organizationId,
         cashRegisterDayId: data.cashRegisterDayId,
@@ -55,7 +80,9 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
         accountsPayableId: data.accountsPayableId,
         createdByUserId: data.createdByUserId,
       },
+      include: CREATED_BY_INCLUDE,
     });
+    return toDomainEntry(row);
   }
 
   /**
@@ -94,14 +121,19 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
           createdByUserId: reversedByUserId,
           reversalOfEntryId: original.id,
         },
+        include: CREATED_BY_INCLUDE,
       });
 
       const updatedOriginal = await tx.cashFlowEntry.update({
         where: { id: original.id },
         data: { isReversed: true },
+        include: CREATED_BY_INCLUDE,
       });
 
-      return { original: updatedOriginal, reversal };
+      return {
+        original: toDomainEntry(updatedOriginal),
+        reversal: toDomainEntry(reversal),
+      };
     });
   }
 
@@ -123,5 +155,41 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
       totalIn: (inSum._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
       totalOut: (outSum._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
     };
+  }
+
+  async listByDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<CashFlowEntryProjection[]> {
+    return prisma.cashFlowEntry.findMany({
+      where: { organizationId, occurredAt: { gte: from, lte: to } },
+      select: { type: true, amount: true, occurredAt: true },
+      orderBy: { occurredAt: "asc" },
+    });
+  }
+
+  async countReversedToday(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number> {
+    return prisma.cashFlowEntry.count({
+      where: {
+        organizationId,
+        isReversed: true,
+        occurredAt: { gte: from, lte: to },
+      },
+    });
+  }
+
+  async listByCashRegisterDay(
+    cashRegisterDayId: string,
+  ): Promise<CashFlowEntryInsightProjection[]> {
+    return prisma.cashFlowEntry.findMany({
+      where: { cashRegisterDayId },
+      select: { type: true, amount: true, occurredAt: true, categoryId: true },
+      orderBy: { occurredAt: "asc" },
+    });
   }
 }

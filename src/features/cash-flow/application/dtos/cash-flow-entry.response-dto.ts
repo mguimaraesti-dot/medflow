@@ -18,6 +18,7 @@ export interface CashFlowEntryResponseDTO {
   paymentMethodId: string;
   accountsPayableId: string | null;
   createdByUserId: string;
+  createdByUserName: string;
   createdAt: Date;
   isReversed: boolean;
   reversalOfEntryId: string | null;
@@ -38,6 +39,7 @@ export function toCashFlowEntryResponseDTO(
     paymentMethodId: entry.paymentMethodId,
     accountsPayableId: entry.accountsPayableId,
     createdByUserId: entry.createdByUserId,
+    createdByUserName: entry.createdByUserName,
     createdAt: entry.createdAt,
     isReversed: entry.isReversed,
     reversalOfEntryId: entry.reversalOfEntryId,

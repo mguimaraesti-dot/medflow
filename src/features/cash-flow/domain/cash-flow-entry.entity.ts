@@ -22,6 +22,8 @@ export interface CashFlowEntry {
   accountsPayableId: string | null;
 
   createdByUserId: string;
+  /** Denormalizado só pra exibição (coluna "Usuário" da tabela) — via join na infraestrutura. */
+  createdByUserName: string;
   createdAt: Date;
 
   isReversed: boolean;

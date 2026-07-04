@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
 import type {
   CashFlowEntry,
@@ -22,11 +23,28 @@ export interface ListCashFlowEntriesFilter {
   cashRegisterDayId?: string;
   type?: CashFlowEntryType;
   categoryId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 export interface CashFlowEntrySums {
   totalIn: string;
   totalOut: string;
+}
+
+/** Projeção mínima usada pelo Dashboard para agregar em código (sem SQL raw). */
+export interface CashFlowEntryProjection {
+  type: CashFlowEntryType;
+  amount: Prisma.Decimal;
+  occurredAt: Date;
+}
+
+/** Projeção usada pelos insights (origem das receitas por categoria + por hora). */
+export interface CashFlowEntryInsightProjection {
+  type: CashFlowEntryType;
+  amount: Prisma.Decimal;
+  occurredAt: Date;
+  categoryId: string;
 }
 
 /**
@@ -53,4 +71,23 @@ export interface CashFlowEntryRepository {
 
   /** Soma agregada (calculada no backend — Coding Standards, item 15) usada para fechar o caixa e alimentar o Dashboard. */
   sumByCashRegisterDay(cashRegisterDayId: string): Promise<CashFlowEntrySums>;
+
+  /** Projeção mínima (type/amount/occurredAt) para o Dashboard agregar em código — evita SQL raw. */
+  listByDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<CashFlowEntryProjection[]>;
+
+  /** Contagem de lançamentos estornados no período — usada pelo alerta de estornos do dia. */
+  countReversedToday(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number>;
+
+  /** Projeção (type/amount/occurredAt/categoryId) de todos os lançamentos de um dia de caixa — usada pelos insights. */
+  listByCashRegisterDay(
+    cashRegisterDayId: string,
+  ): Promise<CashFlowEntryInsightProjection[]>;
 }

@@ -22,3 +22,12 @@ export function formatDateTimeBR(value: string | Date): string {
     minute: "2-digit",
   }).format(date);
 }
+
+/** Só o horário (HH:mm) — usado na Timeline do dia, onde a data já é implícita. */
+export function formatTimeBR(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}

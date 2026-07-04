@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useReverseCashFlowEntry } from "./use-reverse-cash-flow-entry";
 import { ApiError } from "@/shared/lib/api-client";
 import { Button } from "@/shared/ui/button";
@@ -13,30 +14,39 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/shared/ui/dialog";
 
-export function ReverseEntryDialog({ entryId }: { entryId: string }) {
-  const [open, setOpen] = useState(false);
+export function ReverseEntryDialog({
+  entryId,
+  open,
+  onOpenChange,
+}: {
+  entryId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [description, setDescription] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
   const reverseCashFlowEntry = useReverseCashFlowEntry();
 
   async function onConfirm() {
+    if (!entryId) return;
     setServerError(null);
     try {
       await reverseCashFlowEntry.mutateAsync({
         entryId,
         input: { description: description.trim() || undefined },
       });
-      setOpen(false);
+      onOpenChange(false);
       setDescription("");
+      toast.success("Lançamento estornado.");
     } catch (error) {
-      setServerError(
+      const message =
         error instanceof ApiError
           ? error.message
-          : "Não foi possível estornar.",
-      );
+          : "Não foi possível estornar.";
+      setServerError(message);
+      toast.error(message);
     }
   }
 
@@ -44,15 +54,10 @@ export function ReverseEntryDialog({ entryId }: { entryId: string }) {
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        setOpen(next);
+        onOpenChange(next);
         if (!next) setServerError(null);
       }}
     >
-      <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
-          Estornar
-        </Button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Estornar lançamento</DialogTitle>

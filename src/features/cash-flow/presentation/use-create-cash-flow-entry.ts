@@ -16,6 +16,7 @@ export function useCreateCashFlowEntry() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cash-flow", "entries"] });
+      queryClient.invalidateQueries({ queryKey: ["cash-flow", "insights"] });
       // Chave de query da feature cash-register duplicada de propósito
       // (não importamos hooks de outra feature diretamente) — ver
       // use-cash-register-today.ts para a mesma chave.

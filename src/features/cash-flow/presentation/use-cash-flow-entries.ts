@@ -8,6 +8,8 @@ import type { CashFlowEntryResponseDTO } from "../application/dtos/cash-flow-ent
 export interface CashFlowEntriesFilter {
   cashRegisterDayId?: string;
   type?: "IN" | "OUT";
+  dateFrom?: Date;
+  dateTo?: Date;
   page?: number;
   pageSize?: number;
 }
@@ -15,12 +17,17 @@ export interface CashFlowEntriesFilter {
 export const cashFlowEntriesQueryKey = (filter: CashFlowEntriesFilter) =>
   ["cash-flow", "entries", filter] as const;
 
-export function useCashFlowEntries(filter: CashFlowEntriesFilter) {
+export function useCashFlowEntries(
+  filter: CashFlowEntriesFilter,
+  options?: { enabled?: boolean },
+) {
   const params = new URLSearchParams();
   if (filter.cashRegisterDayId) {
     params.set("cashRegisterDayId", filter.cashRegisterDayId);
   }
   if (filter.type) params.set("type", filter.type);
+  if (filter.dateFrom) params.set("dateFrom", filter.dateFrom.toISOString());
+  if (filter.dateTo) params.set("dateTo", filter.dateTo.toISOString());
   params.set("page", String(filter.page ?? 1));
   params.set("pageSize", String(filter.pageSize ?? 20));
 
@@ -30,6 +37,6 @@ export function useCashFlowEntries(filter: CashFlowEntriesFilter) {
       apiFetch<PaginatedResult<CashFlowEntryResponseDTO>>(
         `/api/cash-flow?${params.toString()}`,
       ),
-    enabled: Boolean(filter.cashRegisterDayId),
+    enabled: options?.enabled ?? true,
   });
 }

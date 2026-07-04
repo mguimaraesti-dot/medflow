@@ -18,6 +18,8 @@ export async function listCashFlowEntriesUseCase(
       cashRegisterDayId: input.cashRegisterDayId,
       type: input.type,
       categoryId: input.categoryId,
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
     },
     { page: input.page, pageSize: input.pageSize },
   );

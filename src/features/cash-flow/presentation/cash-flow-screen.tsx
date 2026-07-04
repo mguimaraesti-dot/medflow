@@ -5,9 +5,19 @@ import { useCashRegisterToday } from "@/features/cash-register/presentation/use-
 import { CashRegisterStatusCard } from "@/features/cash-register/presentation/cash-register-status-card";
 import { CashFlowEntryForm } from "./cash-flow-entry-form";
 import { CashFlowEntriesTable } from "./cash-flow-entries-table";
+import { CashFlowTimeline } from "./cash-flow-timeline";
+import { RevenueByCategoryChart } from "./revenue-by-category-chart";
+import { RevenueByHourChart } from "./revenue-by-hour-chart";
+import { useCashFlowEntries } from "./use-cash-flow-entries";
+import { useCashFlowInsights } from "./use-cash-flow-insights";
 
 export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const { data: today } = useCashRegisterToday();
+  const { data: todayEntries } = useCashFlowEntries(
+    { cashRegisterDayId: today?.id, pageSize: 100 },
+    { enabled: Boolean(today?.id) },
+  );
+  const { data: insights } = useCashFlowInsights();
   const isRegisterOpen = today?.status === "OPEN";
 
   const can = (permission: string) => permissions.includes(permission);
@@ -23,6 +33,18 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
       <CashFlowEntryForm
         disabled={!isRegisterOpen || !can(PERMISSIONS.CASH_FLOW_CREATE)}
       />
+
+      <CashFlowTimeline
+        entries={todayEntries?.items ?? []}
+        cashRegisterDay={today}
+      />
+
+      {insights && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <RevenueByCategoryChart byCategory={insights.byCategory} />
+          <RevenueByHourChart byHour={insights.byHour} />
+        </div>
+      )}
 
       <CashFlowEntriesTable
         cashRegisterDayId={today?.id}

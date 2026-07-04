@@ -3,23 +3,21 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { createCashFlowEntrySchema } from "../application/dtos/create-cash-flow-entry.dto";
 import { useCreateCashFlowEntry } from "./use-create-cash-flow-entry";
 import { useCategories } from "@/features/categories/presentation/use-categories";
 import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
+import { CategoryCombobox } from "./category-combobox";
+import { PaymentMethodPicker } from "./payment-method-picker";
 import { ApiError } from "@/shared/lib/api-client";
+import { SegmentedControl } from "@/shared/components/segmented-control";
+import { CurrencyInput } from "@/shared/components/currency-input";
 import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
 // O formulário nunca coleta `occurredAt` (o use case usa o horário do
@@ -63,12 +61,16 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
     try {
       await createCashFlowEntry.mutateAsync(values);
       reset({ ...emptyFormValues, type });
+      toast.success(
+        values.type === "IN" ? "Entrada lançada." : "Saída lançada.",
+      );
     } catch (error) {
-      setServerError(
+      const message =
         error instanceof ApiError
           ? error.message
-          : "Não foi possível lançar a movimentação.",
-      );
+          : "Não foi possível lançar a movimentação.";
+      setServerError(message);
+      toast.error(message);
     }
   }
 
@@ -80,50 +82,47 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
       <CardContent>
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4"
+          className="space-y-5"
           noValidate
         >
           <Controller
             control={control}
             name="type"
             render={({ field }) => (
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={field.value === "IN" ? "default" : "outline"}
-                  disabled={disabled}
-                  onClick={() => {
-                    field.onChange("IN");
-                    reset({ ...emptyFormValues, type: "IN" });
-                  }}
-                >
-                  Entrada
-                </Button>
-                <Button
-                  type="button"
-                  variant={field.value === "OUT" ? "default" : "outline"}
-                  disabled={disabled}
-                  onClick={() => {
-                    field.onChange("OUT");
-                    reset({ ...emptyFormValues, type: "OUT" });
-                  }}
-                >
-                  Saída
-                </Button>
-              </div>
+              <SegmentedControl
+                value={field.value}
+                onChange={field.onChange}
+                disabled={disabled}
+                options={[
+                  {
+                    value: "IN",
+                    label: "Entrada",
+                    activeClassName: "bg-green-600",
+                  },
+                  {
+                    value: "OUT",
+                    label: "Saída",
+                    activeClassName: "bg-destructive",
+                  },
+                ]}
+              />
             )}
           />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="amount">Valor</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                min={0.01}
-                disabled={disabled}
-                {...register("amount", { valueAsNumber: true })}
+              <Controller
+                control={control}
+                name="amount"
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="amount"
+                    disabled={disabled}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
               />
               {errors.amount && (
                 <p className="text-destructive text-sm">
@@ -138,22 +137,13 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                 control={control}
                 name="categoryId"
                 render={({ field }) => (
-                  <Select
+                  <CategoryCombobox
+                    id="categoryId"
                     disabled={disabled}
-                    value={field.value || undefined}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger id="categoryId" className="w-full">
-                      <SelectValue placeholder="Selecione a categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    categories={categories}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
                 )}
               />
               {errors.categoryId && (
@@ -162,50 +152,37 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                 </p>
               )}
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="paymentMethodId">Forma de pagamento</Label>
-              <Controller
-                control={control}
-                name="paymentMethodId"
-                render={({ field }) => (
-                  <Select
-                    disabled={disabled}
-                    value={field.value || undefined}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger id="paymentMethodId" className="w-full">
-                      <SelectValue placeholder="Selecione a forma de pagamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentMethods?.map((paymentMethod) => (
-                        <SelectItem
-                          key={paymentMethod.id}
-                          value={paymentMethod.id}
-                        >
-                          {paymentMethod.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.paymentMethodId && (
-                <p className="text-destructive text-sm">
-                  {errors.paymentMethodId.message}
-                </p>
+          <div className="space-y-2">
+            <Label>Forma de pagamento</Label>
+            <Controller
+              control={control}
+              name="paymentMethodId"
+              render={({ field }) => (
+                <PaymentMethodPicker
+                  disabled={disabled}
+                  paymentMethods={paymentMethods}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
               )}
-            </div>
+            />
+            {errors.paymentMethodId && (
+              <p className="text-destructive text-sm">
+                {errors.paymentMethodId.message}
+              </p>
+            )}
+          </div>
 
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="description">Descrição (opcional)</Label>
-              <Textarea
-                id="description"
-                rows={2}
-                disabled={disabled}
-                {...register("description")}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição (opcional)</Label>
+            <Textarea
+              id="description"
+              rows={2}
+              disabled={disabled}
+              {...register("description")}
+            />
           </div>
 
           {serverError && (
@@ -217,8 +194,16 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
           <Button
             type="submit"
             disabled={disabled || createCashFlowEntry.isPending}
+            className="from-primary w-full bg-gradient-to-b to-blue-600 shadow-sm"
           >
-            {createCashFlowEntry.isPending ? "Lançando..." : "Lançar"}
+            {createCashFlowEntry.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Lançando...
+              </>
+            ) : (
+              "Lançar"
+            )}
           </Button>
         </form>
       </CardContent>

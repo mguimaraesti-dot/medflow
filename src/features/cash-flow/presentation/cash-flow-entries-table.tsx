@@ -1,11 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import { MoreHorizontal, Receipt } from "lucide-react";
 import { useCashFlowEntries } from "./use-cash-flow-entries";
 import { ReverseEntryDialog } from "./reverse-entry-dialog";
+import {
+  DateQuickFilters,
+  getDateRangeForQuickFilter,
+  type QuickDateFilter,
+} from "./date-quick-filters";
+import { useCategories } from "@/features/categories/presentation/use-categories";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
+import { EmptyState } from "@/shared/components/empty-state";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { Skeleton } from "@/shared/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -24,25 +39,56 @@ export function CashFlowEntriesTable({
   canReverse: boolean;
 }) {
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useCashFlowEntries({ cashRegisterDayId, page });
+  const [quickFilter, setQuickFilter] = useState<QuickDateFilter>("today");
+  const [reversingEntryId, setReversingEntryId] = useState<string | null>(null);
+
+  const { dateFrom, dateTo } = getDateRangeForQuickFilter(quickFilter);
+  const { data, isLoading } = useCashFlowEntries({ dateFrom, dateTo, page });
+  const { data: categories } = useCategories();
+  const categoryById = new Map(
+    categories?.map((category) => [category.id, category]),
+  );
+
+  function changeFilter(next: QuickDateFilter) {
+    setQuickFilter(next);
+    setPage(1);
+  }
+
+  const isTodayEmpty =
+    quickFilter === "today" && !cashRegisterDayId && !isLoading;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Lançamentos do dia</CardTitle>
+      <CardHeader className="flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle>Lançamentos</CardTitle>
+        <DateQuickFilters value={quickFilter} onChange={changeFilter} />
       </CardHeader>
       <CardContent>
         {isLoading && (
-          <p className="text-muted-foreground text-sm">Carregando...</p>
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
         )}
 
-        {!isLoading && !cashRegisterDayId && (
-          <p className="text-muted-foreground text-sm">
-            Nenhum caixa aberto hoje.
-          </p>
+        {!isLoading && data && data.items.length === 0 && (
+          <EmptyState
+            icon={Receipt}
+            title={
+              isTodayEmpty
+                ? "Nenhum caixa aberto hoje."
+                : "Nenhuma movimentação registrada."
+            }
+            description={
+              isTodayEmpty
+                ? "Abra o caixa para começar a lançar."
+                : "Os lançamentos do período aparecem aqui."
+            }
+          />
         )}
 
-        {!isLoading && cashRegisterDayId && data && (
+        {!isLoading && data && data.items.length > 0 && (
           <>
             <div className="overflow-x-auto">
               <Table>
@@ -50,16 +96,18 @@ export function CashFlowEntriesTable({
                   <TableRow>
                     <TableHead>Hora</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Descrição</TableHead>
+                    <TableHead>Usuário</TableHead>
                     <TableHead>Estorno</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.items.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
+                    <TableRow key={entry.id} className="hover:bg-muted/50">
+                      <TableCell className="text-muted-foreground">
                         {formatDateTimeBR(entry.occurredAt)}
                       </TableCell>
                       <TableCell>
@@ -71,8 +119,35 @@ export function CashFlowEntriesTable({
                           {entry.type === "IN" ? "Entrada" : "Saída"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatCurrencyBRL(entry.amount)}</TableCell>
-                      <TableCell>{entry.description ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor:
+                                categoryById.get(entry.categoryId)?.color ??
+                                "#64748B",
+                            }}
+                          />
+                          {categoryById.get(entry.categoryId)?.name ?? "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell
+                        className={
+                          entry.type === "IN"
+                            ? "font-medium text-green-600 dark:text-green-500"
+                            : "text-destructive font-medium"
+                        }
+                      >
+                        {entry.type === "IN" ? "+" : "-"}
+                        {formatCurrencyBRL(entry.amount)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {entry.description ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {entry.createdByUserName}
+                      </TableCell>
                       <TableCell>
                         {entry.isReversed && (
                           <Badge variant="secondary">Estornado</Badge>
@@ -85,21 +160,26 @@ export function CashFlowEntriesTable({
                         {canReverse &&
                           !entry.isReversed &&
                           !entry.reversalOfEntryId && (
-                            <ReverseEntryDialog entryId={entry.id} />
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Ações</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={() => setReversingEntryId(entry.id)}
+                                >
+                                  Estornar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                       </TableCell>
                     </TableRow>
                   ))}
-                  {data.items.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-muted-foreground text-center"
-                      >
-                        Nenhum lançamento ainda.
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
             </div>
@@ -133,6 +213,12 @@ export function CashFlowEntriesTable({
           </>
         )}
       </CardContent>
+
+      <ReverseEntryDialog
+        entryId={reversingEntryId}
+        open={reversingEntryId !== null}
+        onOpenChange={(open) => !open && setReversingEntryId(null)}
+      />
     </Card>
   );
 }

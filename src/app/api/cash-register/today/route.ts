@@ -4,10 +4,13 @@ import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { handleApiError } from "@/core/errors/error-handler";
 import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
+import { getTodayCashRegisterUseCase } from "@/features/cash-register/application/get-today-cash-register.use-case";
 import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
+import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
+const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
 
 export async function GET() {
   const requestId = generateRequestId();
@@ -18,14 +21,10 @@ export async function GET() {
       throw new ForbiddenError("consultar caixa sem organização vinculada");
     }
 
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    const cashRegisterDay =
-      await cashRegisterDayRepository.findByOrganizationAndDate(
-        user.organizationId,
-        today,
-      );
+    const cashRegisterDay = await getTodayCashRegisterUseCase(
+      user.organizationId,
+      { cashRegisterDayRepository, cashFlowEntryRepository },
+    );
 
     return NextResponse.json({
       data: cashRegisterDay

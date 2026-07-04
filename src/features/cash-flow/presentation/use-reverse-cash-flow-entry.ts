@@ -27,6 +27,7 @@ export function useReverseCashFlowEntry() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cash-flow", "entries"] });
+      queryClient.invalidateQueries({ queryKey: ["cash-flow", "insights"] });
       queryClient.invalidateQueries({ queryKey: ["cash-register", "today"] });
     },
   });
