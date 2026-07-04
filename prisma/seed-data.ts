@@ -112,8 +112,12 @@ export const EXPENSE_CATEGORIES: SeedCategory[] = [
   },
 ];
 
-export const PAYMENT_METHODS: { name: string; displayOrder: number }[] = [
-  { name: "Dinheiro", displayOrder: 1 },
+export const PAYMENT_METHODS: {
+  name: string;
+  displayOrder: number;
+  isCash?: boolean;
+}[] = [
+  { name: "Dinheiro", displayOrder: 1, isCash: true },
   { name: "PIX", displayOrder: 2 },
   { name: "Cartão de Débito", displayOrder: 3 },
   { name: "Cartão de Crédito", displayOrder: 4 },

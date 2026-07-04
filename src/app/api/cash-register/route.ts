@@ -8,8 +8,10 @@ import { openCashRegisterSchema } from "@/features/cash-register/application/dto
 import { openCashRegisterUseCase } from "@/features/cash-register/application/open-cash-register.use-case";
 import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
+import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
+const safeRepository = new PrismaSafeRepository();
 
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
@@ -27,7 +29,7 @@ export async function POST(request: NextRequest) {
       input,
       user.id,
       user.organizationId,
-      { cashRegisterDayRepository },
+      { cashRegisterDayRepository, safeRepository },
     );
 
     return NextResponse.json(

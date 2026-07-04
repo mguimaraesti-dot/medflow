@@ -81,10 +81,26 @@ describe.skipIf(!hasTestDb)(
         data: { organizationId, name: "PIX Teste" },
       });
       paymentMethodId = paymentMethod.id;
+
+      // Motor de Tesouraria: abrir caixa retira o saldo inicial do Cofre —
+      // precisa existir e ter saldo suficiente antes do primeiro caixa.
+      const safe = await testPrisma.safe.create({ data: { organizationId } });
+      await testPrisma.safeMovement.create({
+        data: {
+          organizationId,
+          safeId: safe.id,
+          type: "MANUAL_ADJUSTMENT",
+          amount: "500.00",
+          performedByUserId: userId,
+          reason: "Saldo inicial de bootstrap (teste de integração)",
+        },
+      });
     });
 
     afterAll(async () => {
       await testPrisma.cashFlowEntry.deleteMany({ where: { organizationId } });
+      await testPrisma.safeMovement.deleteMany({ where: { organizationId } });
+      await testPrisma.safe.deleteMany({ where: { organizationId } });
       await testPrisma.cashRegisterDay.deleteMany({
         where: { organizationId },
       });
@@ -95,11 +111,15 @@ describe.skipIf(!hasTestDb)(
       await testPrisma.$disconnect();
     });
 
-    it("executa o ciclo completo sem inconsistência de saldo", async () => {
+    it("executa o ciclo completo (Caixa + Cofre) sem inconsistência de saldo", async () => {
       const { PrismaCashRegisterDayRepository } =
         await import("@/features/cash-register/infrastructure/prisma-cash-register-day.repository");
       const { PrismaCashFlowEntryRepository } =
         await import("@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository");
+      const { PrismaSafeRepository } =
+        await import("@/features/treasury/infrastructure/prisma-safe.repository");
+      const { PrismaSafeMovementRepository } =
+        await import("@/features/treasury/infrastructure/prisma-safe-movement.repository");
       const { openCashRegisterUseCase } =
         await import("@/features/cash-register/application/open-cash-register.use-case");
       const { createCashFlowEntryUseCase } =
@@ -108,15 +128,19 @@ describe.skipIf(!hasTestDb)(
         await import("@/features/cash-flow/application/reverse-cash-flow-entry.use-case");
       const { closeCashRegisterUseCase } =
         await import("@/features/cash-register/application/close-cash-register.use-case");
+      const { confirmCashRegisterHandoffUseCase } =
+        await import("@/features/cash-register/application/confirm-cash-register-handoff.use-case");
 
       const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
       const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
+      const safeRepository = new PrismaSafeRepository();
+      const safeMovementRepository = new PrismaSafeMovementRepository();
 
       const day = await openCashRegisterUseCase(
         { openingBalance: 100 },
         userId,
         organizationId,
-        { cashRegisterDayRepository },
+        { cashRegisterDayRepository, safeRepository },
       );
       expect(day.status).toBe("OPEN");
 
@@ -142,12 +166,29 @@ describe.skipIf(!hasTestDb)(
       );
       expect(reversal.type).toBe("IN");
 
-      // Esperado: 100 (abertura) + 200 (entrada) - 50 (saída) + 50 (estorno da saída) = 300
-      const closed = await closeCashRegisterUseCase(userId, organizationId, {
-        cashRegisterDayRepository,
-        cashFlowEntryRepository,
-      });
+      // Saldo contábil esperado: 100 (abertura) + 200 (entrada) - 50 (saída)
+      // + 50 (estorno da saída) = 300. "PIX Teste" não é isCash, então o
+      // Dinheiro Esperado (conferência física) fica só no valor de abertura.
+      const pendingConference = await closeCashRegisterUseCase(
+        { countedAmount: 100 },
+        userId,
+        organizationId,
+        {
+          cashRegisterDayRepository,
+          cashFlowEntryRepository,
+          safeMovementRepository,
+        },
+      );
+      expect(pendingConference.status).toBe("PENDING_CONFERENCE");
+      expect(pendingConference.expectedCashAmount?.toString()).toBe("100.00");
 
+      const closed = await confirmCashRegisterHandoffUseCase(
+        { receivedAmount: 100 },
+        userId,
+        organizationId,
+        { cashRegisterDayRepository, cashFlowEntryRepository },
+      );
+      expect(closed.status).toBe("CLOSED");
       expect(closed.closingBalance?.toString()).toBe("300.00");
 
       await expect(

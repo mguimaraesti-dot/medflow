@@ -33,6 +33,8 @@ model Organization {
   suppliers        Supplier[]
   recurringBills   RecurringBill[]
   settings         OrganizationSettings?
+  safe             Safe?
+  safeMovements    SafeMovement[]
 
   @@map("organizations")
 }
@@ -115,11 +117,13 @@ model User {
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
 
-  auditLogs         AuditLog[]
-  cashFlowEntries   CashFlowEntry[]     @relation("EntryCreatedBy")
-  openedRegisters   CashRegisterDay[]   @relation("RegisterOpenedBy")
-  closedRegisters   CashRegisterDay[]   @relation("RegisterClosedBy")
-  reopenedRegisters CashRegisterDay[]   @relation("RegisterReopenedBy")
+  auditLogs                 AuditLog[]
+  cashFlowEntries           CashFlowEntry[]     @relation("EntryCreatedBy")
+  openedRegisters           CashRegisterDay[]   @relation("RegisterOpenedBy")
+  closedRegisters           CashRegisterDay[]   @relation("RegisterClosedBy")
+  reopenedRegisters         CashRegisterDay[]   @relation("RegisterReopenedBy")
+  handoffConfirmedRegisters CashRegisterDay[]   @relation("RegisterHandoffConfirmedBy")
+  safeMovements             SafeMovement[]
 
   @@index([organizationId])
   @@map("users")
@@ -139,6 +143,11 @@ enum AuditAction {
   CASH_REGISTER_CLOSED
   CASH_REGISTER_REOPENED
   PAYMENT_CONFIRMED
+  CASH_REGISTER_CONFERENCE_REQUESTED
+  CASH_REGISTER_HANDOFF_CONFIRMED
+  CASH_REGISTER_CONFERENCE_REJECTED
+  SAFE_SANGRIA
+  SAFE_MANUAL_ADJUSTMENT
 }
 
 model AuditLog {
@@ -197,6 +206,7 @@ model PaymentMethod {
   name           String       // Dinheiro, PIX, Cartão Débito, Cartão Crédito, Boleto, Transferência
   displayOrder   Int          @default(0)
   active         Boolean      @default(true)
+  isCash         Boolean      @default(false) // usado no cálculo de Dinheiro Esperado (Motor de Tesouraria)
 
   cashFlowEntries CashFlowEntry[]
 
@@ -225,6 +235,7 @@ model Supplier {
 // ============================================================
 enum CashRegisterStatus {
   OPEN
+  PENDING_CONFERENCE
   CLOSED
 }
 
@@ -254,7 +265,25 @@ model CashRegisterDay {
   reopenedAt       DateTime?
   reopenCount      Int               @default(0)
 
+  // Motor de Tesouraria (ADR — docs/decisions/adr-tesouraria.md): dupla
+  // conferência no fechamento — secretária presta contas (countedAmount),
+  // gerência confere e confirma o handoff (receivedAmount) ou rejeita.
+  expectedCashAmount  Decimal?  @db.Decimal(14, 2)
+  countedAmount       Decimal?  @db.Decimal(14, 2)
+  receivedAmount      Decimal?  @db.Decimal(14, 2)
+  difference          Decimal?  @db.Decimal(14, 2)
+  confirmedDifference Decimal?  @db.Decimal(14, 2)
+  closureNote         String?
+
+  handoffConfirmedByUserId String?
+  handoffConfirmedBy       User?     @relation("RegisterHandoffConfirmedBy", fields: [handoffConfirmedByUserId], references: [id])
+  handoffConfirmedAt       DateTime?
+
+  rejectedAt     DateTime?
+  rejectionReason String?
+
   cashFlowEntries CashFlowEntry[]
+  safeMovements   SafeMovement[]
 
   @@unique([organizationId, date])
   @@index([organizationId, status])
@@ -380,4 +409,52 @@ model RecurringBill {
   createdAt      DateTime     @default(now())
 
   @@map("recurring_bills")
+}
+
+// ============================================================
+// TESOURARIA (Cofre — docs/decisions/adr-tesouraria.md)
+// ============================================================
+enum SafeMovementType {
+  FUNDING               // abastecimento do caixa (Cofre -> Caixa)
+  SANGRIA               // sangria (Caixa -> Cofre)
+  CASH_REGISTER_HANDOFF // fechamento confirmado (Caixa -> Cofre)
+  MANUAL_ADJUSTMENT     // só Admin — amount pode ser negativo (único tipo sem direção implícita)
+}
+
+model Safe {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+
+  movements      SafeMovement[]
+
+  @@map("safes")
+}
+
+// Saldo nunca é persistido como fonte da verdade — sempre derivado da
+// soma das movimentações (Coding Standards, item 18.1). Nunca update/delete.
+model SafeMovement {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+
+  safeId         String
+  safe           Safe             @relation(fields: [safeId], references: [id])
+
+  type           SafeMovementType
+  amount         Decimal          @db.Decimal(14, 2)
+
+  relatedCashRegisterDayId String?
+  relatedCashRegisterDay   CashRegisterDay? @relation(fields: [relatedCashRegisterDayId], references: [id])
+
+  performedByUserId String
+  performedBy       User    @relation(fields: [performedByUserId], references: [id])
+  reason            String? // obrigatório para MANUAL_ADJUSTMENT (validado no DTO)
+
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, type])
+  @@index([relatedCashRegisterDayId])
+  @@map("safe_movements")
 }

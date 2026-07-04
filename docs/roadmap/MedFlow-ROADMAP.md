@@ -2,6 +2,16 @@
 
 > Documento curto. Objetivo único: impedir que ideias futuras contaminem o escopo do MVP em desenvolvimento.
 
+## Sequência confirmada (pós-Sprint 2)
+
+Decisão registrada em `docs/decisions/adr-tesouraria.md`: Design Pass e Motor de Tesouraria não competem entre si — Tesouraria é backend puro (sem tela), então entra antes do Design Pass sem atrapalhá-lo.
+
+1. **Sprint 2 — Contas a Pagar** (em finalização)
+2. **Task 6A — Motor de Tesouraria** (Caixa/Cofre/Conta Bancária futura; ver ADR) — schema, migration, use cases, testes. Sem tela.
+3. **Design Pass** — identidade visual consistente em cima de tudo que já existe (Login, Dashboard, Fluxo de Caixa, Contas a Pagar). Só faz sentido depois de existir variedade real de telas.
+4. **Task 6B — Tela de Tesouraria** — já nasce em cima do design consolidado.
+5. **Sprint 3 — Relatórios + Fechamento** (inclui o Relatório Diário com os campos novos do Cofre: `countedAmount`, `receivedAmount`, `confirmedDifference`)
+
 ## V1 (em desenvolvimento)
 - ⬜ Fluxo de Caixa (Sprint 1)
 - ⬜ Contas a Pagar (Sprint 2)

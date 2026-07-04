@@ -22,6 +22,16 @@ export interface CashRegisterDayResponseDTO {
   reopenedByUserId: string | null;
   reopenedAt: Date | null;
   reopenCount: number;
+  expectedCashAmount: string | null;
+  countedAmount: string | null;
+  receivedAmount: string | null;
+  difference: string | null;
+  confirmedDifference: string | null;
+  closureNote: string | null;
+  handoffConfirmedByUserId: string | null;
+  handoffConfirmedAt: Date | null;
+  rejectedAt: Date | null;
+  rejectionReason: string | null;
 }
 
 export function toCashRegisterDayResponseDTO(
@@ -43,5 +53,15 @@ export function toCashRegisterDayResponseDTO(
     reopenedByUserId: day.reopenedByUserId,
     reopenedAt: day.reopenedAt,
     reopenCount: day.reopenCount,
+    expectedCashAmount: toMoneyString(day.expectedCashAmount),
+    countedAmount: toMoneyString(day.countedAmount),
+    receivedAmount: toMoneyString(day.receivedAmount),
+    difference: toMoneyString(day.difference),
+    confirmedDifference: toMoneyString(day.confirmedDifference),
+    closureNote: day.closureNote,
+    handoffConfirmedByUserId: day.handoffConfirmedByUserId,
+    handoffConfirmedAt: day.handoffConfirmedAt,
+    rejectedAt: day.rejectedAt,
+    rejectionReason: day.rejectionReason,
   };
 }

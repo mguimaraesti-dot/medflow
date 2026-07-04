@@ -157,6 +157,34 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
     };
   }
 
+  async sumCashOnlyByCashRegisterDay(
+    cashRegisterDayId: string,
+  ): Promise<CashFlowEntrySums> {
+    const [inSum, outSum] = await Promise.all([
+      prisma.cashFlowEntry.aggregate({
+        where: {
+          cashRegisterDayId,
+          type: "IN",
+          paymentMethod: { isCash: true },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.cashFlowEntry.aggregate({
+        where: {
+          cashRegisterDayId,
+          type: "OUT",
+          paymentMethod: { isCash: true },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    return {
+      totalIn: (inSum._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+      totalOut: (outSum._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+    };
+  }
+
   async listByDateRange(
     organizationId: string,
     from: Date,

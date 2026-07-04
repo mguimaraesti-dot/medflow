@@ -72,6 +72,11 @@ export interface CashFlowEntryRepository {
   /** Soma agregada (calculada no backend — Coding Standards, item 15) usada para fechar o caixa e alimentar o Dashboard. */
   sumByCashRegisterDay(cashRegisterDayId: string): Promise<CashFlowEntrySums>;
 
+  /** Mesma soma, mas só de lançamentos com `paymentMethod.isCash = true` — usada no cálculo de Dinheiro Esperado (Motor de Tesouraria). */
+  sumCashOnlyByCashRegisterDay(
+    cashRegisterDayId: string,
+  ): Promise<CashFlowEntrySums>;
+
   /** Projeção mínima (type/amount/occurredAt) para o Dashboard agregar em código — evita SQL raw. */
   listByDateRange(
     organizationId: string,

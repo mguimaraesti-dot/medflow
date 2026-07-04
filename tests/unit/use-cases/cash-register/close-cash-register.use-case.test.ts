@@ -3,6 +3,7 @@ import { closeCashRegisterUseCase } from "@/features/cash-register/application/c
 import { CashRegisterNotOpenError } from "@/core/errors/domain-error";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
+import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: { auditLog: { create: vi.fn() } },
@@ -14,27 +15,23 @@ describe("closeCashRegisterUseCase", () => {
       findOpenByOrganization: vi.fn().mockResolvedValue(null),
     } as unknown as CashRegisterDayRepository;
     const cashFlowEntryRepository = {} as CashFlowEntryRepository;
+    const safeMovementRepository = {} as SafeMovementRepository;
 
     await expect(
-      closeCashRegisterUseCase("user-1", "org-1", {
+      closeCashRegisterUseCase({ countedAmount: 100 }, "user-1", "org-1", {
         cashRegisterDayRepository,
         cashFlowEntryRepository,
+        safeMovementRepository,
       }),
     ).rejects.toThrow(CashRegisterNotOpenError);
   });
 
-  // Cenário da matriz: "Fechamento sem movimentação -> Permitido e saldo preservado"
-  it("fecha sem nenhuma movimentação, preservando o saldo de abertura", async () => {
-    const openRegister = {
-      id: "day-1",
-      // String simples - o use case é quem envolve em Prisma.Decimal
-      // internamente; o teste não precisa instanciar Decimal diretamente.
-      openingBalance: "100.00",
-    };
+  it("fecha sem nenhuma movimentação, indo para PENDING_CONFERENCE com expectedCashAmount = abertura", async () => {
+    const openRegister = { id: "day-1", openingBalance: "100.00" };
     const close = vi.fn().mockImplementation((id, data) => ({
       id,
       ...data,
-      status: "CLOSED",
+      status: "PENDING_CONFERENCE",
     }));
 
     const cashRegisterDayRepository = {
@@ -43,30 +40,39 @@ describe("closeCashRegisterUseCase", () => {
     } as unknown as CashRegisterDayRepository;
 
     const cashFlowEntryRepository = {
-      sumByCashRegisterDay: vi
+      sumCashOnlyByCashRegisterDay: vi
         .fn()
         .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
     } as unknown as CashFlowEntryRepository;
 
-    const result = await closeCashRegisterUseCase("user-1", "org-1", {
-      cashRegisterDayRepository,
-      cashFlowEntryRepository,
-    });
+    const safeMovementRepository = {
+      sumByCashRegisterDayAndType: vi.fn().mockResolvedValue("0.00"),
+    } as unknown as SafeMovementRepository;
+
+    const result = await closeCashRegisterUseCase(
+      { countedAmount: 100 },
+      "user-1",
+      "org-1",
+      {
+        cashRegisterDayRepository,
+        cashFlowEntryRepository,
+        safeMovementRepository,
+      },
+    );
 
     expect(close).toHaveBeenCalledWith(
       "day-1",
-      expect.objectContaining({ closingBalance: "100.00" }),
+      expect.objectContaining({
+        expectedCashAmount: "100.00",
+        countedAmount: "100.00",
+        difference: "0.00",
+      }),
     );
-    expect(result.status).toBe("CLOSED");
+    expect(result.status).toBe("PENDING_CONFERENCE");
   });
 
-  it("calcula closingBalance = abertura + entradas - saídas", async () => {
-    const openRegister = {
-      id: "day-1",
-      // String simples - o use case é quem envolve em Prisma.Decimal
-      // internamente; o teste não precisa instanciar Decimal diretamente.
-      openingBalance: "100.00",
-    };
+  it("calcula expectedCashAmount = abertura + entradas em dinheiro - saídas em dinheiro - sangrias", async () => {
+    const openRegister = { id: "day-1", openingBalance: "100.00" };
     const close = vi.fn().mockImplementation((id, data) => ({ id, ...data }));
 
     const cashRegisterDayRepository = {
@@ -75,19 +81,64 @@ describe("closeCashRegisterUseCase", () => {
     } as unknown as CashRegisterDayRepository;
 
     const cashFlowEntryRepository = {
-      sumByCashRegisterDay: vi
+      sumCashOnlyByCashRegisterDay: vi
         .fn()
         .mockResolvedValue({ totalIn: "500.00", totalOut: "120.50" }),
     } as unknown as CashFlowEntryRepository;
 
-    await closeCashRegisterUseCase("user-1", "org-1", {
+    const safeMovementRepository = {
+      sumByCashRegisterDayAndType: vi.fn().mockResolvedValue("30.00"),
+    } as unknown as SafeMovementRepository;
+
+    await closeCashRegisterUseCase(
+      { countedAmount: 449.5 },
+      "user-1",
+      "org-1",
+      {
+        cashRegisterDayRepository,
+        cashFlowEntryRepository,
+        safeMovementRepository,
+      },
+    );
+
+    // 100 + 500 - 120.50 - 30 (sangria) = 449.50
+    expect(close).toHaveBeenCalledWith(
+      "day-1",
+      expect.objectContaining({
+        expectedCashAmount: "449.50",
+        difference: "0.00",
+      }),
+    );
+  });
+
+  it("registra difference negativa quando o valor contado é menor que o esperado", async () => {
+    const openRegister = { id: "day-1", openingBalance: "100.00" };
+    const close = vi.fn().mockImplementation((id, data) => ({ id, ...data }));
+
+    const cashRegisterDayRepository = {
+      findOpenByOrganization: vi.fn().mockResolvedValue(openRegister),
+      close,
+    } as unknown as CashRegisterDayRepository;
+
+    const cashFlowEntryRepository = {
+      sumCashOnlyByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
+    } as unknown as CashFlowEntryRepository;
+
+    const safeMovementRepository = {
+      sumByCashRegisterDayAndType: vi.fn().mockResolvedValue("0.00"),
+    } as unknown as SafeMovementRepository;
+
+    await closeCashRegisterUseCase({ countedAmount: 90 }, "user-1", "org-1", {
       cashRegisterDayRepository,
       cashFlowEntryRepository,
+      safeMovementRepository,
     });
 
     expect(close).toHaveBeenCalledWith(
       "day-1",
-      expect.objectContaining({ closingBalance: "479.50" }),
+      expect.objectContaining({ difference: "-10.00" }),
     );
   });
 });

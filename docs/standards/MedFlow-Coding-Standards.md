@@ -226,6 +226,22 @@ Nenhuma alteração na arquitetura ou nestes Coding Standards será feita até o
 
 ---
 
+## 18. Princípios Contábeis e Consistência Transacional (origem: ADR — Tesouraria)
+
+**18.1 — Ledger é sempre a fonte da verdade**
+- Nunca excluir uma movimentação financeira já registrada, em nenhum ledger do sistema (`CashFlowEntry`, `SafeMovement` ou qualquer futuro) — correção é sempre uma nova movimentação de estorno/ajuste, nunca `DELETE` nem edição do registro original (generaliza 13.2 para qualquer ledger, não só `CashFlowEntry`).
+- Saldo nunca é a fonte da verdade — é sempre derivado da soma das movimentações (`SUM(IN) − SUM(OUT)`) sobre o ledger correspondente. Um campo de saldo persistido só pode existir como cache explícito, recalculável a qualquer momento a partir do ledger — nunca como dado primário.
+- Estorno ou correção sempre gera uma nova movimentação de sinal oposto vinculada à original (FK explícita) — nunca reescreve nem apaga o registro original.
+
+**18.2 — Consistência transacional e idempotência**
+- Toda operação que grava mais de uma linha relacionada (ex.: criar uma movimentação de ledger e, na mesma operação, atualizar o status de uma entidade relacionada) roda dentro de uma única `prisma.$transaction` — nunca duas escritas relacionadas em chamadas separadas ao banco.
+- A pré-condição de estado (ex.: "o registro ainda está no status esperado?") é checada de novo dentro da própria transação, não só no use case antes de chamar o repositório. É isso que fecha a corrida entre duas requisições quase simultâneas: a segunda encontra o estado já alterado pela primeira (que comitou antes) e falha com erro de domínio — nunca duplica a movimentação.
+- Chave de idempotência (`Idempotency-Key` no header, padrão Stripe) é reconhecida como boa prática, mas não é obrigatória no MVP — protege contra retry de rede após timeout, cenário mais relevante para API pública com tráfego não confiável do que para um sistema interno de uma clínica. Fica registrada como melhoria futura, a implementar se/quando um caso real de duplicidade for observado em produção — não preventivamente.
+
+Origem: `docs/decisions/adr-tesouraria.md` (Seções 6 e 6.1).
+
+---
+
 Este documento deve ser seguido rigorosamente a partir da implementação da Sprint 1. Qualquer exceção necessária durante uma Sprint deve ser registrada explicitamente (o quê, por quê) em vez de simplesmente divergir em silêncio.
 
 **Status: congelado como v1.0.** Próximas mudanças só a partir de necessidade real identificada em desenvolvimento ou uso, não de nova discussão teórica.

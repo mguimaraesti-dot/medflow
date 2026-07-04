@@ -79,15 +79,6 @@ export class CashRegisterAlreadyOpenError extends DomainError {
   }
 }
 
-export class FirstUseRequiresOpeningBalanceError extends DomainError {
-  readonly code = "FIRST_USE_REQUIRES_OPENING_BALANCE";
-  readonly httpStatus = 400;
-
-  constructor() {
-    super("Informe o saldo inicial do caixa (primeiro uso do sistema).");
-  }
-}
-
 export class CashRegisterNotOpenError extends DomainError {
   readonly code = "CASH_REGISTER_NOT_OPEN";
   readonly httpStatus = 409;
@@ -125,6 +116,36 @@ export class PayableAlreadyProcessedError extends DomainError {
 
   constructor(accountsPayableId: string) {
     super("Esta conta já foi paga ou cancelada.", { accountsPayableId });
+  }
+}
+
+// ---------------------------------------------------------------
+// Motor de Tesouraria (docs/decisions/adr-tesouraria.md)
+// ---------------------------------------------------------------
+
+export class InsufficientSafeBalanceError extends DomainError {
+  readonly code = "INSUFFICIENT_SAFE_BALANCE";
+  readonly httpStatus = 409;
+
+  constructor(
+    organizationId: string,
+    requestedAmount: string,
+    availableBalance: string,
+  ) {
+    super("O Cofre não tem saldo suficiente para este valor.", {
+      organizationId,
+      requestedAmount,
+      availableBalance,
+    });
+  }
+}
+
+export class CashRegisterNotPendingConferenceError extends DomainError {
+  readonly code = "CASH_REGISTER_NOT_PENDING_CONFERENCE";
+  readonly httpStatus = 409;
+
+  constructor(organizationId: string) {
+    super("Não há caixa aguardando conferência.", { organizationId });
   }
 }
 

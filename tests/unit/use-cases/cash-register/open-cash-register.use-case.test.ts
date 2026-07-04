@@ -1,10 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 import { openCashRegisterUseCase } from "@/features/cash-register/application/open-cash-register.use-case";
 import {
   CashRegisterAlreadyOpenError,
-  FirstUseRequiresOpeningBalanceError,
+  InsufficientSafeBalanceError,
 } from "@/core/errors/domain-error";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
+import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: { auditLog: { create: vi.fn() } },
@@ -18,57 +20,76 @@ function makeRepo(
     findByOrganizationAndDate: vi.fn().mockResolvedValue(null),
     findLastClosed: vi.fn().mockResolvedValue(null),
     findOpenByOrganization: vi.fn(),
+    findPendingConferenceByOrganization: vi.fn(),
     create: vi.fn(),
     close: vi.fn(),
+    confirmHandoff: vi.fn(),
+    rejectConference: vi.fn(),
     reopen: vi.fn(),
     ...overrides,
   };
 }
 
+function makeSafeRepo(balance: string): SafeRepository {
+  return {
+    findByOrganization: vi.fn(),
+    getBalance: vi.fn().mockResolvedValue(new Prisma.Decimal(balance)),
+  };
+}
+
 describe("openCashRegisterUseCase", () => {
-  // Cenário da matriz: "Primeiro uso do sistema -> Solicita saldo inicial"
-  it("exige openingBalance quando é o primeiro uso (sem caixa fechado anterior)", async () => {
+  // Motor de Tesouraria (ADR 2.6/2.8): substitui o antigo cenário de
+  // "primeiro uso exige saldo inicial" — agora é sempre uma retirada do Cofre.
+  it("bloqueia quando o Cofre não tem saldo suficiente", async () => {
     const repo = makeRepo();
+    const safeRepository = makeSafeRepo("50.00");
 
     await expect(
-      openCashRegisterUseCase({}, "user-1", "org-1", {
+      openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
         cashRegisterDayRepository: repo,
+        safeRepository,
       }),
-    ).rejects.toThrow(FirstUseRequiresOpeningBalanceError);
+    ).rejects.toThrow(InsufficientSafeBalanceError);
   });
 
-  // Cenário da matriz: "Dia seguinte -> Herda automaticamente o saldo final anterior"
-  it("herda o closingBalance do último caixa fechado, ignorando openingBalance do input", async () => {
-    const lastClosed = {
-      id: "day-0",
-      // Decimal-like mínimo (só o método que o use case realmente chama)
-      // em vez de `new Prisma.Decimal(...)` — mantém este teste unitário
-      // desacoplado do Prisma Client gerado.
-      closingBalance: { toFixed: (n: number) => (150.75).toFixed(n) },
-    };
+  it("abre o caixa retirando openingBalance do Cofre quando há saldo suficiente", async () => {
     const create = vi.fn().mockResolvedValue({ id: "day-1" });
-    const repo = makeRepo({
-      findLastClosed: vi.fn().mockResolvedValue(lastClosed),
-      create,
-    });
+    const repo = makeRepo({ create });
+    const safeRepository = makeSafeRepo("2000.00");
 
-    await openCashRegisterUseCase({ openingBalance: 9999 }, "user-1", "org-1", {
+    await openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
       cashRegisterDayRepository: repo,
+      safeRepository,
     });
 
     expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ openingBalance: "150.75" }),
+      expect.objectContaining({ openingBalance: "100.00" }),
     );
+  });
+
+  it("permite openingBalance igual ao saldo exato do Cofre", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "day-1" });
+    const repo = makeRepo({ create });
+    const safeRepository = makeSafeRepo("100.00");
+
+    await expect(
+      openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
+        cashRegisterDayRepository: repo,
+        safeRepository,
+      }),
+    ).resolves.not.toThrow();
   });
 
   it("bloqueia abrir um segundo caixa no mesmo dia/organização", async () => {
     const repo = makeRepo({
       findByOrganizationAndDate: vi.fn().mockResolvedValue({ id: "day-1" }),
     });
+    const safeRepository = makeSafeRepo("2000.00");
 
     await expect(
-      openCashRegisterUseCase({}, "user-1", "org-1", {
+      openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
         cashRegisterDayRepository: repo,
+        safeRepository,
       }),
     ).rejects.toThrow(CashRegisterAlreadyOpenError);
   });

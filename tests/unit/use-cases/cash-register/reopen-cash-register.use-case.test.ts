@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { reopenCashRegisterUseCase } from "@/features/cash-register/application/reopen-cash-register.use-case";
 import {
   CashRegisterAlreadyOpenError,
+  ConflictError,
   NotFoundError,
 } from "@/core/errors/domain-error";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
@@ -45,6 +46,28 @@ describe("reopenCashRegisterUseCase", () => {
         { cashRegisterDayRepository: repo },
       ),
     ).rejects.toThrow(CashRegisterAlreadyOpenError);
+  });
+
+  // Motor de Tesouraria: PENDING_CONFERENCE só volta pra OPEN via rejeição
+  // da conferência, não via Reabertura (transições distintas).
+  it("bloqueia reabrir um caixa PENDING_CONFERENCE (use rejeitar conferência)", async () => {
+    const repo = {
+      findById: vi.fn().mockResolvedValue({
+        id: "day-1",
+        status: "PENDING_CONFERENCE",
+        organizationId: "org-1",
+        date: new Date(),
+      }),
+    } as unknown as CashRegisterDayRepository;
+
+    await expect(
+      reopenCashRegisterUseCase(
+        "day-1",
+        { reason: "correção necessária no valor" },
+        "admin-1",
+        { cashRegisterDayRepository: repo },
+      ),
+    ).rejects.toThrow(ConflictError);
   });
 
   it("reabre um caixa CLOSED e incrementa reopenCount", async () => {

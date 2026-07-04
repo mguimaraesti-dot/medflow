@@ -206,16 +206,56 @@ async function upsertPaymentMethods(organizationId: string) {
       where: {
         organizationId_name: { organizationId, name: method.name },
       },
-      update: { displayOrder: method.displayOrder },
+      update: {
+        displayOrder: method.displayOrder,
+        isCash: method.isCash ?? false,
+      },
       create: {
         organizationId,
         name: method.name,
         displayOrder: method.displayOrder,
+        isCash: method.isCash ?? false,
       },
     });
   }
 
   console.log(`✔ ${PAYMENT_METHODS.length} formas de pagamento garantidas`);
+}
+
+/**
+ * Motor de Tesouraria (docs/decisions/adr-tesouraria.md): garante o
+ * Cofre da organização e, se ele ainda não tiver nenhuma movimentação,
+ * credita um saldo inicial de bootstrap — sem isso o ambiente de dev
+ * fica travado (não dá pra abrir o primeiro caixa sem saldo no Cofre).
+ */
+async function upsertSafe(organizationId: string, adminUserId: string) {
+  const safe = await prisma.safe.upsert({
+    where: { organizationId },
+    update: {},
+    create: { organizationId },
+  });
+
+  const movementCount = await prisma.safeMovement.count({
+    where: { safeId: safe.id },
+  });
+
+  if (movementCount === 0) {
+    await prisma.safeMovement.create({
+      data: {
+        organizationId,
+        safeId: safe.id,
+        type: "MANUAL_ADJUSTMENT",
+        amount: "2000.00",
+        performedByUserId: adminUserId,
+        reason: "Saldo inicial de bootstrap (seed)",
+      },
+    });
+    console.log(
+      "✔ Cofre garantido, com saldo inicial de bootstrap (R$ 2000,00)",
+    );
+  } else {
+    console.log("✔ Cofre garantido (já tinha movimentações)");
+  }
 }
 
 async function main() {
@@ -225,9 +265,10 @@ async function main() {
   await upsertRoles();
   const organization = await upsertOrganization();
   const supabaseAuthId = await upsertAdminAuthUser();
-  await upsertAdminUser(organization.id, supabaseAuthId);
+  const admin = await upsertAdminUser(organization.id, supabaseAuthId);
   await upsertCategories(organization.id);
   await upsertPaymentMethods(organization.id);
+  await upsertSafe(organization.id, admin.id);
 
   console.log("\n✅ Seed concluído. Login inicial:");
   console.log(`   e-mail: ${ADMIN_EMAIL}`);

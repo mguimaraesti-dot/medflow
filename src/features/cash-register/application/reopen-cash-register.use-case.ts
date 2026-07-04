@@ -2,6 +2,7 @@ import { prisma } from "@/core/database/prisma.client";
 import { logger } from "@/core/logger/logger";
 import {
   CashRegisterAlreadyOpenError,
+  ConflictError,
   NotFoundError,
 } from "@/core/errors/domain-error";
 import type { CashRegisterDayRepository } from "../domain/cash-register-day.repository";
@@ -34,6 +35,16 @@ export async function reopenCashRegisterUseCase(
     throw new CashRegisterAlreadyOpenError(
       cashRegisterDay.organizationId,
       cashRegisterDay.date.toISOString(),
+    );
+  }
+
+  // Motor de Tesouraria: PENDING_CONFERENCE só volta para OPEN via
+  // rejeição da conferência (gerência) — a Reabertura é uma transição
+  // distinta, só a partir de CLOSED (ADR 2.1/Seção 5, Q2).
+  if (cashRegisterDay.status === "PENDING_CONFERENCE") {
+    throw new ConflictError(
+      "Caixa aguardando conferência não pode ser reaberto — rejeite a conferência para voltar ao status aberto.",
+      { cashRegisterDayId: cashRegisterDay.id },
     );
   }
 
