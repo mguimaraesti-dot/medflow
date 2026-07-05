@@ -102,7 +102,7 @@ export function AccountsPayableForm({
   async function onSubmit(values: AccountsPayableFormValues) {
     setServerError(null);
     try {
-      // Anexos ainda não têm caso de uso no backend (exigem um model de
+      // Documentos ainda não têm caso de uso no backend (exigem um model de
       // Attachment/Storage que ainda não existe) — por isso não entram no
       // payload, mesmo já coletados na tela.
       const maxOccurrences =
@@ -318,7 +318,7 @@ export function AccountsPayableForm({
       </Card>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Anexos</h3>
+        <h3 className="text-sm font-semibold">Documentos</h3>
         <FileDropZone files={attachments} onChange={setAttachments} />
       </div>
 

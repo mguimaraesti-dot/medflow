@@ -1,3 +1,16 @@
+import {
+  Building2,
+  CalendarClock,
+  CheckCircle2,
+  FilePlus,
+  Pencil,
+  Repeat as RepeatIcon,
+  RotateCcw,
+  ShieldCheck,
+  Tag,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import { formatDateOnlyBR, formatSmartDueDate } from "@/shared/lib/format";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 import type { PayableStatus } from "../domain/accounts-payable.entity";
@@ -129,22 +142,56 @@ export interface AccountsPayableEvent {
   id: string;
   label: string;
   actor: string;
-  /** Detalhe complementar (ex: origem da confirmação, motivo) — exibido junto ao ator. */
+  /** Detalhe complementar (ex: origem da confirmação, motivo, "De: X Para: Y") — exibido junto ao ator. */
   detail?: string;
   date: Date;
+  icon: LucideIcon;
+}
+
+/** Usados só pra resolver nome (não id) nos diffs de fornecedor/categoria da timeline. */
+export interface AccountsPayableEventLookups {
+  supplierById?: Map<string, { name: string }>;
+  categoryById?: Map<string, { name: string }>;
+  /**
+   * `updateAccountsPayableUseCase` sempre grava um `reason` mencionando
+   * "ocorrência" (mesmo em contas avulsas — só o texto muda conforme o
+   * scope escolhido no formulário). Só é seguro tratar isso como um evento
+   * de recorrência quando a conta realmente pertence a uma (`recurringBillId`
+   * não nulo) — senão toda edição de conta avulsa mostraria "Recorrência
+   * alterada" indevidamente.
+   */
+  isRecurring?: boolean;
+}
+
+function changeDetail(
+  before: unknown,
+  after: unknown,
+  resolveName?: (id: string) => string | undefined,
+): string {
+  const label = (value: unknown) => {
+    if (typeof value === "string" && resolveName) {
+      return resolveName(value) ?? value;
+    }
+    return String(value);
+  };
+  return `De: ${label(before)} Para: ${label(after)}`;
 }
 
 /**
- * Timeline real, montada a partir do AuditLog (nunca reconstruída de
- * createdAt/paidAt/status) — cobre todo o ciclo de vida, inclusive
- * exclusão/restauração (Soft Delete, Sprint 05). Um único registro de
- * edição pode virar mais de um evento na timeline quando fornecedor e/ou
- * categoria mudaram juntos (before/after do mesmo AuditLog).
+ * Única fonte da timeline da conta (Histórico) — montada a partir do
+ * AuditLog real (nunca reconstruída de createdAt/paidAt/status), cobrindo
+ * todo o ciclo de vida: criação, edições (com diff de campo quando
+ * possível), pagamento, cancelamento, exclusão/restauração (Soft Delete) e
+ * alterações de recorrência. Substitui as antigas abas Histórico +
+ * Auditoria (eram redundantes — Refinamento UX, unificação em uma só aba).
  */
 export function toAccountsPayableEvents(
   entries: AccountsPayableAuditLogEntry[],
+  lookups: AccountsPayableEventLookups = {},
 ): AccountsPayableEvent[] {
   const events: AccountsPayableEvent[] = [];
+  const resolveSupplier = (id: string) => lookups.supplierById?.get(id)?.name;
+  const resolveCategory = (id: string) => lookups.categoryById?.get(id)?.name;
 
   for (const entry of entries) {
     const actor = entry.userName ?? "Sistema";
@@ -157,6 +204,7 @@ export function toAccountsPayableEvents(
           label: `Conta criada por ${actor}`,
           actor,
           date,
+          icon: FilePlus,
         });
         break;
 
@@ -167,8 +215,9 @@ export function toAccountsPayableEvents(
           id: entry.id,
           label: "Pagamento confirmado",
           actor,
-          detail: `Por ${actor} · Origem: ${source}`,
+          detail: `Origem: ${source}`,
           date,
+          icon: CheckCircle2,
         });
         break;
       }
@@ -180,6 +229,7 @@ export function toAccountsPayableEvents(
           actor,
           detail: entry.reason ? `Motivo: ${entry.reason}` : undefined,
           date,
+          icon: Trash2,
         });
         break;
 
@@ -190,6 +240,7 @@ export function toAccountsPayableEvents(
             label: "Conta restaurada",
             actor,
             date,
+            icon: RotateCcw,
           });
           break;
         }
@@ -201,51 +252,109 @@ export function toAccountsPayableEvents(
             actor,
             detail: entry.reason ?? undefined,
             date,
+            icon: ShieldCheck,
           });
           break;
         }
 
-        const categoryChanged =
-          entry.before &&
-          entry.after &&
-          "categoryId" in entry.after &&
-          entry.before.categoryId !== entry.after.categoryId;
-        const supplierChanged =
-          entry.before &&
-          entry.after &&
-          "supplierId" in entry.after &&
-          entry.before.supplierId !== entry.after.supplierId;
+        const before = entry.before;
+        const after = entry.after;
+        const isRecurrenceEdit =
+          Boolean(lookups.isRecurring) &&
+          typeof entry.reason === "string" &&
+          entry.reason.includes("ocorrência");
 
-        if (categoryChanged) {
+        const fieldDiff = (
+          field: string,
+        ): { from: unknown; to: unknown } | null => {
+          if (!before || !after || !(field in after)) return null;
+          const from = before[field];
+          const to = after[field];
+          return from !== to ? { from, to } : null;
+        };
+
+        const categoryDiff = fieldDiff("categoryId");
+        const supplierDiff = fieldDiff("supplierId");
+        const dueDateDiff = fieldDiff("dueDate");
+
+        if (categoryDiff) {
           events.push({
             id: `${entry.id}-category`,
             label: "Categoria alterada",
             actor,
+            detail: changeDetail(
+              categoryDiff.from,
+              categoryDiff.to,
+              resolveCategory,
+            ),
             date,
+            icon: Tag,
           });
         }
-        if (supplierChanged) {
+        if (supplierDiff) {
           events.push({
             id: `${entry.id}-supplier`,
             label: "Fornecedor alterado",
             actor,
+            detail: changeDetail(
+              supplierDiff.from,
+              supplierDiff.to,
+              resolveSupplier,
+            ),
             date,
+            icon: Building2,
           });
         }
-        if (!categoryChanged && !supplierChanged) {
+        if (dueDateDiff) {
+          events.push({
+            id: `${entry.id}-dueDate`,
+            label: "Vencimento alterado",
+            actor,
+            detail: changeDetail(
+              formatDateOnlyBR(dueDateDiff.from as string),
+              formatDateOnlyBR(dueDateDiff.to as string),
+            ),
+            date,
+            icon: CalendarClock,
+          });
+        }
+        if (!categoryDiff && !supplierDiff && !dueDateDiff) {
+          // `entry.reason` aqui é sempre o texto padrão de escopo
+          // ("...nesta ocorrência"/"...para recorrência") — nunca um motivo
+          // customizado, então não faz sentido exibi-lo como detalhe.
           events.push({
             id: entry.id,
             label: "Conta editada",
             actor,
-            detail: entry.reason ?? undefined,
             date,
+            icon: Pencil,
+          });
+        }
+
+        if (isRecurrenceEdit) {
+          events.push({
+            id: `${entry.id}-recurrence`,
+            label: "Recorrência alterada",
+            actor,
+            detail:
+              entry.reason === "Alteração aplicada para recorrência."
+                ? "Aplicado para esta e as próximas ocorrências"
+                : "Aplicado apenas a esta ocorrência",
+            date,
+            icon: RepeatIcon,
           });
         }
         break;
       }
 
       default:
-        events.push({ id: entry.id, label: "Evento registrado", actor, date });
+        events.push({
+          id: entry.id,
+          label: "Evento registrado",
+          actor,
+          date,
+          icon: ShieldCheck,
+        });
     }
   }
 

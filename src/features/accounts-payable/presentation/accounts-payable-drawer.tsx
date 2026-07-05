@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CheckCircle2,
   Download,
   FileText,
   Pencil,
   Repeat,
-  ShieldCheck,
   Trash2,
 } from "lucide-react";
 import {
@@ -32,6 +31,8 @@ import {
 } from "./accounts-payable-helpers";
 import { useRecurringBill } from "./use-recurring-bill";
 import { useAccountsPayableAuditLog } from "./use-accounts-payable-audit-log";
+import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
+import { useCategories } from "@/features/categories/presentation/use-categories";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
@@ -78,7 +79,23 @@ export function AccountsPayableDrawer({
       : null;
 
   const { data: auditLog } = useAccountsPayableAuditLog(payable?.id ?? null);
-  const events = auditLog ? toAccountsPayableEvents(auditLog) : [];
+  const { data: suppliers } = useSuppliers();
+  const { data: categories } = useCategories();
+  const supplierById = useMemo(
+    () => new Map(suppliers?.map((s) => [s.id, s])),
+    [suppliers],
+  );
+  const categoryById = useMemo(
+    () => new Map(categories?.map((c) => [c.id, c])),
+    [categories],
+  );
+  const events = auditLog
+    ? toAccountsPayableEvents(auditLog, {
+        supplierById,
+        categoryById,
+        isRecurring: payable?.recurringBillId != null,
+      })
+    : [];
 
   const badge = payable ? STATUS_META[payable.displayStatus] : null;
   const dueDateDisplay = payable ? getDueDateDisplay(payable.dueDate) : null;
@@ -130,8 +147,7 @@ export function AccountsPayableDrawer({
                 <TabsList variant="line" className="mx-4">
                   <TabsTrigger value="account">Conta</TabsTrigger>
                   <TabsTrigger value="history">Histórico</TabsTrigger>
-                  <TabsTrigger value="attachments">Anexos</TabsTrigger>
-                  <TabsTrigger value="audit">Auditoria</TabsTrigger>
+                  <TabsTrigger value="attachments">Documentos</TabsTrigger>
                 </TabsList>
 
                 <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -223,17 +239,23 @@ export function AccountsPayableDrawer({
                       {events.map((event, index) => (
                         <li key={event.id} className="flex gap-3">
                           <div className="flex flex-col items-center">
-                            <span className="bg-primary h-2 w-2 rounded-full" />
+                            <span className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                              <event.icon className="h-3.5 w-3.5" />
+                            </span>
                             {index < events.length - 1 && (
                               <span className="bg-border mt-1 w-px flex-1" />
                             )}
                           </div>
-                          <div className="-mt-0.5 pb-1">
+                          <div className="-mt-0.5 pb-3">
                             <p className="text-sm font-medium">{event.label}</p>
                             <p className="text-muted-foreground text-xs">
-                              {formatDateTimeBR(event.date)}
-                              {event.detail && ` · ${event.detail}`}
+                              Por {event.actor} · {formatDateTimeBR(event.date)}
                             </p>
+                            {event.detail && (
+                              <p className="text-muted-foreground text-xs">
+                                {event.detail}
+                              </p>
+                            )}
                           </div>
                         </li>
                       ))}
@@ -244,7 +266,7 @@ export function AccountsPayableDrawer({
                     {attachments.length === 0 ? (
                       <EmptyState
                         icon={FileText}
-                        title="Nenhum anexo."
+                        title="Nenhum documento."
                         description="Documentos vinculados a esta conta (ex: boleto) aparecem aqui."
                       />
                     ) : (
@@ -271,27 +293,6 @@ export function AccountsPayableDrawer({
                         ))}
                       </ul>
                     )}
-                  </TabsContent>
-
-                  <TabsContent value="audit" className="mt-4">
-                    <ul className="space-y-3">
-                      {events.map((event) => (
-                        <li
-                          key={event.id}
-                          className="flex items-start gap-3 rounded-lg border p-3"
-                        >
-                          <ShieldCheck className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium">{event.label}</p>
-                            <p className="text-muted-foreground text-xs">
-                              Usuário: {event.actor} ·{" "}
-                              {formatDateTimeBR(event.date)}
-                              {event.detail && ` · ${event.detail}`}
-                            </p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
                   </TabsContent>
                 </div>
               </Tabs>

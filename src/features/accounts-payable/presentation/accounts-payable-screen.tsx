@@ -338,7 +338,7 @@ export function AccountsPayableScreen({
                   }
                   onSelect={(event) => event.preventDefault()}
                 >
-                  Anexos
+                  Documentos
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>

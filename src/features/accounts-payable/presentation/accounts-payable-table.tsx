@@ -338,7 +338,7 @@ export function AccountsPayableTable({
                   )}
                   {visibleColumns.attachments && (
                     <SortableHead
-                      label="Anexos"
+                      label="Documentos"
                       field="ATTACHMENTS"
                       sort={sort}
                       onSort={toggleSort}
