@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Poppins } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { Providers } from "./providers";
 import "./globals.css";
+
+// Tipografia do Manual da Marca MedFlow.
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
+});
 
 export const metadata: Metadata = {
   title: "MedFlow",
@@ -16,9 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body
-        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}
-      >
+      <body className={`${poppins.variable} ${GeistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

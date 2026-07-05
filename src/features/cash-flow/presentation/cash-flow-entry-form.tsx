@@ -195,7 +195,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
           <Button
             type="submit"
             disabled={disabled || createCashFlowEntry.isPending}
-            className="from-primary w-full bg-gradient-to-b to-blue-600 shadow-sm"
+            className="from-primary to-brand-secondary w-full bg-gradient-to-b shadow-sm"
           >
             {createCashFlowEntry.isPending ? (
               <>

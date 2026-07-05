@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { Logo } from "@/shared/components/logo";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/presentation/logout-button";
 import { Button } from "@/shared/ui/button";
@@ -142,16 +143,10 @@ function SidebarFooter({
   );
 }
 
-function Logo() {
+function SidebarLogo() {
   return (
-    <Link
-      href="/dashboard"
-      className="flex items-center gap-2 px-4 py-4 font-semibold"
-    >
-      <span className="bg-primary flex h-7 w-7 items-center justify-center rounded-md text-sm text-white">
-        M
-      </span>
-      MedFlow
+    <Link href="/dashboard" className="px-4 py-4">
+      <Logo />
     </Link>
   );
 }
@@ -166,7 +161,7 @@ export function AppSidebar({
 }) {
   return (
     <aside className="bg-background hidden w-64 shrink-0 flex-col border-r lg:flex">
-      <Logo />
+      <SidebarLogo />
       <SidebarNav />
       <SidebarFooter userName={userName} roleName={roleName} />
     </aside>
@@ -195,15 +190,15 @@ export function MobileSidebarTrigger({
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <Link href="/dashboard" className="font-semibold">
-          MedFlow
+        <Link href="/dashboard">
+          <Logo />
         </Link>
       </header>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="flex w-64 flex-col p-0">
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-          <Logo />
+          <SidebarLogo />
           <SidebarNav onNavigate={() => setOpen(false)} />
           <SidebarFooter userName={userName} roleName={roleName} />
         </SheetContent>
