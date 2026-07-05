@@ -16,6 +16,7 @@ export interface ListSafeMovementsFilter {
   type?: SafeMovementType;
   createdAtFrom?: Date;
   createdAtTo?: Date;
+  relatedCashRegisterDayId?: string;
 }
 
 export interface SafeMovementRepository {

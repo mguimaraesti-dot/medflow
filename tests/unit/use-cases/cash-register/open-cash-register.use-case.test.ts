@@ -21,6 +21,7 @@ function makeRepo(
     findLastClosed: vi.fn().mockResolvedValue(null),
     findOpenByOrganization: vi.fn(),
     findPendingConferenceByOrganization: vi.fn(),
+    list: vi.fn(),
     create: vi.fn(),
     close: vi.fn(),
     confirmHandoff: vi.fn(),

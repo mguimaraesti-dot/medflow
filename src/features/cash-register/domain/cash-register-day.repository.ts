@@ -1,4 +1,11 @@
+import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
 import type { CashRegisterDay } from "./cash-register-day.entity";
+
+export interface ListCashRegisterDaysFilter {
+  organizationId: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
 
 export interface CreateCashRegisterDayInput {
   organizationId: string;
@@ -53,6 +60,12 @@ export interface ReopenCashRegisterDayInput {
  */
 export interface CashRegisterDayRepository {
   findById(id: string): Promise<CashRegisterDay | null>;
+
+  /** Histórico paginado, ordenado por data desc — usado pelo Relatório de Fechamento Diário. */
+  list(
+    filter: ListCashRegisterDaysFilter,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<CashRegisterDay>>;
 
   findByOrganizationAndDate(
     organizationId: string,

@@ -192,7 +192,7 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
   ): Promise<CashFlowEntryProjection[]> {
     return prisma.cashFlowEntry.findMany({
       where: { organizationId, occurredAt: { gte: from, lte: to } },
-      select: { type: true, amount: true, occurredAt: true },
+      select: { type: true, amount: true, occurredAt: true, categoryId: true },
       orderBy: { occurredAt: "asc" },
     });
   }

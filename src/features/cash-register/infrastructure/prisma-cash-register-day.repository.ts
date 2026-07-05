@@ -1,7 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/core/database/prisma.client";
+import { buildPaginatedResult } from "@/shared/lib/pagination";
+import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
 import type {
   CashRegisterDayRepository,
+  ListCashRegisterDaysFilter,
   CreateCashRegisterDayInput,
   CloseCashRegisterDayInput,
   ConfirmHandoffInput,
@@ -49,6 +52,33 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
       where: { organizationId, status: "PENDING_CONFERENCE" },
       orderBy: { date: "desc" },
     });
+  }
+
+  async list(
+    filter: ListCashRegisterDaysFilter,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<CashRegisterDay>> {
+    const where: Prisma.CashRegisterDayWhereInput = {
+      organizationId: filter.organizationId,
+      ...((filter.dateFrom || filter.dateTo) && {
+        date: {
+          ...(filter.dateFrom && { gte: filter.dateFrom }),
+          ...(filter.dateTo && { lte: filter.dateTo }),
+        },
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.cashRegisterDay.findMany({
+        where,
+        orderBy: { date: "desc" },
+        skip: (pagination.page - 1) * pagination.pageSize,
+        take: pagination.pageSize,
+      }),
+      prisma.cashRegisterDay.count({ where }),
+    ]);
+
+    return buildPaginatedResult(items, total, pagination);
   }
 
   /**
