@@ -9,6 +9,8 @@ export interface AccountsPayableFilter {
   status?: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
   dueDateFrom?: Date;
   dueDateTo?: Date;
+  categoryId?: string;
+  search?: string;
   page?: number;
   pageSize?: number;
 }
@@ -19,6 +21,8 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
   if (filter.dueDateFrom)
     params.set("dueDateFrom", filter.dueDateFrom.toISOString());
   if (filter.dueDateTo) params.set("dueDateTo", filter.dueDateTo.toISOString());
+  if (filter.categoryId) params.set("categoryId", filter.categoryId);
+  if (filter.search) params.set("search", filter.search);
   params.set("page", String(filter.page ?? 1));
   params.set("pageSize", String(filter.pageSize ?? 20));
 

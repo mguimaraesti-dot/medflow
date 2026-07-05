@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/shared/ui/button";
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -23,6 +23,7 @@ export function LogoutButton() {
     <Button
       variant="outline"
       size="sm"
+      className={className}
       onClick={handleLogout}
       disabled={loading}
     >

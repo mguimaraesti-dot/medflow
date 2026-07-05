@@ -130,6 +130,7 @@ export function RecurringBillsPanel() {
                   <CategoryCombobox
                     id="recurring-categoryId"
                     categories={categories}
+                    type="OUT"
                     value={field.value}
                     onChange={field.onChange}
                   />

@@ -141,6 +141,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                     id="categoryId"
                     disabled={disabled}
                     categories={categories}
+                    type={type}
                     value={field.value}
                     onChange={field.onChange}
                   />

@@ -20,6 +20,7 @@ export async function listAccountsPayableUseCase(
       dueDateTo: input.dueDateTo,
       supplierId: input.supplierId,
       categoryId: input.categoryId,
+      search: input.search,
     },
     { page: input.page, pageSize: input.pageSize },
   );

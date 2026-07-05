@@ -10,6 +10,7 @@ import type {
   MarkAsPaidInput,
 } from "../domain/accounts-payable.repository";
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
+import type { AccountsPayableSummary } from "../domain/accounts-payable-summary.entity";
 
 // Mesmo padrão de join usado em PrismaCashFlowEntryRepository — duplicado
 // aqui de propósito (não importamos infraestrutura de outra feature).
@@ -55,6 +56,9 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       ...statusFilter,
       ...(filter.supplierId && { supplierId: filter.supplierId }),
       ...(filter.categoryId && { categoryId: filter.categoryId }),
+      ...(filter.search && {
+        description: { contains: filter.search, mode: "insensitive" },
+      }),
       ...((filter.dueDateFrom || filter.dueDateTo) && {
         dueDate: {
           ...(filter.dueDateFrom && { gte: filter.dueDateFrom }),
@@ -137,5 +141,92 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       where: { id },
       data: { status: "CANCELLED" },
     });
+  }
+
+  async getSummary(
+    organizationId: string,
+    period: { dueDateFrom?: Date; dueDateTo?: Date },
+  ): Promise<AccountsPayableSummary> {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setUTCHours(23, 59, 59, 999);
+
+    const periodRange = {
+      ...(period.dueDateFrom && { gte: period.dueDateFrom }),
+      ...(period.dueDateTo && { lte: period.dueDateTo }),
+    };
+
+    const baseWhere: Prisma.AccountsPayableWhereInput = { organizationId };
+
+    const [dueToday, upcoming, overdue, paid] = await Promise.all([
+      prisma.accountsPayable.aggregate({
+        where: {
+          ...baseWhere,
+          status: "PENDING",
+          dueDate: { ...periodRange, gte: today, lte: endOfToday },
+        },
+        _count: true,
+        _sum: { amount: true },
+      }),
+      prisma.accountsPayable.aggregate({
+        where: {
+          ...baseWhere,
+          status: "PENDING",
+          dueDate: { ...periodRange, gt: endOfToday },
+        },
+        _count: true,
+        _sum: { amount: true },
+      }),
+      prisma.accountsPayable.aggregate({
+        where: {
+          ...baseWhere,
+          status: "PENDING",
+          dueDate: { ...periodRange, lt: today },
+        },
+        _count: true,
+        _sum: { amount: true },
+      }),
+      prisma.accountsPayable.aggregate({
+        where: {
+          ...baseWhere,
+          status: "PAID",
+          dueDate: periodRange,
+        },
+        _count: true,
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const toBucket = (result: {
+      _count: number;
+      _sum: { amount: Prisma.Decimal | null };
+    }) => ({
+      count: result._count,
+      amount: result._sum.amount ?? new Prisma.Decimal(0),
+    });
+
+    const dueTodayBucket = toBucket(dueToday);
+    const upcomingBucket = toBucket(upcoming);
+    const overdueBucket = toBucket(overdue);
+    const paidBucket = toBucket(paid);
+
+    return {
+      dueToday: dueTodayBucket,
+      upcoming: upcomingBucket,
+      overdue: overdueBucket,
+      paid: paidBucket,
+      total: {
+        count:
+          dueTodayBucket.count +
+          upcomingBucket.count +
+          overdueBucket.count +
+          paidBucket.count,
+        amount: dueTodayBucket.amount
+          .plus(upcomingBucket.amount)
+          .plus(overdueBucket.amount)
+          .plus(paidBucket.amount),
+      },
+    };
   }
 }

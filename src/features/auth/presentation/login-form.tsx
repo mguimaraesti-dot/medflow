@@ -81,7 +81,11 @@ export function LoginForm() {
         </p>
       )}
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <Button
+        type="submit"
+        className="from-primary w-full bg-gradient-to-b to-blue-600 shadow-sm"
+        disabled={isSubmitting}
+      >
         {isSubmitting ? "Entrando..." : "Entrar"}
       </Button>
     </form>

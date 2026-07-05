@@ -55,6 +55,10 @@ Ideias que surgirem durante qualquer Sprint entram aqui primeiro. Só recebem um
 - Notificações push
 - Integração direta com bancos
 - API pública
+- Anexos em Contas a Pagar (upload de boleto/nota fiscal/comprovante) — schema já reserva `boletoPdfUrl`, falta a UI e o storage
+- Assistente Financeiro (IA) — sugerido em mockup de referência do Design Pass; escopo (o que ele faz, que dados acessa) não definido ainda
+- Central de notificações in-app (sino com contador) — distinto de "Notificações push" acima, que é sobre push real
+- Páginas de Relatórios e Configurações dedicadas (hoje não existem como telas)
 
 ---
 

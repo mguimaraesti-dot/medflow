@@ -47,3 +47,40 @@ export function formatDateOnlyBR(value: string | Date): string {
     timeZone: "UTC",
   }).format(date);
 }
+
+/**
+ * Data "inteligente" para a coluna Vencimento (UX spec Contas a Pagar):
+ * "Hoje"/"Amanhã" perto, "Há N dias" no passado, "20 Jul" caso contrário
+ * — evita mostrar só a data crua. Mesma correção de timezone de
+ * `formatDateOnlyBR` (dueDate é meia-noite UTC).
+ */
+export function formatSmartDueDate(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const dateUTC = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+  );
+
+  const now = new Date();
+  const todayUTC = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+
+  const diffDays = Math.round((dateUTC - todayUTC) / 86_400_000);
+
+  if (diffDays === 0) return "Hoje";
+  if (diffDays === 1) return "Amanhã";
+  if (diffDays < 0) {
+    const days = Math.abs(diffDays);
+    return `Há ${days} dia${days > 1 ? "s" : ""}`;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  }).format(date);
+}

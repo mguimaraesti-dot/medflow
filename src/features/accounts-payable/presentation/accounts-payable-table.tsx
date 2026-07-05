@@ -1,13 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Receipt } from "lucide-react";
+import {
+  CheckCircle2,
+  Copy,
+  Eye,
+  MoreHorizontal,
+  Receipt,
+  XCircle,
+} from "lucide-react";
 import { useAccountsPayable } from "./use-accounts-payable";
 import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
-import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
+import { formatCurrencyBRL, formatSmartDueDate } from "@/shared/lib/format";
 import { ApiError } from "@/shared/lib/api-client";
 import { EmptyState } from "@/shared/components/empty-state";
 import { Badge } from "@/shared/ui/badge";
@@ -27,18 +34,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { toast } from "sonner";
+import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
-type QuickFilter = "ALL" | "PENDING" | "OVERDUE" | "PAID" | "CANCELLED";
-
-const FILTERS: { value: QuickFilter; label: string }[] = [
-  { value: "ALL", label: "Todas" },
-  { value: "PENDING", label: "Pendentes" },
-  { value: "OVERDUE", label: "Vencidas" },
-  { value: "PAID", label: "Pagas" },
-  { value: "CANCELLED", label: "Canceladas" },
-];
+export type StatusFilter = "ALL" | "PENDING" | "OVERDUE" | "PAID" | "CANCELLED";
 
 const STATUS_BADGE: Record<
   string,
@@ -53,13 +52,38 @@ const STATUS_BADGE: Record<
   CANCELLED: { label: "Cancelada", variant: "secondary" },
 };
 
-export function AccountsPayableTable({ canPay }: { canPay: boolean }) {
+export function AccountsPayableTable({
+  canPay,
+  canCreate,
+  status,
+  categoryId,
+  search,
+  dueDateFrom,
+  dueDateTo,
+  onView,
+  onDuplicate,
+  onCreateNew,
+}: {
+  canPay: boolean;
+  canCreate: boolean;
+  status: StatusFilter;
+  categoryId?: string;
+  search?: string;
+  dueDateFrom?: Date;
+  dueDateTo?: Date;
+  onView: (payable: AccountsPayableResponseDTO) => void;
+  onDuplicate: (payable: AccountsPayableResponseDTO) => void;
+  onCreateNew: () => void;
+}) {
   const [page, setPage] = useState(1);
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>("ALL");
   const [payingId, setPayingId] = useState<string | null>(null);
 
   const { data, isLoading } = useAccountsPayable({
-    status: quickFilter === "ALL" ? undefined : quickFilter,
+    status: status === "ALL" ? undefined : status,
+    categoryId,
+    search,
+    dueDateFrom,
+    dueDateTo,
     page,
   });
   const { data: suppliers } = useSuppliers();
@@ -68,11 +92,6 @@ export function AccountsPayableTable({ canPay }: { canPay: boolean }) {
 
   const supplierById = new Map(suppliers?.map((s) => [s.id, s]));
   const categoryById = new Map(categories?.map((c) => [c.id, c]));
-
-  function changeFilter(next: QuickFilter) {
-    setQuickFilter(next);
-    setPage(1);
-  }
 
   async function handleCancel(id: string) {
     try {
@@ -88,149 +107,170 @@ export function AccountsPayableTable({ canPay }: { canPay: boolean }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Contas a pagar</CardTitle>
-        <div className="flex flex-wrap gap-2">
-          {FILTERS.map((filter) => (
-            <Button
-              key={filter.value}
-              type="button"
-              size="sm"
-              variant={filter.value === quickFilter ? "default" : "outline"}
-              onClick={() => changeFilter(filter.value)}
-            >
-              {filter.label}
-            </Button>
-          ))}
+    <>
+      {isLoading && (
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
         </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading && (
-          <div className="space-y-2">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-        )}
+      )}
 
-        {!isLoading && data && data.items.length === 0 && (
-          <EmptyState
-            icon={Receipt}
-            title="Nenhuma conta encontrada."
-            description="As contas a pagar cadastradas aparecem aqui."
-          />
-        )}
+      {!isLoading && data && data.items.length === 0 && (
+        <EmptyState
+          icon={Receipt}
+          title="Nenhuma conta encontrada."
+          description="As contas a pagar cadastradas aparecem aqui."
+          action={
+            canCreate && (
+              <Button type="button" size="sm" onClick={onCreateNew}>
+                Nova Conta
+              </Button>
+            )
+          }
+        />
+      )}
 
-        {!isLoading && data && data.items.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.items.map((payable) => {
-                    const badge = STATUS_BADGE[payable.displayStatus];
-                    const canAct =
-                      canPay &&
-                      (payable.displayStatus === "PENDING" ||
-                        payable.displayStatus === "OVERDUE");
+      {!isLoading && data && data.items.length > 0 && (
+        <>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Fornecedor</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.items.map((payable) => {
+                  const badge = STATUS_BADGE[payable.displayStatus];
+                  const category = categoryById.get(payable.categoryId);
+                  const canPayThis =
+                    canPay &&
+                    (payable.displayStatus === "PENDING" ||
+                      payable.displayStatus === "OVERDUE");
 
-                    return (
-                      <TableRow key={payable.id} className="hover:bg-muted/50">
-                        <TableCell className="text-muted-foreground">
-                          {formatDateOnlyBR(payable.dueDate)}
-                        </TableCell>
-                        <TableCell>
-                          {supplierById.get(payable.supplierId)?.name ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {categoryById.get(payable.categoryId)?.name ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {payable.description}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {formatCurrencyBRL(payable.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={badge.variant}>{badge.label}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {canAct && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Ações</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                  return (
+                    <TableRow
+                      key={payable.id}
+                      className="hover:bg-muted/50 cursor-pointer"
+                      onClick={() => onView(payable)}
+                    >
+                      <TableCell className="text-muted-foreground">
+                        {formatSmartDueDate(payable.dueDate)}
+                      </TableCell>
+                      <TableCell>
+                        {supplierById.get(payable.supplierId)?.name ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        {category ? (
+                          <Badge
+                            variant="outline"
+                            style={{
+                              borderColor: category.color,
+                              color: category.color,
+                            }}
+                          >
+                            {category.name}
+                          </Badge>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrencyBRL(payable.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={badge.variant}>{badge.label}</Badge>
+                      </TableCell>
+                      <TableCell
+                        className="text-right"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Ações</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onView(payable)}>
+                              <Eye className="h-4 w-4" />
+                              Visualizar
+                            </DropdownMenuItem>
+                            {canCreate && (
+                              <DropdownMenuItem
+                                onClick={() => onDuplicate(payable)}
+                              >
+                                <Copy className="h-4 w-4" />
+                                Duplicar
+                              </DropdownMenuItem>
+                            )}
+                            {canPayThis && (
+                              <>
                                 <DropdownMenuItem
                                   onClick={() => setPayingId(payable.id)}
                                 >
-                                  Pagar
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  Confirmar pagamento
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   variant="destructive"
                                   onClick={() => handleCancel(payable.id)}
                                 >
+                                  <XCircle className="h-4 w-4" />
                                   Cancelar
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
 
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Página {data.page} de {data.totalPages} · {data.total} conta(s)
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= data.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Próxima
-                </Button>
-              </div>
+          <div className="mt-4 flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">
+              Página {data.page} de {data.totalPages} · {data.total} conta(s)
+            </span>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Anterior
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={page >= data.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Próxima
+              </Button>
             </div>
-          </>
-        )}
-      </CardContent>
+          </div>
+        </>
+      )}
 
       <PayAccountsPayableDialog
         accountsPayableId={payingId}
         open={payingId !== null}
         onOpenChange={(open) => !open && setPayingId(null)}
       />
-    </Card>
+    </>
   );
 }

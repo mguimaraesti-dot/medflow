@@ -2,6 +2,7 @@ import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
 import type { CreateCashFlowEntryInput } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { CashFlowEntry } from "@/features/cash-flow/domain/cash-flow-entry.entity";
 import type { AccountsPayable, PayableStatus } from "./accounts-payable.entity";
+import type { AccountsPayableSummary } from "./accounts-payable-summary.entity";
 
 export interface CreateAccountsPayableInput {
   organizationId: string;
@@ -26,6 +27,8 @@ export interface ListAccountsPayableFilter {
   dueDateTo?: Date;
   supplierId?: string;
   categoryId?: string;
+  /** Busca livre por descrição (contains, case-insensitive). */
+  search?: string;
 }
 
 export interface MarkAsPaidInput {
@@ -61,4 +64,14 @@ export interface AccountsPayableRepository {
   ): Promise<{ payable: AccountsPayable; cashFlowEntry: CashFlowEntry }>;
 
   cancel(id: string): Promise<AccountsPayable>;
+
+  /**
+   * Agregação para os cards de KPI da tela — particiona por
+   * dueToday/upcoming/overdue/paid dentro do período informado; `total`
+   * é a soma dos 4. Sempre calculado no backend (Coding Standards, item 15).
+   */
+  getSummary(
+    organizationId: string,
+    period: { dueDateFrom?: Date; dueDateTo?: Date },
+  ): Promise<AccountsPayableSummary>;
 }

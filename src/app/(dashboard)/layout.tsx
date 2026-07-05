@@ -1,15 +1,14 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/core/auth/session";
-import { LogoutButton } from "@/features/auth/presentation/logout-button";
-import { ThemeToggle } from "@/shared/components/theme-toggle";
-import { NavLinks } from "@/shared/components/nav-links";
+import {
+  AppSidebar,
+  MobileSidebarTrigger,
+} from "@/shared/components/app-sidebar";
 
 /**
- * Topbar mínima (sem sidebar ainda — entra se/quando a navegação
- * crescer o suficiente para justificar). Confirma sessão (o middleware
- * já protege a rota, isso é defesa em profundidade) e dá um jeito de
- * sair.
+ * Sidebar fixa (lg+) + Sheet (mobile) — substitui a topbar horizontal
+ * da Sprint 1 agora que a navegação cresceu (Design Pass). Confirma
+ * sessão (o middleware já protege a rota, isso é defesa em profundidade).
  */
 export default async function DashboardLayout({
   children,
@@ -23,23 +22,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="bg-background min-h-screen">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="font-semibold">
-            MedFlow
-          </Link>
-          <NavLinks />
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-muted-foreground hidden text-sm sm:inline">
-            {user.name} · {user.roleName}
-          </span>
-          <ThemeToggle />
-          <LogoutButton />
-        </div>
-      </header>
-      <main className="p-4">{children}</main>
+    <div className="bg-background flex min-h-screen">
+      <AppSidebar userName={user.name} roleName={user.roleName} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileSidebarTrigger userName={user.name} roleName={user.roleName} />
+        <main className="flex-1 space-y-6 p-4 lg:p-6">{children}</main>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,155 @@
+"use client";
+
+import { useState } from "react";
+import { CalendarDays } from "lucide-react";
+import { SegmentedControl } from "./segmented-control";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { formatDateOnlyBR } from "@/shared/lib/format";
+
+export type PeriodPreset = "TODAY" | "WEEK" | "MONTH" | "YEAR" | "CUSTOM";
+
+export interface PeriodRange {
+  from: Date;
+  to: Date;
+}
+
+function utcDate(year: number, month: number, day: number): Date {
+  return new Date(Date.UTC(year, month, day));
+}
+
+function startOfDayUTC(date: Date): Date {
+  return utcDate(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function endOfDayUTC(date: Date): Date {
+  const result = startOfDayUTC(date);
+  result.setUTCHours(23, 59, 59, 999);
+  return result;
+}
+
+/** Períodos representam o intervalo do calendário inteiro (ex: mês inteiro), não recortado até hoje. */
+export function computePeriodRange(
+  preset: PeriodPreset,
+  custom?: PeriodRange,
+): PeriodRange {
+  const today = startOfDayUTC(new Date());
+
+  if (preset === "TODAY") {
+    return { from: today, to: endOfDayUTC(today) };
+  }
+
+  if (preset === "WEEK") {
+    const start = new Date(today);
+    start.setUTCDate(start.getUTCDate() - today.getUTCDay());
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+    return { from: start, to: endOfDayUTC(end) };
+  }
+
+  if (preset === "MONTH") {
+    const start = utcDate(today.getUTCFullYear(), today.getUTCMonth(), 1);
+    const end = utcDate(today.getUTCFullYear(), today.getUTCMonth() + 1, 0);
+    return { from: start, to: endOfDayUTC(end) };
+  }
+
+  if (preset === "YEAR") {
+    const start = utcDate(today.getUTCFullYear(), 0, 1);
+    const end = utcDate(today.getUTCFullYear(), 11, 31);
+    return { from: start, to: endOfDayUTC(end) };
+  }
+
+  return custom ?? { from: today, to: endOfDayUTC(today) };
+}
+
+const PRESET_OPTIONS = [
+  { value: "TODAY" as const, label: "Hoje" },
+  { value: "WEEK" as const, label: "Esta Semana" },
+  { value: "MONTH" as const, label: "Este Mês" },
+  { value: "YEAR" as const, label: "Este Ano" },
+  { value: "CUSTOM" as const, label: "Personalizado" },
+];
+
+export function PeriodSelector({
+  preset,
+  custom,
+  onChange,
+}: {
+  preset: PeriodPreset;
+  custom?: PeriodRange;
+  onChange: (preset: PeriodPreset, custom?: PeriodRange) => void;
+}) {
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [fromInput, setFromInput] = useState("");
+  const [toInput, setToInput] = useState("");
+
+  const range = computePeriodRange(preset, custom);
+
+  function handlePresetChange(next: PeriodPreset) {
+    if (next === "CUSTOM") {
+      setFromInput(range.from.toISOString().slice(0, 10));
+      setToInput(range.to.toISOString().slice(0, 10));
+      setPopoverOpen(true);
+      return;
+    }
+    onChange(next);
+  }
+
+  function applyCustom() {
+    if (!fromInput || !toInput) return;
+    onChange("CUSTOM", { from: new Date(fromInput), to: new Date(toInput) });
+    setPopoverOpen(false);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <SegmentedControl
+        options={PRESET_OPTIONS}
+        value={preset}
+        onChange={handlePresetChange}
+      />
+
+      {preset === "CUSTOM" && (
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="outline" size="sm">
+              <CalendarDays className="h-4 w-4" />
+              {formatDateOnlyBR(range.from)} - {formatDateOnlyBR(range.to)}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto space-y-3 p-4">
+            <div className="space-y-2">
+              <Label htmlFor="period-from">De</Label>
+              <Input
+                id="period-from"
+                type="date"
+                value={fromInput}
+                onChange={(event) => setFromInput(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="period-to">Até</Label>
+              <Input
+                id="period-to"
+                type="date"
+                value={toInput}
+                onChange={(event) => setToInput(event.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="w-full"
+              disabled={!fromInput || !toInput}
+              onClick={applyCustom}
+            >
+              Aplicar
+            </Button>
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  );
+}

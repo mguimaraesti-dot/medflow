@@ -8,6 +8,7 @@ export const listAccountsPayableSchema = paginationSchema.extend({
   dueDateTo: z.coerce.date().optional(),
   supplierId: cuidSchema.optional(),
   categoryId: cuidSchema.optional(),
+  search: z.string().trim().min(1).max(200).optional(),
 });
 
 export type ListAccountsPayableInput = z.infer<
