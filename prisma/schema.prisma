@@ -126,6 +126,7 @@ model User {
   safeMovements             SafeMovement[]
   createdPayables           AccountsPayable[]   @relation("PayableCreatedBy")
   paidPayables              AccountsPayable[]   @relation("PayablePaidBy")
+  deletedPayables           AccountsPayable[]   @relation("PayableDeletedBy")
 
   @@index([organizationId])
   @@map("users")
@@ -392,6 +393,14 @@ model AccountsPayable {
   paidAt          DateTime?
   paidVia         PaymentConfirmationSource?
 
+  // Soft delete (Sprint 05) — nunca DELETE físico; conta some da listagem
+  // padrão mas continua no banco pra auditoria e restauração. Só permitido
+  // enquanto status === PENDING (ver soft-delete-accounts-payable.use-case).
+  deletedAt        DateTime?
+  deletedByUserId  String?
+  deletedBy        User?          @relation("PayableDeletedBy", fields: [deletedByUserId], references: [id])
+  deletionReason   String?
+
   cashFlowEntries CashFlowEntry[]
 
   createdAt      DateTime      @default(now())
@@ -399,6 +408,7 @@ model AccountsPayable {
 
   @@index([organizationId, status])
   @@index([dueDate])
+  @@index([deletedAt])
   @@map("accounts_payable")
 }
 

@@ -29,6 +29,9 @@ export interface AccountsPayableResponseDTO {
   paidByUserName: string | null;
   paidAt: Date | null;
   paidVia: PaymentConfirmationSource | null;
+  deletedAt: Date | null;
+  deletedByUserName: string | null;
+  deletionReason: string | null;
   createdAt: Date;
 }
 
@@ -64,6 +67,9 @@ export function toAccountsPayableResponseDTO(
     paidByUserName: payable.paidByUserName,
     paidAt: payable.paidAt,
     paidVia: payable.paidVia,
+    deletedAt: payable.deletedAt,
+    deletedByUserName: payable.deletedByUserName,
+    deletionReason: payable.deletionReason,
     createdAt: payable.createdAt,
   };
 }

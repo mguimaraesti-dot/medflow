@@ -13,12 +13,14 @@ import {
   Receipt,
   Settings,
   Tags,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Logo } from "@/shared/components/logo";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/presentation/logout-button";
+import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/shared/ui/sheet";
 
@@ -34,6 +36,13 @@ const FINANCEIRO: NavItem[] = [
   { href: "/cash-flow", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { href: "/treasury", label: "Tesouraria", icon: Landmark },
 ];
+
+/** Só aparece pra quem tem payable:delete (Administrador) — anexado condicionalmente ao final do bloco Financeiro. */
+const DELETED_PAYABLES_ITEM: NavItem = {
+  href: "/accounts-payable/deleted",
+  label: "Contas Excluídas",
+  icon: Trash2,
+};
 
 const CADASTROS: NavItem[] = [
   { href: "/suppliers", label: "Fornecedores", icon: Building2 },
@@ -74,8 +83,17 @@ function NavLink({
   );
 }
 
-function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarNav({
+  permissions,
+  onNavigate,
+}: {
+  permissions: string[];
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
+  const financeiroItems = permissions.includes(PERMISSIONS.PAYABLE_DELETE)
+    ? [...FINANCEIRO, DELETED_PAYABLES_ITEM]
+    : FINANCEIRO;
 
   return (
     <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-3">
@@ -83,7 +101,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         <p className="text-muted-foreground px-3 text-xs font-semibold tracking-wider uppercase">
           Financeiro
         </p>
-        {FINANCEIRO.map((item) => (
+        {financeiroItems.map((item) => (
           <NavLink
             key={item.href}
             item={item}
@@ -157,14 +175,16 @@ function SidebarLogo() {
 export function AppSidebar({
   userName,
   roleName,
+  permissions,
 }: {
   userName: string;
   roleName: string;
+  permissions: string[];
 }) {
   return (
     <aside className="bg-background hidden w-64 shrink-0 flex-col border-r lg:flex">
       <SidebarLogo />
-      <SidebarNav />
+      <SidebarNav permissions={permissions} />
       <SidebarFooter userName={userName} roleName={roleName} />
     </aside>
   );
@@ -174,9 +194,11 @@ export function AppSidebar({
 export function MobileSidebarTrigger({
   userName,
   roleName,
+  permissions,
 }: {
   userName: string;
   roleName: string;
+  permissions: string[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -201,7 +223,10 @@ export function MobileSidebarTrigger({
         <SheetContent side="left" className="flex w-64 flex-col p-0">
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
           <SidebarLogo />
-          <SidebarNav onNavigate={() => setOpen(false)} />
+          <SidebarNav
+            permissions={permissions}
+            onNavigate={() => setOpen(false)}
+          />
           <SidebarFooter userName={userName} roleName={roleName} />
         </SheetContent>
       </Sheet>

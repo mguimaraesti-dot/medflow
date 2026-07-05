@@ -13,6 +13,8 @@ export interface AccountsPayableFilter {
   search?: string;
   page?: number;
   pageSize?: number;
+  /** Só usado pela tela "Contas Excluídas" (requer payable:delete no backend). */
+  deletedOnly?: boolean;
 }
 
 export function useAccountsPayable(filter: AccountsPayableFilter) {
@@ -23,6 +25,7 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
   if (filter.dueDateTo) params.set("dueDateTo", filter.dueDateTo.toISOString());
   if (filter.categoryId) params.set("categoryId", filter.categoryId);
   if (filter.search) params.set("search", filter.search);
+  if (filter.deletedOnly) params.set("deletedOnly", "true");
   params.set("page", String(filter.page ?? 1));
   params.set("pageSize", String(filter.pageSize ?? 20));
 

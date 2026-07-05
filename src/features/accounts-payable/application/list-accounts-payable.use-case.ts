@@ -21,6 +21,7 @@ export async function listAccountsPayableUseCase(
       supplierId: input.supplierId,
       categoryId: input.categoryId,
       search: input.search,
+      deletedOnly: input.deletedOnly,
     },
     { page: input.page, pageSize: input.pageSize },
   );

@@ -32,6 +32,11 @@ export interface ListAccountsPayableFilter {
   categoryId?: string;
   /** Busca livre por descrição (contains, case-insensitive). */
   search?: string;
+  /**
+   * `false` (padrão) — só contas não excluídas. `true` — só as excluídas
+   * (soft delete), usado exclusivamente pela tela "Contas Excluídas".
+   */
+  deletedOnly?: boolean;
 }
 
 export interface MarkAsPaidInput {
@@ -50,6 +55,11 @@ export interface UpdateAccountsPayableInput {
   categoryId: string;
   description: string;
   dueDate: Date;
+}
+
+export interface SoftDeleteAccountsPayableInput {
+  deletedByUserId: string;
+  deletionReason?: string;
 }
 
 /**
@@ -83,6 +93,15 @@ export interface AccountsPayableRepository {
   markAsPaid(id: string, data: MarkAsPaidInput): Promise<AccountsPayable>;
 
   cancel(id: string): Promise<AccountsPayable>;
+
+  /** Soft delete — nunca remove a linha. Só chamado depois de validar (use-case) que a conta está PENDENTE e ainda não excluída. */
+  softDelete(
+    id: string,
+    data: SoftDeleteAccountsPayableInput,
+  ): Promise<AccountsPayable>;
+
+  /** Reverte o soft delete — limpa deletedAt/deletedByUserId/deletionReason. */
+  restore(id: string): Promise<AccountsPayable>;
 
   /**
    * Agregação para os cards de KPI da tela — particiona por

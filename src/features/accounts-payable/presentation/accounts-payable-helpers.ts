@@ -5,6 +5,7 @@ import type {
   RecurrencePeriodicity,
   RecurringBillDetail,
 } from "./use-recurring-bill";
+import type { AccountsPayableAuditLogEntry } from "./use-accounts-payable-audit-log";
 
 export const STATUS_META: Record<
   PayableStatus,
@@ -128,43 +129,124 @@ export interface AccountsPayableEvent {
   id: string;
   label: string;
   actor: string;
-  /** Detalhe complementar (ex: origem da confirmação) — exibido junto ao ator. */
+  /** Detalhe complementar (ex: origem da confirmação, motivo) — exibido junto ao ator. */
   detail?: string;
-  /** null quando o DTO atual não expõe um timestamp confiável para o evento (ex: cancelamento). */
-  date: Date | null;
+  date: Date;
 }
 
-/** Eventos derivados só do que o DTO já expõe hoje (createdAt/paidAt/status) — sem novo endpoint. */
-export function getAccountsPayableEvents(
-  payable: AccountsPayableResponseDTO,
+/**
+ * Timeline real, montada a partir do AuditLog (nunca reconstruída de
+ * createdAt/paidAt/status) — cobre todo o ciclo de vida, inclusive
+ * exclusão/restauração (Soft Delete, Sprint 05). Um único registro de
+ * edição pode virar mais de um evento na timeline quando fornecedor e/ou
+ * categoria mudaram juntos (before/after do mesmo AuditLog).
+ */
+export function toAccountsPayableEvents(
+  entries: AccountsPayableAuditLogEntry[],
 ): AccountsPayableEvent[] {
-  const events: AccountsPayableEvent[] = [
-    {
-      id: "created",
-      label: `Conta cadastrada por ${payable.createdByUserName}`,
-      actor: payable.createdByUserName,
-      date: payable.createdAt,
-    },
-  ];
+  const events: AccountsPayableEvent[] = [];
 
-  const payment = getPaymentConfirmationDetail(payable);
-  if (payment) {
-    events.push({
-      id: "paid",
-      label: `Pagamento confirmado por ${payment.userName}`,
-      actor: payment.userName,
-      detail: `Origem: ${payment.source}`,
-      date: payment.confirmedAt,
-    });
-  }
+  for (const entry of entries) {
+    const actor = entry.userName ?? "Sistema";
+    const date = new Date(entry.createdAt);
 
-  if (payable.status === "CANCELLED") {
-    events.push({
-      id: "cancelled",
-      label: "Conta cancelada",
-      actor: "Sistema",
-      date: null,
-    });
+    switch (entry.action) {
+      case "CREATE":
+        events.push({
+          id: entry.id,
+          label: `Conta criada por ${actor}`,
+          actor,
+          date,
+        });
+        break;
+
+      case "PAYMENT_CONFIRMED": {
+        const paidVia = entry.after?.paidVia;
+        const source = paidVia === "WHATSAPP" ? "WhatsApp" : "Sistema";
+        events.push({
+          id: entry.id,
+          label: "Pagamento confirmado",
+          actor,
+          detail: `Por ${actor} · Origem: ${source}`,
+          date,
+        });
+        break;
+      }
+
+      case "DELETE":
+        events.push({
+          id: entry.id,
+          label: "Conta excluída",
+          actor,
+          detail: entry.reason ? `Motivo: ${entry.reason}` : undefined,
+          date,
+        });
+        break;
+
+      case "UPDATE": {
+        if (entry.reason === "Conta restaurada.") {
+          events.push({
+            id: entry.id,
+            label: "Conta restaurada",
+            actor,
+            date,
+          });
+          break;
+        }
+
+        if (entry.after?.status === "CANCELLED") {
+          events.push({
+            id: entry.id,
+            label: "Conta cancelada",
+            actor,
+            detail: entry.reason ?? undefined,
+            date,
+          });
+          break;
+        }
+
+        const categoryChanged =
+          entry.before &&
+          entry.after &&
+          "categoryId" in entry.after &&
+          entry.before.categoryId !== entry.after.categoryId;
+        const supplierChanged =
+          entry.before &&
+          entry.after &&
+          "supplierId" in entry.after &&
+          entry.before.supplierId !== entry.after.supplierId;
+
+        if (categoryChanged) {
+          events.push({
+            id: `${entry.id}-category`,
+            label: "Categoria alterada",
+            actor,
+            date,
+          });
+        }
+        if (supplierChanged) {
+          events.push({
+            id: `${entry.id}-supplier`,
+            label: "Fornecedor alterado",
+            actor,
+            date,
+          });
+        }
+        if (!categoryChanged && !supplierChanged) {
+          events.push({
+            id: entry.id,
+            label: "Conta editada",
+            actor,
+            detail: entry.reason ?? undefined,
+            date,
+          });
+        }
+        break;
+      }
+
+      default:
+        events.push({ id: entry.id, label: "Evento registrado", actor, date });
+    }
   }
 
   return events;

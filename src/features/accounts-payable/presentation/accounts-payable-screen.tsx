@@ -88,6 +88,7 @@ export function AccountsPayableScreen({
   const can = (permission: string) => permissions.includes(permission);
   const canCreate = can(PERMISSIONS.PAYABLE_CREATE);
   const canPay = can(PERMISSIONS.PAYABLE_PAY);
+  const canDelete = can(PERMISSIONS.PAYABLE_DELETE);
 
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("MONTH");
   const [periodCustom, setPeriodCustom] = useState<PeriodRange | undefined>();
@@ -358,6 +359,7 @@ export function AccountsPayableScreen({
             <AccountsPayableTable
               canPay={canPay}
               canCreate={canCreate}
+              canDelete={canDelete}
               status={status}
               categoryId={categoryId}
               search={search.trim() || undefined}
@@ -388,6 +390,7 @@ export function AccountsPayableScreen({
         categoryName={categoryNameOf(viewing)}
         canPay={canPay}
         canEdit={canCreate}
+        canDelete={canDelete}
         open={viewing !== null}
         onOpenChange={(open) => !open && setViewing(null)}
         onEdit={(payable) => {

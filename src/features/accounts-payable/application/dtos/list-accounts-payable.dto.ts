@@ -9,6 +9,8 @@ export const listAccountsPayableSchema = paginationSchema.extend({
   supplierId: cuidSchema.optional(),
   categoryId: cuidSchema.optional(),
   search: z.string().trim().min(1).max(200).optional(),
+  /** `true` só na tela "Contas Excluídas" — nunca combinado com o filtro padrão. */
+  deletedOnly: z.coerce.boolean().optional(),
 });
 
 export type ListAccountsPayableInput = z.infer<

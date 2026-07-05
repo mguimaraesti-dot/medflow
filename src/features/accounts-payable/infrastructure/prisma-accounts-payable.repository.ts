@@ -7,6 +7,7 @@ import type {
   CreateAccountsPayableInput,
   ListAccountsPayableFilter,
   MarkAsPaidInput,
+  SoftDeleteAccountsPayableInput,
   UpdateAccountsPayableInput,
 } from "../domain/accounts-payable.repository";
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
@@ -17,6 +18,7 @@ import type { AccountsPayableSummary } from "../domain/accounts-payable-summary.
 const USER_NAMES_INCLUDE = {
   createdBy: { select: { name: true } },
   paidBy: { select: { name: true } },
+  deletedBy: { select: { name: true } },
 } as const;
 
 type AccountsPayableRowWithUserNames = Prisma.AccountsPayableGetPayload<{
@@ -24,11 +26,12 @@ type AccountsPayableRowWithUserNames = Prisma.AccountsPayableGetPayload<{
 }>;
 
 function toDomain(row: AccountsPayableRowWithUserNames): AccountsPayable {
-  const { createdBy, paidBy, ...payable } = row;
+  const { createdBy, paidBy, deletedBy, ...payable } = row;
   return {
     ...payable,
     createdByUserName: createdBy.name,
     paidByUserName: paidBy?.name ?? null,
+    deletedByUserName: deletedBy?.name ?? null,
   };
 }
 
@@ -62,6 +65,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
 
     const where: Prisma.AccountsPayableWhereInput = {
       organizationId: filter.organizationId,
+      deletedAt: filter.deletedOnly ? { not: null } : null,
       ...statusFilter,
       ...(filter.supplierId && { supplierId: filter.supplierId }),
       ...(filter.categoryId && { categoryId: filter.categoryId }),
@@ -162,6 +166,31 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     const row = await prisma.accountsPayable.update({
       where: { id },
       data: { status: "CANCELLED" },
+      include: USER_NAMES_INCLUDE,
+    });
+    return toDomain(row);
+  }
+
+  async softDelete(
+    id: string,
+    data: SoftDeleteAccountsPayableInput,
+  ): Promise<AccountsPayable> {
+    const row = await prisma.accountsPayable.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedByUserId: data.deletedByUserId,
+        deletionReason: data.deletionReason,
+      },
+      include: USER_NAMES_INCLUDE,
+    });
+    return toDomain(row);
+  }
+
+  async restore(id: string): Promise<AccountsPayable> {
+    const row = await prisma.accountsPayable.update({
+      where: { id },
+      data: { deletedAt: null, deletedByUserId: null, deletionReason: null },
       include: USER_NAMES_INCLUDE,
     });
     return toDomain(row);

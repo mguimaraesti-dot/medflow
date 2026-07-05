@@ -21,6 +21,8 @@ export const PERMISSIONS = {
   PAYABLE_CREATE: "payable:create",
   PAYABLE_PAY: "payable:pay",
   PAYABLE_READ: "payable:read",
+  /** Excluir (soft delete) e restaurar contas — exclusivo de Administrador. */
+  PAYABLE_DELETE: "payable:delete",
 
   TREASURY_CONFIRM_HANDOFF: "treasury:confirm-handoff",
   TREASURY_REJECT_CONFERENCE: "treasury:reject-conference",
@@ -59,6 +61,7 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.PAYABLE_CREATE,
     PERMISSIONS.PAYABLE_PAY,
     PERMISSIONS.PAYABLE_READ,
+    PERMISSIONS.PAYABLE_DELETE,
     PERMISSIONS.TREASURY_CONFIRM_HANDOFF,
     PERMISSIONS.TREASURY_REJECT_CONFERENCE,
     PERMISSIONS.TREASURY_SANGRIA,

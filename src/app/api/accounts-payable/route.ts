@@ -30,6 +30,11 @@ export async function GET(request: NextRequest) {
     const searchParams = Object.fromEntries(request.nextUrl.searchParams);
     const input = listAccountsPayableSchema.parse(searchParams);
 
+    // "Contas Excluídas" só é visível pra quem pode excluir/restaurar.
+    if (input.deletedOnly) {
+      await requirePermission(PERMISSIONS.PAYABLE_DELETE);
+    }
+
     const result = await listAccountsPayableUseCase(
       input,
       user.organizationId,

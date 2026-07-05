@@ -41,6 +41,12 @@ export interface AccountsPayable {
   paidAt: Date | null;
   paidVia: PaymentConfirmationSource | null;
 
+  /** Soft delete — não persistido fisicamente. `null` enquanto a conta não foi excluída. */
+  deletedAt: Date | null;
+  deletedByUserId: string | null;
+  deletedByUserName: string | null;
+  deletionReason: string | null;
+
   createdAt: Date;
   updatedAt: Date;
 }

@@ -119,6 +119,38 @@ export class PayableAlreadyProcessedError extends DomainError {
   }
 }
 
+export class PayableCannotBeDeletedError extends DomainError {
+  readonly code = "PAYABLE_CANNOT_BE_DELETED";
+  readonly httpStatus = 409;
+
+  constructor(accountsPayableId: string, status: "PAID" | "CANCELLED") {
+    super(
+      status === "PAID"
+        ? "Contas pagas não podem ser excluídas para preservar a integridade do histórico financeiro."
+        : "Contas canceladas não podem ser excluídas — permanecem apenas para consulta histórica.",
+      { accountsPayableId, status },
+    );
+  }
+}
+
+export class PayableAlreadyDeletedError extends DomainError {
+  readonly code = "PAYABLE_ALREADY_DELETED";
+  readonly httpStatus = 409;
+
+  constructor(accountsPayableId: string) {
+    super("Esta conta já foi excluída.", { accountsPayableId });
+  }
+}
+
+export class PayableNotDeletedError extends DomainError {
+  readonly code = "PAYABLE_NOT_DELETED";
+  readonly httpStatus = 409;
+
+  constructor(accountsPayableId: string) {
+    super("Esta conta não está excluída.", { accountsPayableId });
+  }
+}
+
 // ---------------------------------------------------------------
 // Motor de Tesouraria (docs/decisions/adr-tesouraria.md)
 // ---------------------------------------------------------------

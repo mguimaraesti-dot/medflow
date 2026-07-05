@@ -8,6 +8,7 @@ import {
   Pencil,
   Repeat,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import {
   Sheet,
@@ -20,15 +21,17 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/components/empty-state";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
+import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import {
   STATUS_META,
   getAccountsPayableAttachments,
-  getAccountsPayableEvents,
   getDueDateDisplay,
   getPaymentConfirmationDetail,
   getRecurrenceDisplay,
+  toAccountsPayableEvents,
 } from "./accounts-payable-helpers";
 import { useRecurringBill } from "./use-recurring-bill";
+import { useAccountsPayableAuditLog } from "./use-accounts-payable-audit-log";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
@@ -48,6 +51,7 @@ export function AccountsPayableDrawer({
   categoryName,
   canPay = false,
   canEdit = false,
+  canDelete = false,
   open,
   onOpenChange,
   onEdit,
@@ -57,11 +61,13 @@ export function AccountsPayableDrawer({
   categoryName?: string;
   canPay?: boolean;
   canEdit?: boolean;
+  canDelete?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit?: (payable: AccountsPayableResponseDTO) => void;
 }) {
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: recurringBill } = useRecurringBill(
     payable?.recurringBillId ?? null,
@@ -71,9 +77,11 @@ export function AccountsPayableDrawer({
       ? getRecurrenceDisplay(recurringBill, payable.occurrenceNumber)
       : null;
 
+  const { data: auditLog } = useAccountsPayableAuditLog(payable?.id ?? null);
+  const events = auditLog ? toAccountsPayableEvents(auditLog) : [];
+
   const badge = payable ? STATUS_META[payable.displayStatus] : null;
   const dueDateDisplay = payable ? getDueDateDisplay(payable.dueDate) : null;
-  const events = payable ? getAccountsPayableEvents(payable) : [];
   const attachments = payable ? getAccountsPayableAttachments(payable) : [];
   const paymentConfirmation = payable
     ? getPaymentConfirmationDetail(payable)
@@ -223,9 +231,7 @@ export function AccountsPayableDrawer({
                           <div className="-mt-0.5 pb-1">
                             <p className="text-sm font-medium">{event.label}</p>
                             <p className="text-muted-foreground text-xs">
-                              {event.date
-                                ? formatDateTimeBR(event.date)
-                                : "Data não registrada"}
+                              {formatDateTimeBR(event.date)}
                               {event.detail && ` · ${event.detail}`}
                             </p>
                           </div>
@@ -279,9 +285,7 @@ export function AccountsPayableDrawer({
                             <p className="text-sm font-medium">{event.label}</p>
                             <p className="text-muted-foreground text-xs">
                               Usuário: {event.actor} ·{" "}
-                              {event.date
-                                ? formatDateTimeBR(event.date)
-                                : "Sem timestamp registrado"}
+                              {formatDateTimeBR(event.date)}
                               {event.detail && ` · ${event.detail}`}
                             </p>
                           </div>
@@ -292,7 +296,7 @@ export function AccountsPayableDrawer({
                 </div>
               </Tabs>
 
-              {(canPayThis || canEdit) && (
+              {(canPayThis || canEdit || canDelete) && (
                 <div className="flex gap-2 border-t p-4">
                   {canPayThis && (
                     <Button
@@ -315,6 +319,17 @@ export function AccountsPayableDrawer({
                       Editar conta
                     </Button>
                   )}
+                  {canDelete && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleting(true)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Excluir
+                    </Button>
+                  )}
                 </div>
               )}
             </>
@@ -326,6 +341,13 @@ export function AccountsPayableDrawer({
         accountsPayableId={payingId}
         open={payingId !== null}
         onOpenChange={(open) => !open && setPayingId(null)}
+      />
+
+      <DeleteAccountsPayableDialog
+        payable={payable}
+        open={deleting}
+        onOpenChange={setDeleting}
+        onDeleted={() => onOpenChange(false)}
       />
     </>
   );

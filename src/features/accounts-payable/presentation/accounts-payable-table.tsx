@@ -15,12 +15,14 @@ import {
   Pencil,
   Receipt,
   Repeat,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import { useAccountsPayable } from "./use-accounts-payable";
 import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
+import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import {
   STATUS_META,
   getAccountsPayableAttachments,
@@ -127,6 +129,7 @@ function SortableHead({
 export function AccountsPayableTable({
   canPay,
   canCreate,
+  canDelete,
   status,
   categoryId,
   search,
@@ -140,6 +143,7 @@ export function AccountsPayableTable({
 }: {
   canPay: boolean;
   canCreate: boolean;
+  canDelete: boolean;
   status: StatusFilter;
   categoryId?: string;
   search?: string;
@@ -154,6 +158,8 @@ export function AccountsPayableTable({
   const [page, setPage] = useState(1);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [cancelScopeTarget, setCancelScopeTarget] =
+    useState<AccountsPayableResponseDTO | null>(null);
+  const [deletingTarget, setDeletingTarget] =
     useState<AccountsPayableResponseDTO | null>(null);
   const [sort, setSort] = useState<{
     field: SortField;
@@ -527,6 +533,15 @@ export function AccountsPayableTable({
                                   Cancelar
                                 </DropdownMenuItem>
                               )}
+                              {canDelete && (
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={() => setDeletingTarget(payable)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -573,6 +588,12 @@ export function AccountsPayableTable({
           await handleCancel(cancelScopeTarget.id, scope);
           setCancelScopeTarget(null);
         }}
+      />
+
+      <DeleteAccountsPayableDialog
+        payable={deletingTarget}
+        open={deletingTarget !== null}
+        onOpenChange={(open) => !open && setDeletingTarget(null)}
       />
     </>
   );

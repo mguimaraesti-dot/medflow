@@ -23,9 +23,17 @@ export default async function DashboardLayout({
 
   return (
     <div className="bg-background flex min-h-screen">
-      <AppSidebar userName={user.name} roleName={user.roleName} />
+      <AppSidebar
+        userName={user.name}
+        roleName={user.roleName}
+        permissions={user.permissions}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
-        <MobileSidebarTrigger userName={user.name} roleName={user.roleName} />
+        <MobileSidebarTrigger
+          userName={user.name}
+          roleName={user.roleName}
+          permissions={user.permissions}
+        />
         <main className="flex-1 space-y-6 p-4 lg:p-6">{children}</main>
       </div>
     </div>
