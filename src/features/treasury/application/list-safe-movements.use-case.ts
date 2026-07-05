@@ -13,7 +13,12 @@ export async function listSafeMovementsUseCase(
   deps: Deps,
 ): Promise<PaginatedResult<SafeMovement>> {
   return deps.safeMovementRepository.list(
-    { organizationId, type: input.type },
+    {
+      organizationId,
+      type: input.type,
+      createdAtFrom: input.createdAtFrom,
+      createdAtTo: input.createdAtTo,
+    },
     { page: input.page, pageSize: input.pageSize },
   );
 }

@@ -31,6 +31,8 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
         canOpen={can(PERMISSIONS.CASH_REGISTER_OPEN)}
         canClose={can(PERMISSIONS.CASH_REGISTER_CLOSE)}
         canReopen={can(PERMISSIONS.CASH_REGISTER_REOPEN)}
+        canConfirmHandoff={can(PERMISSIONS.TREASURY_CONFIRM_HANDOFF)}
+        canRejectConference={can(PERMISSIONS.TREASURY_REJECT_CONFERENCE)}
       />
 
       <CashFlowEntryForm

@@ -14,6 +14,8 @@ export interface CreateSafeMovementInput {
 export interface ListSafeMovementsFilter {
   organizationId: string;
   type?: SafeMovementType;
+  createdAtFrom?: Date;
+  createdAtTo?: Date;
 }
 
 export interface SafeMovementRepository {

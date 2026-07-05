@@ -34,6 +34,12 @@ export class PrismaSafeMovementRepository implements SafeMovementRepository {
     const where: Prisma.SafeMovementWhereInput = {
       organizationId: filter.organizationId,
       ...(filter.type && { type: filter.type }),
+      ...((filter.createdAtFrom || filter.createdAtTo) && {
+        createdAt: {
+          ...(filter.createdAtFrom && { gte: filter.createdAtFrom }),
+          ...(filter.createdAtTo && { lte: filter.createdAtTo }),
+        },
+      }),
     };
 
     const [items, total] = await Promise.all([

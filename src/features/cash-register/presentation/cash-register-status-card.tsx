@@ -15,7 +15,9 @@ import {
 } from "@/features/cash-register/application/dtos/open-cash-register.dto";
 import { useCashRegisterToday } from "./use-cash-register-today";
 import { useOpenCashRegister } from "./use-open-cash-register";
-import { useCloseCashRegister } from "./use-close-cash-register";
+import { CloseRegisterDialog } from "./close-register-dialog";
+import { ConfirmHandoffDialog } from "./confirm-handoff-dialog";
+import { RejectConferenceDialog } from "./reject-conference-dialog";
 import { ReopenRegisterDialog } from "./reopen-register-dialog";
 import { ApiError } from "@/shared/lib/api-client";
 import { formatCurrencyBRL } from "@/shared/lib/format";
@@ -31,16 +33,19 @@ export function CashRegisterStatusCard({
   canOpen,
   canClose,
   canReopen,
+  canConfirmHandoff,
+  canRejectConference,
 }: {
   canOpen: boolean;
   canClose: boolean;
   canReopen: boolean;
+  canConfirmHandoff: boolean;
+  canRejectConference: boolean;
 }) {
   const { data: today, isLoading } = useCashRegisterToday();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const openCashRegister = useOpenCashRegister();
-  const closeCashRegister = useCloseCashRegister();
 
   const {
     register,
@@ -59,19 +64,6 @@ export function CashRegisterStatusCard({
         error instanceof ApiError
           ? error.message
           : "Não foi possível abrir o caixa.",
-      );
-    }
-  }
-
-  async function onClose() {
-    setServerError(null);
-    try {
-      await closeCashRegister.mutateAsync();
-    } catch (error) {
-      setServerError(
-        error instanceof ApiError
-          ? error.message
-          : "Não foi possível fechar o caixa.",
       );
     }
   }
@@ -96,7 +88,7 @@ export function CashRegisterStatusCard({
             noValidate
           >
             <div className="space-y-2">
-              <Label htmlFor="openingBalance">Saldo inicial (opcional)</Label>
+              <Label htmlFor="openingBalance">Saldo inicial</Label>
               <Input
                 id="openingBalance"
                 type="number"
@@ -163,30 +155,65 @@ export function CashRegisterStatusCard({
           icon={CircleDollarSign}
         />
         <Card className="py-4">
-          <CardContent className="flex h-full flex-col justify-between px-4">
+          <CardContent className="flex h-full flex-col justify-between gap-2 px-4">
             <span className="text-muted-foreground text-sm">Status</span>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Badge
-                variant={today.status === "OPEN" ? "default" : "secondary"}
+                variant={
+                  today.status === "OPEN"
+                    ? "default"
+                    : today.status === "PENDING_CONFERENCE"
+                      ? "outline"
+                      : "secondary"
+                }
                 className="text-sm"
               >
-                {today.status === "OPEN" ? "Caixa Aberto" : "Caixa Fechado"}
+                {today.status === "OPEN" && "Caixa Aberto"}
+                {today.status === "PENDING_CONFERENCE" &&
+                  "Aguardando conferência"}
+                {today.status === "CLOSED" && "Caixa Fechado"}
               </Badge>
               {today.status === "OPEN" && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  disabled={!canClose || closeCashRegister.isPending}
-                  onClick={onClose}
-                >
-                  {closeCashRegister.isPending ? "Fechando..." : "Fechar"}
-                </Button>
+                <CloseRegisterDialog disabled={!canClose} />
+              )}
+              {today.status === "PENDING_CONFERENCE" && (
+                <div className="flex flex-wrap gap-2">
+                  {canRejectConference && <RejectConferenceDialog />}
+                  {canConfirmHandoff && (
+                    <ConfirmHandoffDialog
+                      suggestedAmount={
+                        today.countedAmount
+                          ? Number(today.countedAmount)
+                          : undefined
+                      }
+                    />
+                  )}
+                </div>
               )}
               {today.status === "CLOSED" && canReopen && (
                 <ReopenRegisterDialog cashRegisterDayId={today.id} />
               )}
             </div>
+            {today.status === "PENDING_CONFERENCE" && (
+              <p className="text-muted-foreground text-xs">
+                Contado: {formatCurrencyBRL(today.countedAmount ?? "0")}
+                {today.difference && (
+                  <>
+                    {" "}
+                    · Diferença:{" "}
+                    <span
+                      className={
+                        Number(today.difference) < 0
+                          ? "text-destructive"
+                          : "text-success"
+                      }
+                    >
+                      {formatCurrencyBRL(today.difference)}
+                    </span>
+                  </>
+                )}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
