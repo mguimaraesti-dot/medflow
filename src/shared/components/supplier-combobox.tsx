@@ -41,6 +41,8 @@ export function SupplierCombobox({
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [documentNumber, setDocumentNumber] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const { data: suppliers } = useSuppliers();
@@ -54,12 +56,16 @@ export function SupplierCombobox({
       const created = await createSupplier.mutateAsync({
         name,
         document: documentNumber.trim() || undefined,
+        contactName: contactName.trim() || undefined,
+        phone: phone.trim() || undefined,
       });
       onChange(created.id);
       setCreateOpen(false);
       setOpen(false);
       setName("");
       setDocumentNumber("");
+      setContactName("");
+      setPhone("");
     } catch (createError) {
       setError(
         createError instanceof ApiError
@@ -154,6 +160,28 @@ export function SupplierCombobox({
                 value={documentNumber}
                 onChange={(event) => setDocumentNumber(event.target.value)}
               />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="supplier-contact-name">
+                  Contato (opcional)
+                </Label>
+                <Input
+                  id="supplier-contact-name"
+                  placeholder="Nome da pessoa de contato"
+                  value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplier-phone">Telefone (opcional)</Label>
+                <Input
+                  id="supplier-phone"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </div>
             </div>
             {error && (
               <p className="text-destructive text-sm" role="alert">

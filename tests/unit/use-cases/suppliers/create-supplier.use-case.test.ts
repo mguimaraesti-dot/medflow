@@ -20,4 +20,29 @@ describe("createSupplierUseCase", () => {
     });
     expect(result).toBe(created);
   });
+
+  it("repassa contato e telefone opcionais quando informados", async () => {
+    const created = { id: "supplier-2", name: "Distribuidora ABC" };
+    const create = vi.fn().mockResolvedValue(created);
+    const supplierRepository = { create } as unknown as SupplierRepository;
+
+    await createSupplierUseCase(
+      {
+        name: "Distribuidora ABC",
+        document: "12.345.678/0001-90",
+        contactName: "Maria Silva",
+        phone: "(11) 98888-7777",
+      },
+      "org-1",
+      { supplierRepository },
+    );
+
+    expect(create).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      name: "Distribuidora ABC",
+      document: "12.345.678/0001-90",
+      contactName: "Maria Silva",
+      phone: "(11) 98888-7777",
+    });
+  });
 });

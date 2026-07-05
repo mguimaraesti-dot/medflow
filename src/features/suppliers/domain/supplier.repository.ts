@@ -4,6 +4,8 @@ export interface CreateSupplierInput {
   organizationId: string;
   name: string;
   document?: string;
+  contactName?: string;
+  phone?: string;
 }
 
 export interface SupplierRepository {

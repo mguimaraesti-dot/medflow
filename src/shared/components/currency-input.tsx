@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { Input } from "@/shared/ui/input";
 import { cn } from "@/shared/lib/utils";
 
+/** Sem o símbolo "R$" — quem exibe o prefixo é o span decorativo do input, nunca os dois juntos. */
 function formatCentsToBRL(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 

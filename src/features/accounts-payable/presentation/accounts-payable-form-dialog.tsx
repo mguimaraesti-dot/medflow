@@ -22,7 +22,7 @@ export function AccountsPayableFormDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Nova conta a pagar</DialogTitle>
         </DialogHeader>
@@ -31,6 +31,7 @@ export function AccountsPayableFormDialog({
           <AccountsPayableForm
             initialValues={initialValues}
             onSuccess={() => onOpenChange(false)}
+            onCancel={() => onOpenChange(false)}
           />
         )}
       </DialogContent>

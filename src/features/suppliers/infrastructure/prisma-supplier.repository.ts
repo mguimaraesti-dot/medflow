@@ -19,6 +19,8 @@ export class PrismaSupplierRepository implements SupplierRepository {
         organizationId: data.organizationId,
         name: data.name,
         document: data.document,
+        contactName: data.contactName,
+        phone: data.phone,
       },
     });
   }

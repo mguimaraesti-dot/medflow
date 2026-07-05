@@ -221,6 +221,8 @@ model Supplier {
 
   name           String
   document       String?      // CPF/CNPJ, opcional na Sprint 1
+  contactName    String?      // pessoa de contato, opcional (Sprint 02 - UX)
+  phone          String?      // telefone de contato, opcional (Sprint 02 - UX)
   active         Boolean      @default(true)
 
   accountsPayable AccountsPayable[]
