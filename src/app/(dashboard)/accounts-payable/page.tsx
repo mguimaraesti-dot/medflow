@@ -4,10 +4,7 @@ import { AccountsPayableScreen } from "@/features/accounts-payable/presentation/
 export default async function AccountsPayablePage() {
   const user = await getSessionUser();
 
-  return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Contas a Pagar</h1>
-      <AccountsPayableScreen permissions={user?.permissions ?? []} />
-    </div>
-  );
+  // Título já é renderizado pela própria AccountsPayableScreen — um <h1>
+  // aqui duplicava "Contas a Pagar" na tela (ver ajuste de UX/Design Pass).
+  return <AccountsPayableScreen permissions={user?.permissions ?? []} />;
 }

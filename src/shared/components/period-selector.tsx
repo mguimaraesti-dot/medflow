@@ -7,6 +7,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { formatDateOnlyBR } from "@/shared/lib/format";
 
 export type PeriodPreset = "TODAY" | "WEEK" | "MONTH" | "YEAR" | "CUSTOM";
@@ -76,10 +83,13 @@ export function PeriodSelector({
   preset,
   custom,
   onChange,
+  variant = "segmented",
 }: {
   preset: PeriodPreset;
   custom?: PeriodRange;
   onChange: (preset: PeriodPreset, custom?: PeriodRange) => void;
+  /** "select" é um único dropdown (usado em telas que precisam de cabeçalho mais enxuto); "segmented" (default) preserva o comportamento original de botões. */
+  variant?: "segmented" | "select";
 }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [fromInput, setFromInput] = useState("");
@@ -103,6 +113,69 @@ export function PeriodSelector({
     setPopoverOpen(false);
   }
 
+  const customRangeControl = preset === "CUSTOM" && (
+    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" size="sm">
+          <CalendarDays className="h-4 w-4" />
+          {formatDateOnlyBR(range.from)} - {formatDateOnlyBR(range.to)}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto space-y-3 p-4">
+        <div className="space-y-2">
+          <Label htmlFor="period-from">De</Label>
+          <Input
+            id="period-from"
+            type="date"
+            value={fromInput}
+            onChange={(event) => setFromInput(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="period-to">Até</Label>
+          <Input
+            id="period-to"
+            type="date"
+            value={toInput}
+            onChange={(event) => setToInput(event.target.value)}
+          />
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="w-full"
+          disabled={!fromInput || !toInput}
+          onClick={applyCustom}
+        >
+          Aplicar
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+
+  if (variant === "select") {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={preset}
+          onValueChange={(value) => handlePresetChange(value as PeriodPreset)}
+        >
+          <SelectTrigger className="w-[170px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PRESET_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {customRangeControl}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <SegmentedControl
@@ -110,46 +183,7 @@ export function PeriodSelector({
         value={preset}
         onChange={handlePresetChange}
       />
-
-      {preset === "CUSTOM" && (
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              <CalendarDays className="h-4 w-4" />
-              {formatDateOnlyBR(range.from)} - {formatDateOnlyBR(range.to)}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto space-y-3 p-4">
-            <div className="space-y-2">
-              <Label htmlFor="period-from">De</Label>
-              <Input
-                id="period-from"
-                type="date"
-                value={fromInput}
-                onChange={(event) => setFromInput(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="period-to">Até</Label>
-              <Input
-                id="period-to"
-                type="date"
-                value={toInput}
-                onChange={(event) => setToInput(event.target.value)}
-              />
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              className="w-full"
-              disabled={!fromInput || !toInput}
-              onClick={applyCustom}
-            >
-              Aplicar
-            </Button>
-          </PopoverContent>
-        </Popover>
-      )}
+      {customRangeControl}
     </div>
   );
 }

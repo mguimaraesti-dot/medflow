@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
@@ -27,7 +28,7 @@ export function KpiCard({
   icon?: LucideIcon;
   /** Chip colorido atrás do ícone (Design Pass) — sem isso, ícone simples (comportamento original). */
   iconTone?: IconTone;
-  comparison?: string;
+  comparison?: ReactNode;
 }) {
   return (
     <Card className="hover:border-ring/40 py-4 transition-colors">
@@ -60,7 +61,7 @@ export function KpiCard({
           {value}
         </p>
         {comparison && (
-          <p className="text-muted-foreground mt-1 text-xs">{comparison}</p>
+          <div className="text-muted-foreground mt-1 text-xs">{comparison}</div>
         )}
       </CardContent>
     </Card>
