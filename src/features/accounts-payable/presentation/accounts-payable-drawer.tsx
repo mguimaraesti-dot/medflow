@@ -6,6 +6,7 @@ import {
   Download,
   FileText,
   Pencil,
+  Repeat,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -25,7 +26,9 @@ import {
   getAccountsPayableEvents,
   getDueDateDisplay,
   getPaymentConfirmationDetail,
+  getRecurrenceDisplay,
 } from "./accounts-payable-helpers";
+import { useRecurringBill } from "./use-recurring-bill";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
@@ -59,6 +62,14 @@ export function AccountsPayableDrawer({
   onEdit?: (payable: AccountsPayableResponseDTO) => void;
 }) {
   const [payingId, setPayingId] = useState<string | null>(null);
+
+  const { data: recurringBill } = useRecurringBill(
+    payable?.recurringBillId ?? null,
+  );
+  const recurrenceDisplay =
+    payable && recurringBill
+      ? getRecurrenceDisplay(recurringBill, payable.occurrenceNumber)
+      : null;
 
   const badge = payable ? STATUS_META[payable.displayStatus] : null;
   const dueDateDisplay = payable ? getDueDateDisplay(payable.dueDate) : null;
@@ -162,6 +173,33 @@ export function AccountsPayableDrawer({
                             Em:{" "}
                             {formatDateTimeBR(paymentConfirmation.confirmedAt)}
                           </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {recurrenceDisplay && (
+                      <div className="space-y-2 rounded-lg border p-3">
+                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                          <Repeat className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                          Recorrente
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <Field
+                            label="Periodicidade"
+                            value={recurrenceDisplay.periodicityLabel}
+                          />
+                          <Field
+                            label="Ocorrência"
+                            value={recurrenceDisplay.occurrenceLabel}
+                          />
+                          <Field
+                            label="Início"
+                            value={recurrenceDisplay.startLabel}
+                          />
+                          <Field
+                            label="Fim"
+                            value={recurrenceDisplay.endLabel}
+                          />
                         </div>
                       </div>
                     )}

@@ -1,105 +1,231 @@
 "use client";
 
-import { Copy, Construction } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
-import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
-import { STATUS_META } from "./accounts-payable-helpers";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { Textarea } from "@/shared/ui/textarea";
+import { SupplierCombobox } from "@/shared/components/supplier-combobox";
+import { CategoryCombobox } from "@/shared/components/category-combobox";
+import { useCategories } from "@/features/categories/presentation/use-categories";
+import { formatCurrencyBRL } from "@/shared/lib/format";
+import { ApiError } from "@/shared/lib/api-client";
+import { useUpdateAccountsPayable } from "./use-update-accounts-payable";
+import {
+  AccountsPayableRecurrenceScopeDialog,
+  type RecurrenceScope,
+} from "./accounts-payable-recurrence-scope-dialog";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="text-sm font-medium">{value}</div>
-    </div>
-  );
+interface EditFormValues {
+  supplierId: string;
+  categoryId: string;
+  dueDate: string;
+  description: string;
+}
+
+function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
+  return {
+    supplierId: payable.supplierId,
+    categoryId: payable.categoryId,
+    dueDate: new Date(payable.dueDate).toISOString().slice(0, 10),
+    description: payable.description,
+  };
 }
 
 /**
- * Ainda não existe caso de uso de atualização de `AccountsPayable` no backend
- * (só create/pay/cancel) — alterar isso é fora do escopo desta iteração de
- * UX. Este modal cobre a interação prevista (botão "Editar conta" visível,
- * abre um Modal, nunca uma página nova) sem fingir uma edição que ainda não
- * existe: mostra os dados atuais e direciona para "Duplicar" enquanto a
- * atualização real não é implementada.
+ * Edição escopada: fornecedor/categoria/vencimento/observação — nunca
+ * valor (imutável fora do cadastro inicial). Quando a conta pertence a
+ * uma recorrência, pergunta se a mudança vale só pra esta ocorrência ou
+ * pras próximas também.
  */
 export function AccountsPayableEditDialog({
   payable,
-  supplierName,
-  categoryName,
   open,
   onOpenChange,
-  onDuplicate,
 }: {
   payable: AccountsPayableResponseDTO | null;
-  supplierName?: string;
-  categoryName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onDuplicate: (payable: AccountsPayableResponseDTO) => void;
 }) {
-  const badge = payable ? STATUS_META[payable.displayStatus] : null;
+  const { data: categories } = useCategories("OUT");
+  const updateAccountsPayable = useUpdateAccountsPayable();
+  const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
+  const [pendingValues, setPendingValues] = useState<EditFormValues | null>(
+    null,
+  );
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<EditFormValues>({
+    defaultValues: {
+      supplierId: "",
+      categoryId: "",
+      dueDate: "",
+      description: "",
+    },
+  });
+
+  useEffect(() => {
+    if (payable) reset(toFormValues(payable));
+  }, [payable, reset]);
+
+  async function submit(values: EditFormValues, scope: RecurrenceScope) {
+    if (!payable) return;
+    try {
+      await updateAccountsPayable.mutateAsync({
+        accountsPayableId: payable.id,
+        input: { ...values, dueDate: new Date(values.dueDate), scope },
+      });
+      toast.success(
+        scope === "SERIES"
+          ? "Alteração aplicada a esta conta e às próximas."
+          : "Conta atualizada.",
+      );
+      setScopeDialogOpen(false);
+      setPendingValues(null);
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Não foi possível atualizar a conta.",
+      );
+    }
+  }
+
+  function onSubmit(values: EditFormValues) {
+    if (payable?.recurringBillId) {
+      setPendingValues(values);
+      setScopeDialogOpen(true);
+      return;
+    }
+    void submit(values, "SINGLE");
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Editar conta</DialogTitle>
-          <DialogDescription>
-            Alteração de conta já cadastrada ainda não está disponível — chega
-            numa próxima etapa (requer um caso de uso de atualização no
-            backend).
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar conta</DialogTitle>
+          </DialogHeader>
 
-        {payable && (
-          <div className="bg-muted/40 grid grid-cols-2 gap-4 rounded-lg border p-4">
-            <Field label="Fornecedor" value={supplierName ?? "—"} />
-            <Field label="Categoria" value={categoryName ?? "—"} />
-            <Field label="Valor" value={formatCurrencyBRL(payable.amount)} />
-            <Field
-              label="Vencimento"
-              value={formatDateOnlyBR(payable.dueDate)}
-            />
-            <Field
-              label="Status"
-              value={
-                badge && (
-                  <Badge variant="outline" className={badge.badgeClassName}>
-                    {badge.label}
-                  </Badge>
-                )
-              }
-            />
-          </div>
-        )}
+          {payable && (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Valor</Label>
+                <p className="text-muted-foreground text-sm">
+                  {formatCurrencyBRL(payable.amount)} — não editável
+                </p>
+              </div>
 
-        <div className="text-muted-foreground flex items-start gap-2 text-xs">
-          <Construction className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          Por enquanto, use &quot;Duplicar&quot; para criar uma nova conta com
-          estes mesmos dados.
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-supplierId">Fornecedor</Label>
+                <Controller
+                  control={control}
+                  name="supplierId"
+                  render={({ field }) => (
+                    <SupplierCombobox
+                      id="edit-supplierId"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => payable && onDuplicate(payable)}
-          >
-            <Copy className="h-4 w-4" />
-            Duplicar conta
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              <div className="space-y-2">
+                <Label htmlFor="edit-categoryId">Categoria</Label>
+                <Controller
+                  control={control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <CategoryCombobox
+                      id="edit-categoryId"
+                      categories={categories}
+                      type="OUT"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-dueDate">Vencimento</Label>
+                <Input
+                  id="edit-dueDate"
+                  type="date"
+                  {...register("dueDate", { required: true })}
+                />
+                {errors.dueDate && (
+                  <p className="text-destructive text-sm">
+                    Informe o vencimento.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Observação</Label>
+                <Textarea
+                  id="edit-description"
+                  rows={2}
+                  {...register("description")}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updateAccountsPayable.isPending}
+                >
+                  {updateAccountsPayable.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Salvar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AccountsPayableRecurrenceScopeDialog
+        open={scopeDialogOpen}
+        onOpenChange={setScopeDialogOpen}
+        title="Esta conta pertence a uma recorrência"
+        description="Como deseja aplicar esta alteração?"
+        singleLabel="Apenas esta conta"
+        seriesLabel="Esta conta e todas as próximas"
+        isPending={updateAccountsPayable.isPending}
+        onConfirm={(scope) => pendingValues && submit(pendingValues, scope)}
+      />
+    </>
   );
 }

@@ -383,6 +383,7 @@ model AccountsPayable {
 
   recurringBillId String?
   recurringBill    RecurringBill? @relation(fields: [recurringBillId], references: [id])
+  occurrenceNumber Int?          // posição desta conta na série (1, 2, 3...) — null se não for recorrente
 
   createdByUserId String        // quem cadastrou (ex: Secretária)
   createdBy       User          @relation("PayableCreatedBy", fields: [createdByUserId], references: [id])
@@ -401,6 +402,14 @@ model AccountsPayable {
   @@map("accounts_payable")
 }
 
+/** Mensal/Quinzenal/Semanal/Anual — usado só pelas recorrências criadas via checkbox "Conta recorrente" (Sprint de Recorrências); o painel antigo (dueDay) sempre grava MONTHLY. */
+enum RecurrencePeriodicity {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+  YEARLY
+}
+
 model RecurringBill {
   id             String       @id @default(cuid())
   organizationId String
@@ -416,6 +425,12 @@ model RecurringBill {
   amount         Decimal      @db.Decimal(14, 2)
   dueDay         Int          // dia do mês (1–28, evita problema em fevereiro)
   active         Boolean      @default(true)
+
+  // Campos novos (Sprint de Recorrências) — nullable pra não quebrar as
+  // recorrências já criadas pelo painel antigo, que só usa dueDay.
+  periodicity    RecurrencePeriodicity @default(MONTHLY)
+  maxOccurrences Int?          // null = sem prazo
+  firstDueDate   DateTime?     @db.Date // vencimento da 1ª ocorrência gerada
 
   payables       AccountsPayable[]
 

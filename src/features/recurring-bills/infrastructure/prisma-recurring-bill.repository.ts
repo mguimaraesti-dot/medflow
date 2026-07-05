@@ -6,6 +6,10 @@ import type {
 import type { RecurringBill } from "../domain/recurring-bill.entity";
 
 export class PrismaRecurringBillRepository implements RecurringBillRepository {
+  async findById(id: string): Promise<RecurringBill | null> {
+    return prisma.recurringBill.findUnique({ where: { id } });
+  }
+
   async listActive(organizationId: string): Promise<RecurringBill[]> {
     return prisma.recurringBill.findMany({
       where: { organizationId, active: true },
@@ -22,6 +26,9 @@ export class PrismaRecurringBillRepository implements RecurringBillRepository {
         description: data.description,
         amount: data.amount,
         dueDay: data.dueDay,
+        periodicity: data.periodicity,
+        maxOccurrences: data.maxOccurrences,
+        firstDueDate: data.firstDueDate,
       },
     });
   }

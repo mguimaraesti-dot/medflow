@@ -19,6 +19,7 @@ export interface CreateAccountsPayableInput {
   qrCodeUrl?: string;
   boletoPdfUrl?: string;
   recurringBillId?: string;
+  occurrenceNumber?: number;
   createdByUserId: string;
 }
 
@@ -39,9 +40,22 @@ export interface MarkAsPaidInput {
 }
 
 /**
- * Contrato do repositório de AccountsPayable. Nunca tem `update` — como
- * em todo o domínio financeiro, a correção de um cadastro é sempre
- * cancelar (nunca editar um valor/vencimento já registrado).
+ * Campos editáveis via `update()` — de propósito, nunca inclui `amount` nem
+ * `status`: valor e ciclo de vida continuam imutáveis fora de
+ * pagar/cancelar. Só existe pra suportar a edição de contas recorrentes
+ * (fornecedor/categoria/vencimento/observação podem mudar entre ocorrências).
+ */
+export interface UpdateAccountsPayableInput {
+  supplierId: string;
+  categoryId: string;
+  description: string;
+  dueDate: Date;
+}
+
+/**
+ * Contrato do repositório de AccountsPayable. `update()` é deliberadamente
+ * restrito (ver `UpdateAccountsPayableInput`) — valor e status continuam só
+ * mudando via pagar/cancelar, nunca editados diretamente.
  */
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;
@@ -52,6 +66,14 @@ export interface AccountsPayableRepository {
   ): Promise<PaginatedResult<AccountsPayable>>;
 
   create(data: CreateAccountsPayableInput): Promise<AccountsPayable>;
+
+  update(
+    id: string,
+    data: UpdateAccountsPayableInput,
+  ): Promise<AccountsPayable>;
+
+  /** Todas as ocorrências de uma recorrência, ordenadas por occurrenceNumber — usado pro Drawer (X de Y) e pra propagar edição/cancelamento às próximas. */
+  listByRecurringBill(recurringBillId: string): Promise<AccountsPayable[]>;
 
   /**
    * Só marca o ciclo de vida (Pendente -> Pago) — MVP atual não faz

@@ -6,6 +6,12 @@ import {
   shortTextSchema,
 } from "@/shared/lib/validators";
 
+export const recurrenceInputSchema = z.object({
+  periodicity: z.enum(["MONTHLY", "BIWEEKLY", "WEEKLY", "YEARLY"]),
+  // undefined = sem prazo (o use case decide o tamanho do lote gerado).
+  maxOccurrences: z.number().int().positive().max(120).optional(),
+});
+
 export const createAccountsPayableSchema = z.object({
   supplierId: cuidSchema,
   categoryId: cuidSchema,
@@ -18,8 +24,11 @@ export const createAccountsPayableSchema = z.object({
   qrCodeUrl: shortTextSchema(500),
   boletoPdfUrl: shortTextSchema(500),
   recurringBillId: cuidSchema.optional(),
+  /** Presente só quando "Conta recorrente" está marcada no cadastro. */
+  recurrence: recurrenceInputSchema.optional(),
 });
 
 export type CreateAccountsPayableInput = z.infer<
   typeof createAccountsPayableSchema
 >;
+export type RecurrenceInput = z.infer<typeof recurrenceInputSchema>;

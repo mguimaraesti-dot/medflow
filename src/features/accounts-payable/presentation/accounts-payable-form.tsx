@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
 import { Textarea } from "@/shared/ui/textarea";
 import {
   Select,
@@ -27,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
+import type { RecurrenceInput } from "../application/dtos/create-accounts-payable.dto";
 
 // Formulário usa <input type="date"> (string) em vez de z.coerce.date()
 // direto — evita o mesmo problema de tipo `unknown` já resolvido no
@@ -51,7 +53,15 @@ const emptyFormValues: AccountsPayableFormValues = {
   boletoPdfUrl: "",
 };
 
-type Periodicity = "MONTHLY" | "WEEKLY" | "YEARLY" | "CUSTOM";
+type Periodicity = RecurrenceInput["periodicity"];
+type RecurrenceEnd = "UNLIMITED" | "AFTER_COUNT";
+
+const PERIODICITY_LABEL: Record<Periodicity, string> = {
+  MONTHLY: "Mensal",
+  BIWEEKLY: "Quinzenal",
+  WEEKLY: "Semanal",
+  YEARLY: "Anual",
+};
 
 /**
  * Sem `<Card>` próprio — quem renderiza (inline ou dentro de um Dialog,
@@ -71,6 +81,9 @@ export function AccountsPayableForm({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isRecurring, setIsRecurring] = useState(false);
   const [periodicity, setPeriodicity] = useState<Periodicity>("MONTHLY");
+  const [recurrenceEnd, setRecurrenceEnd] =
+    useState<RecurrenceEnd>("UNLIMITED");
+  const [occurrenceCount, setOccurrenceCount] = useState("12");
   const [attachments, setAttachments] = useState<File[]>([]);
   const createAccountsPayable = useCreateAccountsPayable();
   const { data: categories } = useCategories("OUT");
@@ -89,19 +102,30 @@ export function AccountsPayableForm({
   async function onSubmit(values: AccountsPayableFormValues) {
     setServerError(null);
     try {
-      // "Recorrente" e os anexos ainda não têm caso de uso no backend
-      // (recorrência prevista pra próxima etapa; anexos exigem um model
-      // de Attachment/Storage que ainda não existe) — por isso não entram
-      // no payload, mesmo já coletados na tela.
+      // Anexos ainda não têm caso de uso no backend (exigem um model de
+      // Attachment/Storage que ainda não existe) — por isso não entram no
+      // payload, mesmo já coletados na tela.
+      const maxOccurrences =
+        recurrenceEnd === "AFTER_COUNT"
+          ? Number.parseInt(occurrenceCount, 10)
+          : undefined;
+
       await createAccountsPayable.mutateAsync({
         ...values,
         dueDate: new Date(values.dueDate),
+        recurrence: isRecurring ? { periodicity, maxOccurrences } : undefined,
       });
       reset(emptyFormValues);
       setIsRecurring(false);
       setPeriodicity("MONTHLY");
+      setRecurrenceEnd("UNLIMITED");
+      setOccurrenceCount("12");
       setAttachments([]);
-      toast.success("Conta a pagar cadastrada.");
+      toast.success(
+        isRecurring
+          ? "Conta recorrente cadastrada."
+          : "Conta a pagar cadastrada.",
+      );
       onSuccess?.();
     } catch (error) {
       const message =
@@ -192,7 +216,7 @@ export function AccountsPayableForm({
           </div>
         </div>
 
-        <div className="space-y-3 rounded-lg border p-3">
+        <div className="space-y-4 rounded-lg border p-3">
           <label className="flex items-center gap-2 text-sm font-medium">
             <Checkbox
               checked={isRecurring}
@@ -201,26 +225,63 @@ export function AccountsPayableForm({
             Conta recorrente
           </label>
           {isRecurring && (
-            <div className="space-y-2 pl-6">
-              <Label htmlFor="periodicity">Periodicidade</Label>
-              <Select
-                value={periodicity}
-                onValueChange={(value) => setPeriodicity(value as Periodicity)}
-              >
-                <SelectTrigger id="periodicity" className="w-full sm:w-[220px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MONTHLY">Mensal</SelectItem>
-                  <SelectItem value="WEEKLY">Semanal</SelectItem>
-                  <SelectItem value="YEARLY">Anual</SelectItem>
-                  <SelectItem value="CUSTOM">Personalizada</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                Recorrência automática ainda não está disponível — esta conta
-                será cadastrada só para o vencimento acima.
-              </p>
+            <div className="space-y-4 pl-6">
+              <div className="space-y-2">
+                <Label htmlFor="periodicity">Periodicidade</Label>
+                <Select
+                  value={periodicity}
+                  onValueChange={(value) =>
+                    setPeriodicity(value as Periodicity)
+                  }
+                >
+                  <SelectTrigger
+                    id="periodicity"
+                    className="w-full sm:w-[220px]"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PERIODICITY_LABEL).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Término</Label>
+                <RadioGroup
+                  value={recurrenceEnd}
+                  onValueChange={(value) =>
+                    setRecurrenceEnd(value as RecurrenceEnd)
+                  }
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="UNLIMITED" />
+                    Sem prazo
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="AFTER_COUNT" />
+                    <span className="flex items-center gap-2">
+                      Após
+                      <Input
+                        type="number"
+                        min={1}
+                        max={120}
+                        value={occurrenceCount}
+                        disabled={recurrenceEnd !== "AFTER_COUNT"}
+                        onChange={(event) =>
+                          setOccurrenceCount(event.target.value)
+                        }
+                        className="h-8 w-20"
+                      />
+                      ocorrências
+                    </span>
+                  </label>
+                </RadioGroup>
+              </div>
             </div>
           )}
         </div>

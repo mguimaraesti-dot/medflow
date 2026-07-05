@@ -22,6 +22,7 @@ export interface AccountsPayableResponseDTO {
   /** Igual a `status`, exceto quando PENDING e já vencida — nunca persistido, só calculado aqui. */
   displayStatus: PayableStatus;
   recurringBillId: string | null;
+  occurrenceNumber: number | null;
   createdByUserId: string;
   createdByUserName: string;
   paidByUserId: string | null;
@@ -56,6 +57,7 @@ export function toAccountsPayableResponseDTO(
     status: payable.status,
     displayStatus,
     recurringBillId: payable.recurringBillId,
+    occurrenceNumber: payable.occurrenceNumber,
     createdByUserId: payable.createdByUserId,
     createdByUserName: payable.createdByUserName,
     paidByUserId: payable.paidByUserId,

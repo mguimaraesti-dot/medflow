@@ -31,6 +31,8 @@ export interface AccountsPayable {
   status: PayableStatus;
 
   recurringBillId: string | null;
+  /** Posição desta conta na série da recorrência (1, 2, 3...) — null se não for recorrente. */
+  occurrenceNumber: number | null;
 
   createdByUserId: string;
   createdByUserName: string;

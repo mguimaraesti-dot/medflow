@@ -22,6 +22,7 @@ function buildPayable(
     boletoPdfUrl: null,
     status: "PENDING",
     recurringBillId: null,
+    occurrenceNumber: null,
     createdByUserId: "user-1",
     createdByUserName: "Marcelo Guimarães",
     paidByUserId: null,

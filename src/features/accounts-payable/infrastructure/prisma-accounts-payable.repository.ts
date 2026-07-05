@@ -7,6 +7,7 @@ import type {
   CreateAccountsPayableInput,
   ListAccountsPayableFilter,
   MarkAsPaidInput,
+  UpdateAccountsPayableInput,
 } from "../domain/accounts-payable.repository";
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
 import type { AccountsPayableSummary } from "../domain/accounts-payable-summary.entity";
@@ -104,11 +105,40 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         qrCodeUrl: data.qrCodeUrl,
         boletoPdfUrl: data.boletoPdfUrl,
         recurringBillId: data.recurringBillId,
+        occurrenceNumber: data.occurrenceNumber,
         createdByUserId: data.createdByUserId,
       },
       include: USER_NAMES_INCLUDE,
     });
     return toDomain(row);
+  }
+
+  async update(
+    id: string,
+    data: UpdateAccountsPayableInput,
+  ): Promise<AccountsPayable> {
+    const row = await prisma.accountsPayable.update({
+      where: { id },
+      data: {
+        supplierId: data.supplierId,
+        categoryId: data.categoryId,
+        description: data.description,
+        dueDate: data.dueDate,
+      },
+      include: USER_NAMES_INCLUDE,
+    });
+    return toDomain(row);
+  }
+
+  async listByRecurringBill(
+    recurringBillId: string,
+  ): Promise<AccountsPayable[]> {
+    const rows = await prisma.accountsPayable.findMany({
+      where: { recurringBillId },
+      include: USER_NAMES_INCLUDE,
+      orderBy: { occurrenceNumber: "asc" },
+    });
+    return rows.map(toDomain);
   }
 
   async markAsPaid(

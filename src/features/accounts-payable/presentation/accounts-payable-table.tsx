@@ -14,11 +14,13 @@ import {
   Paperclip,
   Pencil,
   Receipt,
+  Repeat,
   XCircle,
 } from "lucide-react";
 import { useAccountsPayable } from "./use-accounts-payable";
 import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
+import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
 import {
   STATUS_META,
   getAccountsPayableAttachments,
@@ -151,6 +153,8 @@ export function AccountsPayableTable({
 }) {
   const [page, setPage] = useState(1);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [cancelScopeTarget, setCancelScopeTarget] =
+    useState<AccountsPayableResponseDTO | null>(null);
   const [sort, setSort] = useState<{
     field: SortField;
     direction: SortDirection;
@@ -235,10 +239,15 @@ export function AccountsPayableTable({
     // referência instável sem perder reatividade.
   }, [data, sort, supplierById, categoryById]);
 
-  async function handleCancel(id: string) {
+  async function handleCancel(
+    id: string,
+    scope: "SINGLE" | "SERIES" = "SINGLE",
+  ) {
     try {
-      await cancelAccountsPayable.mutateAsync(id);
-      toast.success("Conta cancelada.");
+      await cancelAccountsPayable.mutateAsync({ accountsPayableId: id, scope });
+      toast.success(
+        scope === "SERIES" ? "Recorrência encerrada." : "Conta cancelada.",
+      );
     } catch (error) {
       toast.error(
         error instanceof ApiError
@@ -365,7 +374,18 @@ export function AccountsPayableTable({
                         </p>
                       </TableCell>
                       <TableCell>
-                        {supplierById.get(payable.supplierId)?.name ?? "—"}
+                        <span className="inline-flex items-center gap-1.5">
+                          {supplierById.get(payable.supplierId)?.name ?? "—"}
+                          {payable.recurringBillId && (
+                            <Badge
+                              variant="outline"
+                              className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
+                            >
+                              <Repeat className="h-3 w-3" />
+                              Recorrente
+                            </Badge>
+                          )}
+                        </span>
                       </TableCell>
                       {visibleColumns.category && (
                         <TableCell>
@@ -497,7 +517,11 @@ export function AccountsPayableTable({
                               {canPayThis && (
                                 <DropdownMenuItem
                                   variant="destructive"
-                                  onClick={() => handleCancel(payable.id)}
+                                  onClick={() =>
+                                    payable.recurringBillId
+                                      ? setCancelScopeTarget(payable)
+                                      : handleCancel(payable.id)
+                                  }
                                 >
                                   <XCircle className="h-4 w-4" />
                                   Cancelar
@@ -533,6 +557,22 @@ export function AccountsPayableTable({
         accountsPayableId={payingId}
         open={payingId !== null}
         onOpenChange={(open) => !open && setPayingId(null)}
+      />
+
+      <AccountsPayableRecurrenceScopeDialog
+        open={cancelScopeTarget !== null}
+        onOpenChange={(open) => !open && setCancelScopeTarget(null)}
+        title="Esta conta pertence a uma recorrência"
+        description="Como deseja cancelar?"
+        singleLabel="Apenas esta conta"
+        seriesLabel="Encerrar recorrência"
+        confirmLabel="Confirmar"
+        isPending={cancelAccountsPayable.isPending}
+        onConfirm={async (scope) => {
+          if (!cancelScopeTarget) return;
+          await handleCancel(cancelScopeTarget.id, scope);
+          setCancelScopeTarget(null);
+        }}
       />
     </>
   );

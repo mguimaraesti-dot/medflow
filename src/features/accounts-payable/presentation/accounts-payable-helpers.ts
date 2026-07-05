@@ -1,6 +1,10 @@
-import { formatSmartDueDate } from "@/shared/lib/format";
+import { formatDateOnlyBR, formatSmartDueDate } from "@/shared/lib/format";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 import type { PayableStatus } from "../domain/accounts-payable.entity";
+import type {
+  RecurrencePeriodicity,
+  RecurringBillDetail,
+} from "./use-recurring-bill";
 
 export const STATUS_META: Record<
   PayableStatus,
@@ -164,4 +168,74 @@ export function getAccountsPayableEvents(
   }
 
   return events;
+}
+
+export const PERIODICITY_LABEL: Record<RecurrencePeriodicity, string> = {
+  MONTHLY: "Mensal",
+  BIWEEKLY: "Quinzenal",
+  WEEKLY: "Semanal",
+  YEARLY: "Anual",
+};
+
+/** Mesma lógica de avanço de data do `createRecurringAccountsPayableUseCase` — duplicada de propósito (presentation não importa application). */
+function addPeriod(
+  date: Date,
+  periodicity: RecurrencePeriodicity,
+  times: number,
+): Date {
+  const result = new Date(date);
+  switch (periodicity) {
+    case "WEEKLY":
+      result.setUTCDate(result.getUTCDate() + 7 * times);
+      return result;
+    case "BIWEEKLY":
+      result.setUTCDate(result.getUTCDate() + 14 * times);
+      return result;
+    case "YEARLY":
+      result.setUTCFullYear(result.getUTCFullYear() + times);
+      return result;
+    case "MONTHLY":
+    default:
+      result.setUTCMonth(result.getUTCMonth() + times);
+      return result;
+  }
+}
+
+export interface RecurrenceDisplay {
+  periodicityLabel: string;
+  occurrenceLabel: string;
+  startLabel: string;
+  endLabel: string;
+}
+
+export function getRecurrenceDisplay(
+  bill: RecurringBillDetail,
+  occurrenceNumber: number | null,
+): RecurrenceDisplay {
+  const occurrenceLabel = occurrenceNumber
+    ? bill.maxOccurrences
+      ? `${occurrenceNumber} de ${bill.maxOccurrences}`
+      : `${occurrenceNumber}`
+    : "—";
+
+  const startLabel = bill.firstDueDate
+    ? formatDateOnlyBR(bill.firstDueDate)
+    : "—";
+
+  let endLabel = "Sem prazo";
+  if (bill.maxOccurrences && bill.firstDueDate) {
+    const end = addPeriod(
+      new Date(bill.firstDueDate),
+      bill.periodicity,
+      bill.maxOccurrences - 1,
+    );
+    endLabel = formatDateOnlyBR(end);
+  }
+
+  return {
+    periodicityLabel: PERIODICITY_LABEL[bill.periodicity],
+    occurrenceLabel,
+    startLabel,
+    endLabel,
+  };
 }

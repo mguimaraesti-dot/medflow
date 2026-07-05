@@ -8,10 +8,13 @@ import { createAccountsPayableSchema } from "@/features/accounts-payable/applica
 import { listAccountsPayableSchema } from "@/features/accounts-payable/application/dtos/list-accounts-payable.dto";
 import { toAccountsPayableResponseDTO } from "@/features/accounts-payable/application/dtos/accounts-payable.response-dto";
 import { createAccountsPayableUseCase } from "@/features/accounts-payable/application/create-accounts-payable.use-case";
+import { createRecurringAccountsPayableUseCase } from "@/features/accounts-payable/application/create-recurring-accounts-payable.use-case";
 import { listAccountsPayableUseCase } from "@/features/accounts-payable/application/list-accounts-payable.use-case";
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
+import { PrismaRecurringBillRepository } from "@/features/recurring-bills/infrastructure/prisma-recurring-bill.repository";
 
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
+const recurringBillRepository = new PrismaRecurringBillRepository();
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
@@ -59,6 +62,21 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const input = createAccountsPayableSchema.parse(body);
+
+    if (input.recurrence) {
+      const { recurrence, ...rest } = input;
+      const result = await createRecurringAccountsPayableUseCase(
+        { ...rest, firstDueDate: input.dueDate, ...recurrence },
+        user.id,
+        user.organizationId,
+        { accountsPayableRepository, recurringBillRepository },
+      );
+
+      return NextResponse.json(
+        { data: toAccountsPayableResponseDTO(result.payables[0]) },
+        { status: 201 },
+      );
+    }
 
     const result = await createAccountsPayableUseCase(
       input,

@@ -397,14 +397,8 @@ export function AccountsPayableScreen({
       />
       <AccountsPayableEditDialog
         payable={editing}
-        supplierName={supplierNameOf(editing)}
-        categoryName={categoryNameOf(editing)}
         open={editing !== null}
         onOpenChange={(open) => !open && setEditing(null)}
-        onDuplicate={(payable) => {
-          setEditing(null);
-          handleDuplicate(payable);
-        }}
       />
     </div>
   );

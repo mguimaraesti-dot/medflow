@@ -1,5 +1,8 @@
 import { toMoneyString } from "@/shared/lib/money";
-import type { RecurringBill } from "../../domain/recurring-bill.entity";
+import type {
+  RecurrencePeriodicity,
+  RecurringBill,
+} from "../../domain/recurring-bill.entity";
 
 export interface RecurringBillResponseDTO {
   id: string;
@@ -10,6 +13,9 @@ export interface RecurringBillResponseDTO {
   amount: string;
   dueDay: number;
   active: boolean;
+  periodicity: RecurrencePeriodicity;
+  maxOccurrences: number | null;
+  firstDueDate: Date | null;
 }
 
 export function toRecurringBillResponseDTO(
@@ -24,5 +30,8 @@ export function toRecurringBillResponseDTO(
     amount: toMoneyString(bill.amount) as string,
     dueDay: bill.dueDay,
     active: bill.active,
+    periodicity: bill.periodicity,
+    maxOccurrences: bill.maxOccurrences,
+    firstDueDate: bill.firstDueDate,
   };
 }

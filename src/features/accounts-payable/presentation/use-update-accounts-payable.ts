@@ -2,23 +2,23 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api-client";
+import type { UpdateAccountsPayableInput } from "../application/dtos/update-accounts-payable.dto";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
-export function useCancelAccountsPayable() {
+export function useUpdateAccountsPayable() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       accountsPayableId,
-      scope = "SINGLE",
+      input,
     }: {
       accountsPayableId: string;
-      /** "SERIES" só faz sentido numa conta recorrente — encerra a série. */
-      scope?: "SINGLE" | "SERIES";
+      input: UpdateAccountsPayableInput;
     }) =>
       apiFetch<AccountsPayableResponseDTO>(
-        `/api/accounts-payable/${accountsPayableId}/cancel`,
-        { method: "POST", body: JSON.stringify({ scope }) },
+        `/api/accounts-payable/${accountsPayableId}`,
+        { method: "PATCH", body: JSON.stringify(input) },
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts-payable"] });
