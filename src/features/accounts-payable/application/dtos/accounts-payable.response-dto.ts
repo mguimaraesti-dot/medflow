@@ -23,7 +23,9 @@ export interface AccountsPayableResponseDTO {
   displayStatus: PayableStatus;
   recurringBillId: string | null;
   createdByUserId: string;
+  createdByUserName: string;
   paidByUserId: string | null;
+  paidByUserName: string | null;
   paidAt: Date | null;
   paidVia: PaymentConfirmationSource | null;
   createdAt: Date;
@@ -55,7 +57,9 @@ export function toAccountsPayableResponseDTO(
     displayStatus,
     recurringBillId: payable.recurringBillId,
     createdByUserId: payable.createdByUserId,
+    createdByUserName: payable.createdByUserName,
     paidByUserId: payable.paidByUserId,
+    paidByUserName: payable.paidByUserName,
     paidAt: payable.paidAt,
     paidVia: payable.paidVia,
     createdAt: payable.createdAt,

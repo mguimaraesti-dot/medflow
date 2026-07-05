@@ -88,8 +88,8 @@ export function getAccountsPayableAttachments(
   return attachments;
 }
 
-/** Lê a origem real da confirmação (`paidVia`) — hoje sempre "SYSTEM", pois o canal WhatsApp ainda não está integrado. */
-export function getConfirmedByLabel(
+/** Origem da confirmação (`paidVia`) — hoje sempre "SYSTEM", pois o canal WhatsApp ainda não está integrado. */
+function getPaymentSourceLabel(
   payable: AccountsPayableResponseDTO,
 ): "Sistema" | "WhatsApp" | null {
   if (payable.paidVia === "WHATSAPP") return "WhatsApp";
@@ -97,10 +97,35 @@ export function getConfirmedByLabel(
   return null;
 }
 
+export interface PaymentConfirmationDetail {
+  userName: string;
+  source: "Sistema" | "WhatsApp";
+  confirmedAt: Date;
+}
+
+/**
+ * Auditoria de pagamento: quem confirmou (usuário real, nunca só "Sistema"),
+ * por qual origem (Sistema/WhatsApp) e quando. `null` quando a conta ainda
+ * não foi paga.
+ */
+export function getPaymentConfirmationDetail(
+  payable: AccountsPayableResponseDTO,
+): PaymentConfirmationDetail | null {
+  const source = getPaymentSourceLabel(payable);
+  if (!payable.paidByUserName || !payable.paidAt || !source) return null;
+  return {
+    userName: payable.paidByUserName,
+    source,
+    confirmedAt: payable.paidAt,
+  };
+}
+
 export interface AccountsPayableEvent {
   id: string;
   label: string;
   actor: string;
+  /** Detalhe complementar (ex: origem da confirmação) — exibido junto ao ator. */
+  detail?: string;
   /** null quando o DTO atual não expõe um timestamp confiável para o evento (ex: cancelamento). */
   date: Date | null;
 }
@@ -112,18 +137,20 @@ export function getAccountsPayableEvents(
   const events: AccountsPayableEvent[] = [
     {
       id: "created",
-      label: "Conta cadastrada",
-      actor: "Sistema",
+      label: `Conta cadastrada por ${payable.createdByUserName}`,
+      actor: payable.createdByUserName,
       date: payable.createdAt,
     },
   ];
 
-  if (payable.paidAt) {
+  const payment = getPaymentConfirmationDetail(payable);
+  if (payment) {
     events.push({
       id: "paid",
-      label: "Pagamento confirmado",
-      actor: getConfirmedByLabel(payable) ?? "Sistema",
-      date: payable.paidAt,
+      label: `Pagamento confirmado por ${payment.userName}`,
+      actor: payment.userName,
+      detail: `Origem: ${payment.source}`,
+      date: payment.confirmedAt,
     });
   }
 

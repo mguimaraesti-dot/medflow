@@ -11,9 +11,33 @@ import type {
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
 import type { AccountsPayableSummary } from "../domain/accounts-payable-summary.entity";
 
+// Mesmo padrão de join usado em PrismaCashFlowEntryRepository — duplicado
+// aqui de propósito (não importamos infraestrutura de outra feature).
+const USER_NAMES_INCLUDE = {
+  createdBy: { select: { name: true } },
+  paidBy: { select: { name: true } },
+} as const;
+
+type AccountsPayableRowWithUserNames = Prisma.AccountsPayableGetPayload<{
+  include: typeof USER_NAMES_INCLUDE;
+}>;
+
+function toDomain(row: AccountsPayableRowWithUserNames): AccountsPayable {
+  const { createdBy, paidBy, ...payable } = row;
+  return {
+    ...payable,
+    createdByUserName: createdBy.name,
+    paidByUserName: paidBy?.name ?? null,
+  };
+}
+
 export class PrismaAccountsPayableRepository implements AccountsPayableRepository {
   async findById(id: string): Promise<AccountsPayable | null> {
-    return prisma.accountsPayable.findUnique({ where: { id } });
+    const row = await prisma.accountsPayable.findUnique({
+      where: { id },
+      include: USER_NAMES_INCLUDE,
+    });
+    return row ? toDomain(row) : null;
   }
 
   async list(
@@ -51,9 +75,10 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       }),
     };
 
-    const [items, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       prisma.accountsPayable.findMany({
         where,
+        include: USER_NAMES_INCLUDE,
         orderBy: { dueDate: "asc" },
         skip: (pagination.page - 1) * pagination.pageSize,
         take: pagination.pageSize,
@@ -61,11 +86,11 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       prisma.accountsPayable.count({ where }),
     ]);
 
-    return buildPaginatedResult(items, total, pagination);
+    return buildPaginatedResult(rows.map(toDomain), total, pagination);
   }
 
   async create(data: CreateAccountsPayableInput): Promise<AccountsPayable> {
-    return prisma.accountsPayable.create({
+    const row = await prisma.accountsPayable.create({
       data: {
         organizationId: data.organizationId,
         supplierId: data.supplierId,
@@ -81,14 +106,16 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         recurringBillId: data.recurringBillId,
         createdByUserId: data.createdByUserId,
       },
+      include: USER_NAMES_INCLUDE,
     });
+    return toDomain(row);
   }
 
   async markAsPaid(
     id: string,
     data: MarkAsPaidInput,
   ): Promise<AccountsPayable> {
-    return prisma.accountsPayable.update({
+    const row = await prisma.accountsPayable.update({
       where: { id },
       data: {
         status: "PAID",
@@ -96,14 +123,18 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         paidAt: new Date(),
         paidVia: data.paidVia,
       },
+      include: USER_NAMES_INCLUDE,
     });
+    return toDomain(row);
   }
 
   async cancel(id: string): Promise<AccountsPayable> {
-    return prisma.accountsPayable.update({
+    const row = await prisma.accountsPayable.update({
       where: { id },
       data: { status: "CANCELLED" },
+      include: USER_NAMES_INCLUDE,
     });
+    return toDomain(row);
   }
 
   async getSummary(

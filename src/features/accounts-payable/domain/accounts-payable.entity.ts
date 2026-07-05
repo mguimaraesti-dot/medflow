@@ -33,7 +33,9 @@ export interface AccountsPayable {
   recurringBillId: string | null;
 
   createdByUserId: string;
+  createdByUserName: string;
   paidByUserId: string | null;
+  paidByUserName: string | null;
   paidAt: Date | null;
   paidVia: PaymentConfirmationSource | null;
 

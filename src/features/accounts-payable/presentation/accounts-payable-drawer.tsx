@@ -23,8 +23,8 @@ import {
   STATUS_META,
   getAccountsPayableAttachments,
   getAccountsPayableEvents,
-  getConfirmedByLabel,
   getDueDateDisplay,
+  getPaymentConfirmationDetail,
 } from "./accounts-payable-helpers";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
@@ -64,7 +64,9 @@ export function AccountsPayableDrawer({
   const dueDateDisplay = payable ? getDueDateDisplay(payable.dueDate) : null;
   const events = payable ? getAccountsPayableEvents(payable) : [];
   const attachments = payable ? getAccountsPayableAttachments(payable) : [];
-  const confirmedByLabel = payable ? getConfirmedByLabel(payable) : null;
+  const paymentConfirmation = payable
+    ? getPaymentConfirmationDetail(payable)
+    : null;
   const canPayThis =
     canPay &&
     payable !== null &&
@@ -144,9 +146,26 @@ export function AccountsPayableDrawer({
                       />
                       <Field
                         label="Confirmado por"
-                        value={confirmedByLabel ?? "—"}
+                        value={paymentConfirmation?.userName ?? "—"}
                       />
                     </div>
+
+                    {paymentConfirmation && (
+                      <div className="space-y-2 rounded-lg border p-3">
+                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                          Confirmado por {paymentConfirmation.userName}
+                        </p>
+                        <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
+                          <span>Origem: {paymentConfirmation.source}</span>
+                          <span>
+                            Em:{" "}
+                            {formatDateTimeBR(paymentConfirmation.confirmedAt)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     <Field
                       label="Observação"
                       value={payable.description || "—"}
@@ -168,8 +187,8 @@ export function AccountsPayableDrawer({
                             <p className="text-muted-foreground text-xs">
                               {event.date
                                 ? formatDateTimeBR(event.date)
-                                : "Data não registrada"}{" "}
-                              · {event.actor}
+                                : "Data não registrada"}
+                              {event.detail && ` · ${event.detail}`}
                             </p>
                           </div>
                         </li>
@@ -221,10 +240,11 @@ export function AccountsPayableDrawer({
                           <div>
                             <p className="text-sm font-medium">{event.label}</p>
                             <p className="text-muted-foreground text-xs">
+                              Usuário: {event.actor} ·{" "}
                               {event.date
                                 ? formatDateTimeBR(event.date)
-                                : "Sem timestamp registrado"}{" "}
-                              · Origem: {event.actor}
+                                : "Sem timestamp registrado"}
+                              {event.detail && ` · ${event.detail}`}
                             </p>
                           </div>
                         </li>

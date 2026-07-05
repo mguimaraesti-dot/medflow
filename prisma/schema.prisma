@@ -124,6 +124,8 @@ model User {
   reopenedRegisters         CashRegisterDay[]   @relation("RegisterReopenedBy")
   handoffConfirmedRegisters CashRegisterDay[]   @relation("RegisterHandoffConfirmedBy")
   safeMovements             SafeMovement[]
+  createdPayables           AccountsPayable[]   @relation("PayableCreatedBy")
+  paidPayables              AccountsPayable[]   @relation("PayablePaidBy")
 
   @@index([organizationId])
   @@map("users")
@@ -383,7 +385,9 @@ model AccountsPayable {
   recurringBill    RecurringBill? @relation(fields: [recurringBillId], references: [id])
 
   createdByUserId String        // quem cadastrou (ex: Secretária)
+  createdBy       User          @relation("PayableCreatedBy", fields: [createdByUserId], references: [id])
   paidByUserId    String?       // quem confirmou o pagamento (Financeiro/Proprietário)
+  paidBy          User?         @relation("PayablePaidBy", fields: [paidByUserId], references: [id])
   paidAt          DateTime?
   paidVia         PaymentConfirmationSource?
 

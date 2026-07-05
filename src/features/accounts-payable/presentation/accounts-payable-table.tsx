@@ -22,8 +22,8 @@ import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import {
   STATUS_META,
   getAccountsPayableAttachments,
-  getConfirmedByLabel,
   getDueDateDisplay,
+  getPaymentConfirmationDetail,
 } from "./accounts-payable-helpers";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
@@ -211,8 +211,8 @@ export function AccountsPayableTable({
             ) * dir
           );
         case "CONFIRMED_BY": {
-          const av = getConfirmedByLabel(a) ?? "";
-          const bv = getConfirmedByLabel(b) ?? "";
+          const av = getPaymentConfirmationDetail(a)?.userName ?? "";
+          const bv = getPaymentConfirmationDetail(b)?.userName ?? "";
           return av.localeCompare(bv) * dir;
         }
         case "ATTACHMENTS":
@@ -337,7 +337,8 @@ export function AccountsPayableTable({
                   const badge = STATUS_META[payable.displayStatus];
                   const category = categoryById.get(payable.categoryId);
                   const dueDateDisplay = getDueDateDisplay(payable.dueDate);
-                  const confirmedByLabel = getConfirmedByLabel(payable);
+                  const paymentConfirmation =
+                    getPaymentConfirmationDetail(payable);
                   const attachments = getAccountsPayableAttachments(payable);
                   const canPayThis =
                     canPay &&
@@ -396,16 +397,17 @@ export function AccountsPayableTable({
                       </TableCell>
                       {visibleColumns.confirmedBy && (
                         <TableCell>
-                          {confirmedByLabel ? (
+                          {paymentConfirmation ? (
                             <div className="space-y-0.5">
-                              <Badge variant="outline">
-                                {confirmedByLabel}
-                              </Badge>
-                              {payable.paidAt && (
-                                <p className="text-muted-foreground text-xs">
-                                  {formatDateTimeBR(payable.paidAt)}
-                                </p>
-                              )}
+                              <p className="text-sm font-medium">
+                                {paymentConfirmation.userName}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {paymentConfirmation.source} ·{" "}
+                                {formatDateTimeBR(
+                                  paymentConfirmation.confirmedAt,
+                                )}
+                              </p>
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">
