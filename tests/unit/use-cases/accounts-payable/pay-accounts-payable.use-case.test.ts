@@ -4,10 +4,8 @@ import { payAccountsPayableUseCase } from "@/features/accounts-payable/applicati
 import {
   NotFoundError,
   PayableAlreadyProcessedError,
-  CashRegisterNotOpenError,
 } from "@/core/errors/domain-error";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
-import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: { auditLog: { create: vi.fn() } },
@@ -30,16 +28,11 @@ describe("payAccountsPayableUseCase", () => {
     const accountsPayableRepository = {
       findById: vi.fn().mockResolvedValue(null),
     } as unknown as AccountsPayableRepository;
-    const cashRegisterDayRepository = {} as CashRegisterDayRepository;
 
     await expect(
-      payAccountsPayableUseCase(
-        "payable-1",
-        { paymentMethodId: "pm-1" },
-        "user-1",
-        "org-1",
-        { accountsPayableRepository, cashRegisterDayRepository },
-      ),
+      payAccountsPayableUseCase("payable-1", "user-1", "org-1", {
+        accountsPayableRepository,
+      }),
     ).rejects.toThrow(NotFoundError);
   });
 
@@ -47,73 +40,37 @@ describe("payAccountsPayableUseCase", () => {
     const accountsPayableRepository = {
       findById: vi.fn().mockResolvedValue(buildPayable({ status: "PAID" })),
     } as unknown as AccountsPayableRepository;
-    const cashRegisterDayRepository = {} as CashRegisterDayRepository;
 
     await expect(
-      payAccountsPayableUseCase(
-        "payable-1",
-        { paymentMethodId: "pm-1" },
-        "user-1",
-        "org-1",
-        { accountsPayableRepository, cashRegisterDayRepository },
-      ),
+      payAccountsPayableUseCase("payable-1", "user-1", "org-1", {
+        accountsPayableRepository,
+      }),
     ).rejects.toThrow(PayableAlreadyProcessedError);
   });
 
-  it("bloqueia quando não há caixa aberto hoje", async () => {
-    const accountsPayableRepository = {
-      findById: vi.fn().mockResolvedValue(buildPayable()),
-    } as unknown as AccountsPayableRepository;
-    const cashRegisterDayRepository = {
-      findOpenByOrganization: vi.fn().mockResolvedValue(null),
-    } as unknown as CashRegisterDayRepository;
-
-    await expect(
-      payAccountsPayableUseCase(
-        "payable-1",
-        { paymentMethodId: "pm-1" },
-        "user-1",
-        "org-1",
-        { accountsPayableRepository, cashRegisterDayRepository },
-      ),
-    ).rejects.toThrow(CashRegisterNotOpenError);
-  });
-
-  it("monta o CreateCashFlowEntryInput corretamente ao pagar com sucesso", async () => {
+  it("marca como paga com paidByUserId e paidVia 'SYSTEM' — sem caixa nem forma de pagamento", async () => {
     const payable = buildPayable();
     const markAsPaid = vi.fn().mockResolvedValue({
-      payable: { ...payable, status: "PAID" },
-      cashFlowEntry: { id: "entry-1" },
+      ...payable,
+      status: "PAID",
+      paidByUserId: "user-1",
+      paidVia: "SYSTEM",
     });
     const accountsPayableRepository = {
       findById: vi.fn().mockResolvedValue(payable),
       markAsPaid,
     } as unknown as AccountsPayableRepository;
-    const cashRegisterDayRepository = {
-      findOpenByOrganization: vi.fn().mockResolvedValue({ id: "day-1" }),
-    } as unknown as CashRegisterDayRepository;
 
     const result = await payAccountsPayableUseCase(
       "payable-1",
-      { paymentMethodId: "pm-1" },
       "user-1",
       "org-1",
-      { accountsPayableRepository, cashRegisterDayRepository },
+      { accountsPayableRepository },
     );
 
     expect(markAsPaid).toHaveBeenCalledWith("payable-1", {
       paidByUserId: "user-1",
-      cashFlowEntry: {
-        organizationId: "org-1",
-        cashRegisterDayId: "day-1",
-        type: "OUT",
-        amount: "150.00",
-        description: "Aluguel",
-        categoryId: "cat-1",
-        paymentMethodId: "pm-1",
-        accountsPayableId: "payable-1",
-        createdByUserId: "user-1",
-      },
+      paidVia: "SYSTEM",
     });
     expect(result.status).toBe("PAID");
   });

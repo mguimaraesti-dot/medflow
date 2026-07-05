@@ -2,6 +2,9 @@ import type { Prisma } from "@prisma/client";
 
 export type PayableStatus = "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
 
+/** Hoje só "SYSTEM" é possível — WhatsApp ainda não integrado (só preparado via `publicToken`). */
+export type PaymentConfirmationSource = "SYSTEM" | "WHATSAPP";
+
 /**
  * `OVERDUE` nunca é persistido pelo aplicativo — é sempre computado na
  * leitura (dueDate no passado + status ainda PENDING). No banco, o
@@ -32,6 +35,7 @@ export interface AccountsPayable {
   createdByUserId: string;
   paidByUserId: string | null;
   paidAt: Date | null;
+  paidVia: PaymentConfirmationSource | null;
 
   createdAt: Date;
   updatedAt: Date;

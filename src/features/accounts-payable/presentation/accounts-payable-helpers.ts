@@ -88,16 +88,13 @@ export function getAccountsPayableAttachments(
   return attachments;
 }
 
-/**
- * O pagamento hoje só acontece pelo Modal de confirmação do próprio sistema — a
- * integração real com WhatsApp ainda não existe (só o `publicToken` preparado no
- * domínio). Por isso toda conta paga é "Sistema"; quando o canal WhatsApp existir,
- * este helper passa a diferenciar pela origem real do pagamento.
- */
+/** Lê a origem real da confirmação (`paidVia`) — hoje sempre "SYSTEM", pois o canal WhatsApp ainda não está integrado. */
 export function getConfirmedByLabel(
   payable: AccountsPayableResponseDTO,
 ): "Sistema" | "WhatsApp" | null {
-  return payable.paidByUserId ? "Sistema" : null;
+  if (payable.paidVia === "WHATSAPP") return "WhatsApp";
+  if (payable.paidVia === "SYSTEM") return "Sistema";
+  return null;
 }
 
 export interface AccountsPayableEvent {

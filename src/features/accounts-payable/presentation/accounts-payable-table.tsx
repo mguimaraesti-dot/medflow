@@ -313,7 +313,6 @@ export function AccountsPayableTable({
                     sort={sort}
                     onSort={toggleSort}
                   />
-                  <TableHead>Pagamento</TableHead>
                   {visibleColumns.confirmedBy && (
                     <SortableHead
                       label="Confirmado por"
@@ -395,31 +394,6 @@ export function AccountsPayableTable({
                           {badge.label}
                         </Badge>
                       </TableCell>
-                      <TableCell onClick={(event) => event.stopPropagation()}>
-                        {payable.displayStatus === "PAID" ? (
-                          <Badge
-                            variant="outline"
-                            className={STATUS_META.PAID.badgeClassName}
-                          >
-                            Pago
-                          </Badge>
-                        ) : canPayThis ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="border-green-500/40 text-green-700 hover:bg-green-500/10 dark:text-green-400"
-                            onClick={() => setPayingId(payable.id)}
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                            Confirmar
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
                       {visibleColumns.confirmedBy && (
                         <TableCell>
                           {confirmedByLabel ? (
@@ -471,41 +445,65 @@ export function AccountsPayableTable({
                         className="pr-4 text-right"
                         onClick={(event) => event.stopPropagation()}
                       >
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Ações</span>
+                        <div className="flex items-center justify-end gap-1">
+                          {canPayThis ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-700 dark:text-green-400"
+                              onClick={() => setPayingId(payable.id)}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Pagar
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onView(payable)}>
-                              <Eye className="h-4 w-4" />
-                              Visualizar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onEdit(payable)}>
-                              <Pencil className="h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            {canCreate && (
-                              <DropdownMenuItem
-                                onClick={() => onDuplicate(payable)}
-                              >
-                                <Copy className="h-4 w-4" />
-                                Duplicar
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onView(payable)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Ver
+                            </Button>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Mais ações</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => onView(payable)}>
+                                <Eye className="h-4 w-4" />
+                                Visualizar
                               </DropdownMenuItem>
-                            )}
-                            {canPayThis && (
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => handleCancel(payable.id)}
-                              >
-                                <XCircle className="h-4 w-4" />
-                                Cancelar
+                              <DropdownMenuItem onClick={() => onEdit(payable)}>
+                                <Pencil className="h-4 w-4" />
+                                Editar
                               </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {canCreate && (
+                                <DropdownMenuItem
+                                  onClick={() => onDuplicate(payable)}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                  Duplicar
+                                </DropdownMenuItem>
+                              )}
+                              {canPayThis && (
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={() => handleCancel(payable.id)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Cancelar
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

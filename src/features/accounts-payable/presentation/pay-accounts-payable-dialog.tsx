@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { usePayAccountsPayable } from "./use-pay-accounts-payable";
-import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
-import { PaymentMethodPicker } from "@/shared/components/payment-method-picker";
 import { ApiError } from "@/shared/lib/api-client";
 import { Button } from "@/shared/ui/button";
 import {
@@ -16,6 +14,11 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 
+/**
+ * MVP atual não faz controle financeiro nesta tela — confirmar
+ * pagamento só muda o status pra "Pago" (sem caixa, forma de pagamento
+ * ou lançamento de Fluxo de Caixa vinculado).
+ */
 export function PayAccountsPayableDialog({
   accountsPayableId,
   open,
@@ -25,27 +28,21 @@ export function PayAccountsPayableDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [paymentMethodId, setPaymentMethodId] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
-  const { data: paymentMethods } = usePaymentMethods();
   const payAccountsPayable = usePayAccountsPayable();
 
   async function onConfirm() {
-    if (!accountsPayableId || !paymentMethodId) return;
+    if (!accountsPayableId) return;
     setServerError(null);
     try {
-      await payAccountsPayable.mutateAsync({
-        accountsPayableId,
-        input: { paymentMethodId },
-      });
+      await payAccountsPayable.mutateAsync(accountsPayableId);
       onOpenChange(false);
-      setPaymentMethodId("");
-      toast.success("Conta paga.");
+      toast.success("Conta marcada como paga.");
     } catch (error) {
       const message =
         error instanceof ApiError
           ? error.message
-          : "Não foi possível pagar a conta.";
+          : "Não foi possível confirmar o pagamento.";
       setServerError(message);
       toast.error(message);
     }
@@ -63,18 +60,9 @@ export function PayAccountsPayableDialog({
         <DialogHeader>
           <DialogTitle>Confirmar pagamento</DialogTitle>
           <DialogDescription>
-            Gera um lançamento de saída no caixa de hoje, vinculado a esta
-            conta. Requer caixa aberto.
+            Confirmar que esta conta foi paga?
           </DialogDescription>
         </DialogHeader>
-
-        <div className="py-2">
-          <PaymentMethodPicker
-            paymentMethods={paymentMethods}
-            value={paymentMethodId}
-            onChange={setPaymentMethodId}
-          />
-        </div>
 
         {serverError && (
           <p className="text-destructive text-sm" role="alert">
@@ -85,12 +73,17 @@ export function PayAccountsPayableDialog({
         <DialogFooter>
           <Button
             type="button"
-            disabled={!paymentMethodId || payAccountsPayable.isPending}
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            disabled={payAccountsPayable.isPending}
             onClick={onConfirm}
           >
-            {payAccountsPayable.isPending
-              ? "Pagando..."
-              : "Confirmar pagamento"}
+            {payAccountsPayable.isPending ? "Confirmando..." : "Confirmar"}
           </Button>
         </DialogFooter>
       </DialogContent>

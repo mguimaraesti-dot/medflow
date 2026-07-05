@@ -1,7 +1,9 @@
 import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
-import type { CreateCashFlowEntryInput } from "@/features/cash-flow/domain/cash-flow-entry.repository";
-import type { CashFlowEntry } from "@/features/cash-flow/domain/cash-flow-entry.entity";
-import type { AccountsPayable, PayableStatus } from "./accounts-payable.entity";
+import type {
+  AccountsPayable,
+  PayableStatus,
+  PaymentConfirmationSource,
+} from "./accounts-payable.entity";
 import type { AccountsPayableSummary } from "./accounts-payable-summary.entity";
 
 export interface CreateAccountsPayableInput {
@@ -33,7 +35,7 @@ export interface ListAccountsPayableFilter {
 
 export interface MarkAsPaidInput {
   paidByUserId: string;
-  cashFlowEntry: CreateCashFlowEntryInput;
+  paidVia: PaymentConfirmationSource;
 }
 
 /**
@@ -52,16 +54,11 @@ export interface AccountsPayableRepository {
   create(data: CreateAccountsPayableInput): Promise<AccountsPayable>;
 
   /**
-   * Grava o pagamento e o lançamento de caixa correspondente na mesma
-   * transação (mesmo princípio de atomicidade já usado em
-   * `CashFlowEntryRepository.reverse`) — nunca duas chamadas separadas,
-   * que arriscariam estado parcial (conta paga sem lançamento, ou
-   * vice-versa).
+   * Só marca o ciclo de vida (Pendente -> Pago) — MVP atual não faz
+   * controle financeiro (sem caixa, sem forma de pagamento, sem lançamento
+   * de Fluxo de Caixa vinculado). Ver decisão de escopo do refinamento UX.
    */
-  markAsPaid(
-    id: string,
-    data: MarkAsPaidInput,
-  ): Promise<{ payable: AccountsPayable; cashFlowEntry: CashFlowEntry }>;
+  markAsPaid(id: string, data: MarkAsPaidInput): Promise<AccountsPayable>;
 
   cancel(id: string): Promise<AccountsPayable>;
 

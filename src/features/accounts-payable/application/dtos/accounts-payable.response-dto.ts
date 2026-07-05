@@ -2,6 +2,7 @@ import { toMoneyString } from "@/shared/lib/money";
 import type {
   AccountsPayable,
   PayableStatus,
+  PaymentConfirmationSource,
 } from "../../domain/accounts-payable.entity";
 
 export interface AccountsPayableResponseDTO {
@@ -24,6 +25,7 @@ export interface AccountsPayableResponseDTO {
   createdByUserId: string;
   paidByUserId: string | null;
   paidAt: Date | null;
+  paidVia: PaymentConfirmationSource | null;
   createdAt: Date;
 }
 
@@ -55,6 +57,7 @@ export function toAccountsPayableResponseDTO(
     createdByUserId: payable.createdByUserId,
     paidByUserId: payable.paidByUserId,
     paidAt: payable.paidAt,
+    paidVia: payable.paidVia,
     createdAt: payable.createdAt,
   };
 }

@@ -3,27 +3,24 @@ import { logger } from "@/core/logger/logger";
 import {
   NotFoundError,
   PayableAlreadyProcessedError,
-  CashRegisterNotOpenError,
 } from "@/core/errors/domain-error";
-import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { AccountsPayableRepository } from "../domain/accounts-payable.repository";
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
-import type { PayAccountsPayableInput } from "./dtos/pay-accounts-payable.dto";
 
 interface Deps {
   accountsPayableRepository: AccountsPayableRepository;
-  cashRegisterDayRepository: CashRegisterDayRepository;
 }
 
 /**
- * Pagar uma conta grava o pagamento e o lançamento de caixa (`OUT`)
- * correspondente numa única transação (ver `markAsPaid` no
- * repositório) — precisa de caixa aberto hoje, mesma regra já usada
- * pra qualquer lançamento de saída.
+ * MVP atual não faz controle financeiro nesta tela — só o ciclo de vida
+ * da conta (Pendente -> Pago). Sem caixa, sem forma de pagamento, sem
+ * lançamento de Fluxo de Caixa vinculado (decisão de escopo do
+ * refinamento UX — controle financeiro completo fica pra uma versão
+ * futura). `paidVia` é sempre "SYSTEM" hoje — WhatsApp ainda não está
+ * integrado, só preparado via `publicToken`.
  */
 export async function payAccountsPayableUseCase(
   accountsPayableId: string,
-  input: PayAccountsPayableInput,
   paidByUserId: string,
   organizationId: string,
   deps: Deps,
@@ -38,28 +35,9 @@ export async function payAccountsPayableUseCase(
     throw new PayableAlreadyProcessedError(accountsPayableId);
   }
 
-  const openRegister =
-    await deps.cashRegisterDayRepository.findOpenByOrganization(organizationId);
-  if (!openRegister) {
-    throw new CashRegisterNotOpenError(organizationId);
-  }
-
   const result = await deps.accountsPayableRepository.markAsPaid(
     accountsPayableId,
-    {
-      paidByUserId,
-      cashFlowEntry: {
-        organizationId,
-        cashRegisterDayId: openRegister.id,
-        type: "OUT",
-        amount: payable.amount.toFixed(2),
-        description: payable.description,
-        categoryId: payable.categoryId,
-        paymentMethodId: input.paymentMethodId,
-        accountsPayableId: payable.id,
-        createdByUserId: paidByUserId,
-      },
-    },
+    { paidByUserId, paidVia: "SYSTEM" },
   );
 
   await prisma.auditLog.create({
@@ -68,18 +46,14 @@ export async function payAccountsPayableUseCase(
       entity: "AccountsPayable",
       entityId: payable.id,
       action: "PAYMENT_CONFIRMED",
-      after: {
-        amount: payable.amount.toFixed(2),
-        paymentMethodId: input.paymentMethodId,
-      },
+      after: { paidVia: "SYSTEM" },
     },
   });
 
   logger.info("Conta a pagar paga", {
     organizationId,
     accountsPayableId: payable.id,
-    cashFlowEntryId: result.cashFlowEntry.id,
   });
 
-  return result.payable;
+  return result;
 }

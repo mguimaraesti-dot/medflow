@@ -25,6 +25,7 @@ function buildPayable(
     createdByUserId: "user-1",
     paidByUserId: null,
     paidAt: null,
+    paidVia: null,
     createdAt: new Date("2026-07-01T00:00:00.000Z"),
     updatedAt: new Date("2026-07-01T00:00:00.000Z"),
     ...overrides,

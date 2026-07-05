@@ -2,7 +2,6 @@ import { prisma } from "@/core/database/prisma.client";
 import { Prisma } from "@prisma/client";
 import { buildPaginatedResult } from "@/shared/lib/pagination";
 import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
-import type { CashFlowEntry } from "@/features/cash-flow/domain/cash-flow-entry.entity";
 import type {
   AccountsPayableRepository,
   CreateAccountsPayableInput,
@@ -11,21 +10,6 @@ import type {
 } from "../domain/accounts-payable.repository";
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
 import type { AccountsPayableSummary } from "../domain/accounts-payable-summary.entity";
-
-// Mesmo padrão de join usado em PrismaCashFlowEntryRepository — duplicado
-// aqui de propósito (não importamos infraestrutura de outra feature).
-const CREATED_BY_INCLUDE = { createdBy: { select: { name: true } } } as const;
-
-type CashFlowEntryRowWithCreatedBy = Prisma.CashFlowEntryGetPayload<{
-  include: typeof CREATED_BY_INCLUDE;
-}>;
-
-function toCashFlowEntryDomain(
-  row: CashFlowEntryRowWithCreatedBy,
-): CashFlowEntry {
-  const { createdBy, ...entry } = row;
-  return { ...entry, createdByUserName: createdBy.name };
-}
 
 export class PrismaAccountsPayableRepository implements AccountsPayableRepository {
   async findById(id: string): Promise<AccountsPayable | null> {
@@ -103,36 +87,15 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
   async markAsPaid(
     id: string,
     data: MarkAsPaidInput,
-  ): Promise<{ payable: AccountsPayable; cashFlowEntry: CashFlowEntry }> {
-    return prisma.$transaction(async (tx) => {
-      const cashFlowEntryRow = await tx.cashFlowEntry.create({
-        data: {
-          organizationId: data.cashFlowEntry.organizationId,
-          cashRegisterDayId: data.cashFlowEntry.cashRegisterDayId,
-          type: data.cashFlowEntry.type,
-          amount: data.cashFlowEntry.amount,
-          description: data.cashFlowEntry.description,
-          categoryId: data.cashFlowEntry.categoryId,
-          paymentMethodId: data.cashFlowEntry.paymentMethodId,
-          accountsPayableId: data.cashFlowEntry.accountsPayableId,
-          createdByUserId: data.cashFlowEntry.createdByUserId,
-        },
-        include: CREATED_BY_INCLUDE,
-      });
-
-      const payable = await tx.accountsPayable.update({
-        where: { id },
-        data: {
-          status: "PAID",
-          paidByUserId: data.paidByUserId,
-          paidAt: new Date(),
-        },
-      });
-
-      return {
-        payable,
-        cashFlowEntry: toCashFlowEntryDomain(cashFlowEntryRow),
-      };
+  ): Promise<AccountsPayable> {
+    return prisma.accountsPayable.update({
+      where: { id },
+      data: {
+        status: "PAID",
+        paidByUserId: data.paidByUserId,
+        paidAt: new Date(),
+        paidVia: data.paidVia,
+      },
     });
   }
 

@@ -348,6 +348,12 @@ enum PayableStatus {
   CANCELLED
 }
 
+/** Origem da confirmação de pagamento — hoje só SYSTEM é possível (WhatsApp ainda não integrado, só preparado via `publicToken`). */
+enum PaymentConfirmationSource {
+  SYSTEM
+  WHATSAPP
+}
+
 model AccountsPayable {
   id             String        @id @default(cuid())
   organizationId String
@@ -379,6 +385,7 @@ model AccountsPayable {
   createdByUserId String        // quem cadastrou (ex: Secretária)
   paidByUserId    String?       // quem confirmou o pagamento (Financeiro/Proprietário)
   paidAt          DateTime?
+  paidVia         PaymentConfirmationSource?
 
   cashFlowEntries CashFlowEntry[]
 
