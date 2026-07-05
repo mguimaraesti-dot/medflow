@@ -99,8 +99,13 @@ export function PeriodSelector({
 
   function handlePresetChange(next: PeriodPreset) {
     if (next === "CUSTOM") {
+      // Adota CUSTOM já com o range atual como ponto de partida — se só
+      // marcássemos `popoverOpen` sem chamar `onChange`, o preset do pai
+      // nunca vira "CUSTOM" e o Popover abaixo (guardado por
+      // `preset === "CUSTOM"`) nunca chega a renderizar.
       setFromInput(range.from.toISOString().slice(0, 10));
       setToInput(range.to.toISOString().slice(0, 10));
+      onChange("CUSTOM", { from: range.from, to: range.to });
       setPopoverOpen(true);
       return;
     }

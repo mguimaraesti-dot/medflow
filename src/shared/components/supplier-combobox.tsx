@@ -40,7 +40,6 @@ export function SupplierCombobox({
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
-  const [documentNumber, setDocumentNumber] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +54,6 @@ export function SupplierCombobox({
     try {
       const created = await createSupplier.mutateAsync({
         name,
-        document: documentNumber.trim() || undefined,
         contactName: contactName.trim() || undefined,
         phone: phone.trim() || undefined,
       });
@@ -63,7 +61,6 @@ export function SupplierCombobox({
       setCreateOpen(false);
       setOpen(false);
       setName("");
-      setDocumentNumber("");
       setContactName("");
       setPhone("");
     } catch (createError) {
@@ -151,14 +148,6 @@ export function SupplierCombobox({
                 id="supplier-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="supplier-document">CPF/CNPJ (opcional)</Label>
-              <Input
-                id="supplier-document"
-                value={documentNumber}
-                onChange={(event) => setDocumentNumber(event.target.value)}
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

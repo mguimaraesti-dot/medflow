@@ -21,6 +21,7 @@ export function KpiCard({
   icon: Icon,
   iconTone,
   comparison,
+  compact,
 }: {
   label: string;
   value: string;
@@ -29,10 +30,22 @@ export function KpiCard({
   /** Chip colorido atrás do ícone (Design Pass) — sem isso, ícone simples (comportamento original). */
   iconTone?: IconTone;
   comparison?: ReactNode;
+  /** Versão ~25% mais baixa (menos padding, texto menor) — usada em telas onde a tabela precisa de mais espaço. */
+  compact?: boolean;
 }) {
   return (
-    <Card className="hover:border-ring/40 py-4 transition-colors">
-      <CardHeader className="flex-row items-center justify-between space-y-0 px-4 pb-0">
+    <Card
+      className={cn(
+        "hover:border-ring/40 transition-colors",
+        compact ? "py-2.5" : "py-4",
+      )}
+    >
+      <CardHeader
+        className={cn(
+          "flex-row items-center justify-between space-y-0 px-4 pb-0",
+          compact && "pt-0",
+        )}
+      >
         <CardTitle className="text-muted-foreground text-sm font-normal">
           {label}
         </CardTitle>
@@ -40,20 +53,22 @@ export function KpiCard({
           (iconTone ? (
             <span
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg",
+                "flex items-center justify-center rounded-lg",
+                compact ? "h-6 w-6" : "h-8 w-8",
                 ICON_TONE_CLASSES[iconTone],
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
             </span>
           ) : (
             <Icon className="text-muted-foreground h-4 w-4" />
           ))}
       </CardHeader>
-      <CardContent className="px-4">
+      <CardContent className={cn("px-4", compact && "pb-0")}>
         <p
           className={cn(
-            "text-2xl font-semibold tracking-tight",
+            "font-semibold tracking-tight",
+            compact ? "text-lg" : "text-2xl",
             tone === "positive" && "text-green-600 dark:text-green-500",
             tone === "negative" && "text-destructive",
           )}
@@ -61,7 +76,14 @@ export function KpiCard({
           {value}
         </p>
         {comparison && (
-          <div className="text-muted-foreground mt-1 text-xs">{comparison}</div>
+          <div
+            className={cn(
+              "text-muted-foreground text-xs",
+              compact ? "mt-0.5" : "mt-1",
+            )}
+          >
+            {comparison}
+          </div>
         )}
       </CardContent>
     </Card>

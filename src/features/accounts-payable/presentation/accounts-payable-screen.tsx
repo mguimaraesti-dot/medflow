@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
-  ArrowUpDown,
   CalendarClock,
   CheckCircle2,
   Clock,
@@ -17,8 +16,6 @@ import {
 import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import {
   AccountsPayableTable,
-  type SortDirection,
-  type SortField,
   type StatusFilter,
   type VisibleColumns,
 } from "./accounts-payable-table";
@@ -59,11 +56,6 @@ import {
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 import type { AccountsPayableFormValues } from "./accounts-payable-form";
 
-const SORT_FIELD_LABEL: Record<SortField, string> = {
-  DUE_DATE: "Vencimento",
-  AMOUNT: "Valor",
-};
-
 function TrendComparison({
   count,
   changePercent,
@@ -102,8 +94,6 @@ export function AccountsPayableScreen({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [categoryId, setCategoryId] = useState<string | undefined>();
-  const [sortField, setSortField] = useState<SortField>("DUE_DATE");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     category: true,
     confirmedBy: true,
@@ -189,7 +179,7 @@ export function AccountsPayableScreen({
 
         <TabsContent value="payable" className="space-y-5 pt-4">
           {summary && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
               <KpiCard
                 label="Total do período"
                 value={formatCurrencyBRL(summary.total.amount)}
@@ -201,6 +191,7 @@ export function AccountsPayableScreen({
                 }
                 icon={Wallet}
                 iconTone="blue"
+                compact
               />
               <KpiCard
                 label="Hoje"
@@ -212,6 +203,7 @@ export function AccountsPayableScreen({
                 }
                 icon={CalendarClock}
                 iconTone="blue"
+                compact
               />
               <KpiCard
                 label="A vencer"
@@ -224,6 +216,7 @@ export function AccountsPayableScreen({
                 }
                 icon={Clock}
                 iconTone="green"
+                compact
               />
               <KpiCard
                 label="Vencidas"
@@ -236,6 +229,7 @@ export function AccountsPayableScreen({
                 }
                 icon={AlertTriangle}
                 iconTone="red"
+                compact
               />
               <KpiCard
                 label="Pagas"
@@ -248,6 +242,7 @@ export function AccountsPayableScreen({
                 }
                 icon={CheckCircle2}
                 iconTone="violet"
+                compact
               />
             </div>
           )}
@@ -297,41 +292,6 @@ export function AccountsPayableScreen({
                 ))}
               </SelectContent>
             </Select>
-
-            <div className="flex items-center gap-1.5">
-              <Select
-                value={sortField}
-                onValueChange={(value) => setSortField(value as SortField)}
-              >
-                <SelectTrigger size="sm" className="w-full lg:w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SORT_FIELD_LABEL).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() =>
-                  setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
-                }
-                aria-label={
-                  sortDirection === "asc"
-                    ? "Ordem crescente — clique para inverter"
-                    : "Ordem decrescente — clique para inverter"
-                }
-                title="Inverter ordem"
-              >
-                <ArrowUpDown className="h-4 w-4" />
-              </Button>
-            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -403,8 +363,6 @@ export function AccountsPayableScreen({
               search={search.trim() || undefined}
               dueDateFrom={range.from}
               dueDateTo={range.to}
-              sortField={sortField}
-              sortDirection={sortDirection}
               visibleColumns={visibleColumns}
               onView={setViewing}
               onEdit={setEditing}

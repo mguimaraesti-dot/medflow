@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import {
-  CheckCircle2,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Check,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -50,8 +53,6 @@ import { toast } from "sonner";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
 export type StatusFilter = "ALL" | "PENDING" | "OVERDUE" | "PAID" | "CANCELLED";
-export type SortField = "DUE_DATE" | "AMOUNT";
-export type SortDirection = "asc" | "desc";
 
 export interface VisibleColumns {
   category: boolean;
@@ -59,11 +60,67 @@ export interface VisibleColumns {
   attachments: boolean;
 }
 
+type SortField =
+  | "DUE_DATE"
+  | "SUPPLIER"
+  | "CATEGORY"
+  | "AMOUNT"
+  | "STATUS"
+  | "CONFIRMED_BY"
+  | "ATTACHMENTS";
+type SortDirection = "asc" | "desc";
+
 const DUE_DATE_TONE_CLASS: Record<string, string> = {
   danger: "text-destructive",
   warning: "text-amber-600 dark:text-amber-400",
   default: "text-foreground",
 };
+
+function SortableHead({
+  label,
+  field,
+  sort,
+  onSort,
+  align,
+  className,
+}: {
+  label: string;
+  field: SortField;
+  sort: { field: SortField; direction: SortDirection };
+  onSort: (field: SortField) => void;
+  align?: "right";
+  className?: string;
+}) {
+  const active = sort.field === field;
+  return (
+    <TableHead
+      className={cn(
+        "hover:text-foreground cursor-pointer transition-colors select-none",
+        align === "right" && "text-right",
+        className,
+      )}
+      onClick={() => onSort(field)}
+    >
+      <span
+        className={cn(
+          "inline-flex items-center gap-1",
+          align === "right" && "flex-row-reverse",
+        )}
+      >
+        {label}
+        {active ? (
+          sort.direction === "asc" ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-30" />
+        )}
+      </span>
+    </TableHead>
+  );
+}
 
 export function AccountsPayableTable({
   canPay,
@@ -73,8 +130,6 @@ export function AccountsPayableTable({
   search,
   dueDateFrom,
   dueDateTo,
-  sortField,
-  sortDirection,
   visibleColumns,
   onView,
   onEdit,
@@ -88,8 +143,6 @@ export function AccountsPayableTable({
   search?: string;
   dueDateFrom?: Date;
   dueDateTo?: Date;
-  sortField: SortField;
-  sortDirection: SortDirection;
   visibleColumns: VisibleColumns;
   onView: (payable: AccountsPayableResponseDTO) => void;
   onEdit: (payable: AccountsPayableResponseDTO) => void;
@@ -98,6 +151,10 @@ export function AccountsPayableTable({
 }) {
   const [page, setPage] = useState(1);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [sort, setSort] = useState<{
+    field: SortField;
+    direction: SortDirection;
+  }>({ field: "DUE_DATE", direction: "asc" });
 
   const { data, isLoading } = useAccountsPayable({
     status: status === "ALL" ? undefined : status,
@@ -111,24 +168,72 @@ export function AccountsPayableTable({
   const { data: categories } = useCategories();
   const cancelAccountsPayable = useCancelAccountsPayable();
 
-  const supplierById = new Map(suppliers?.map((s) => [s.id, s]));
-  const categoryById = new Map(categories?.map((c) => [c.id, c]));
+  const supplierById = useMemo(
+    () => new Map(suppliers?.map((s) => [s.id, s])),
+    [suppliers],
+  );
+  const categoryById = useMemo(
+    () => new Map(categories?.map((c) => [c.id, c])),
+    [categories],
+  );
+
+  function toggleSort(field: SortField) {
+    setSort((prev) =>
+      prev.field === field
+        ? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { field, direction: "asc" },
+    );
+  }
 
   const sortedItems = useMemo(() => {
     if (!data) return [];
     const items = [...data.items];
+    const dir = sort.direction === "asc" ? 1 : -1;
+
     items.sort((a, b) => {
-      const direction = sortDirection === "asc" ? 1 : -1;
-      if (sortField === "AMOUNT") {
-        return (Number(a.amount) - Number(b.amount)) * direction;
+      switch (sort.field) {
+        case "AMOUNT":
+          return (Number(a.amount) - Number(b.amount)) * dir;
+        case "SUPPLIER": {
+          const an = supplierById.get(a.supplierId)?.name ?? "";
+          const bn = supplierById.get(b.supplierId)?.name ?? "";
+          return an.localeCompare(bn) * dir;
+        }
+        case "CATEGORY": {
+          const an = categoryById.get(a.categoryId)?.name ?? "";
+          const bn = categoryById.get(b.categoryId)?.name ?? "";
+          return an.localeCompare(bn) * dir;
+        }
+        case "STATUS":
+          return (
+            STATUS_META[a.displayStatus].label.localeCompare(
+              STATUS_META[b.displayStatus].label,
+            ) * dir
+          );
+        case "CONFIRMED_BY": {
+          const av = getConfirmedByLabel(a) ?? "";
+          const bv = getConfirmedByLabel(b) ?? "";
+          return av.localeCompare(bv) * dir;
+        }
+        case "ATTACHMENTS":
+          return (
+            (getAccountsPayableAttachments(a).length -
+              getAccountsPayableAttachments(b).length) *
+            dir
+          );
+        case "DUE_DATE":
+        default:
+          return (
+            (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()) *
+            dir
+          );
       }
-      return (
-        (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()) *
-        direction
-      );
     });
     return items;
-  }, [data, sortField, sortDirection]);
+    // supplierById/categoryById são recriados a cada render (vindos de query
+    // data) — incluir os dados-fonte como dependência evita comparação por
+    // referência instável sem perder reatividade.
+  }, [data, sort, supplierById, categoryById]);
 
   async function handleCancel(id: string) {
     try {
@@ -174,15 +279,57 @@ export function AccountsPayableTable({
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-4">Vencimento</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  {visibleColumns.category && <TableHead>Categoria</TableHead>}
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  {visibleColumns.confirmedBy && (
-                    <TableHead>Confirmado por</TableHead>
+                  <SortableHead
+                    label="Vencimento"
+                    field="DUE_DATE"
+                    sort={sort}
+                    onSort={toggleSort}
+                    className="pl-4"
+                  />
+                  <SortableHead
+                    label="Fornecedor"
+                    field="SUPPLIER"
+                    sort={sort}
+                    onSort={toggleSort}
+                  />
+                  {visibleColumns.category && (
+                    <SortableHead
+                      label="Categoria"
+                      field="CATEGORY"
+                      sort={sort}
+                      onSort={toggleSort}
+                    />
                   )}
-                  {visibleColumns.attachments && <TableHead>Anexos</TableHead>}
+                  <SortableHead
+                    label="Valor"
+                    field="AMOUNT"
+                    sort={sort}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                  <SortableHead
+                    label="Status"
+                    field="STATUS"
+                    sort={sort}
+                    onSort={toggleSort}
+                  />
+                  <TableHead>Pagamento</TableHead>
+                  {visibleColumns.confirmedBy && (
+                    <SortableHead
+                      label="Confirmado por"
+                      field="CONFIRMED_BY"
+                      sort={sort}
+                      onSort={toggleSort}
+                    />
+                  )}
+                  {visibleColumns.attachments && (
+                    <SortableHead
+                      label="Anexos"
+                      field="ATTACHMENTS"
+                      sort={sort}
+                      onSort={toggleSort}
+                    />
+                  )}
                   <TableHead className="pr-4 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -247,6 +394,31 @@ export function AccountsPayableTable({
                         >
                           {badge.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell onClick={(event) => event.stopPropagation()}>
+                        {payable.displayStatus === "PAID" ? (
+                          <Badge
+                            variant="outline"
+                            className={STATUS_META.PAID.badgeClassName}
+                          >
+                            Pago
+                          </Badge>
+                        ) : canPayThis ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="border-green-500/40 text-green-700 hover:bg-green-500/10 dark:text-green-400"
+                            onClick={() => setPayingId(payable.id)}
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Confirmar
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            —
+                          </span>
+                        )}
                       </TableCell>
                       {visibleColumns.confirmedBy && (
                         <TableCell>
@@ -324,21 +496,13 @@ export function AccountsPayableTable({
                               </DropdownMenuItem>
                             )}
                             {canPayThis && (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() => setPayingId(payable.id)}
-                                >
-                                  <CheckCircle2 className="h-4 w-4" />
-                                  Confirmar pagamento
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  onClick={() => handleCancel(payable.id)}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Cancelar
-                                </DropdownMenuItem>
-                              </>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => handleCancel(payable.id)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                                Cancelar
+                              </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -249,18 +249,9 @@ export function AccountsPayableForm({
               {...register("barcode")}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="digitableLine">Linha do Boleto</Label>
-              <Input id="digitableLine" {...register("digitableLine")} />
-              <p className="text-muted-foreground text-xs">
-                Cole aqui a linha digitável do boleto.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pixKey">Chave PIX</Label>
-              <Input id="pixKey" {...register("pixKey")} />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="pixKey">Chave PIX</Label>
+            <Input id="pixKey" {...register("pixKey")} />
           </div>
         </CardContent>
       </Card>
