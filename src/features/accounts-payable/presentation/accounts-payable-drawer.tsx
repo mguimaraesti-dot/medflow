@@ -31,9 +31,14 @@ import {
 } from "./accounts-payable-helpers";
 import { useRecurringBill } from "./use-recurring-bill";
 import { useAccountsPayableAuditLog } from "./use-accounts-payable-audit-log";
+import { useRecurringBillOccurrences } from "./use-recurring-bill-occurrences";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
-import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyBR,
+  formatDateTimeBR,
+} from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
@@ -77,6 +82,11 @@ export function AccountsPayableDrawer({
     payable && recurringBill
       ? getRecurrenceDisplay(recurringBill, payable.occurrenceNumber)
       : null;
+
+  const { data: occurrencesResult } = useRecurringBillOccurrences(
+    payable?.recurringBillId ?? null,
+  );
+  const occurrences = occurrencesResult?.items ?? [];
 
   const { data: auditLog } = useAccountsPayableAuditLog(payable?.id ?? null);
   const { data: suppliers } = useSuppliers();
@@ -148,6 +158,11 @@ export function AccountsPayableDrawer({
                   <TabsTrigger value="account">Conta</TabsTrigger>
                   <TabsTrigger value="history">Histórico</TabsTrigger>
                   <TabsTrigger value="attachments">Documentos</TabsTrigger>
+                  {payable.recurringBillId && (
+                    <TabsTrigger value="occurrences">
+                      Próximas Ocorrências
+                    </TabsTrigger>
+                  )}
                 </TabsList>
 
                 <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -294,6 +309,58 @@ export function AccountsPayableDrawer({
                       </ul>
                     )}
                   </TabsContent>
+
+                  {payable.recurringBillId && (
+                    <TabsContent value="occurrences" className="mt-4">
+                      {occurrences.length === 0 ? (
+                        <EmptyState
+                          icon={Repeat}
+                          title="Nenhuma ocorrência encontrada."
+                          description="As próximas contas geradas por esta recorrência aparecem aqui."
+                        />
+                      ) : (
+                        <ul className="space-y-2">
+                          {occurrences.map((occurrence) => {
+                            const occurrenceBadge =
+                              STATUS_META[occurrence.displayStatus];
+                            const isCurrent = occurrence.id === payable.id;
+                            return (
+                              <li
+                                key={occurrence.id}
+                                className={cn(
+                                  "flex items-center justify-between rounded-lg border p-3",
+                                  isCurrent && "border-primary/50 bg-primary/5",
+                                )}
+                              >
+                                <div>
+                                  <p className="flex items-center gap-1.5 text-sm font-medium">
+                                    {formatDateOnlyBR(occurrence.dueDate)}
+                                    {isCurrent && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-primary border-primary/30"
+                                      >
+                                        Atual
+                                      </Badge>
+                                    )}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs">
+                                    {formatCurrencyBRL(occurrence.amount)}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant="outline"
+                                  className={occurrenceBadge.badgeClassName}
+                                >
+                                  {occurrenceBadge.label}
+                                </Badge>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </TabsContent>
+                  )}
                 </div>
               </Tabs>
 

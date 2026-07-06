@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Menu,
   Receipt,
+  Repeat,
   Settings,
   Tags,
   Trash2,
@@ -33,6 +34,7 @@ interface NavItem {
 const FINANCEIRO: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/accounts-payable", label: "Contas a Pagar", icon: Receipt },
+  { href: "/recurring-bills", label: "Programações", icon: Repeat },
   { href: "/cash-flow", label: "Fluxo de Caixa", icon: ArrowLeftRight },
   { href: "/treasury", label: "Tesouraria", icon: Landmark },
 ];

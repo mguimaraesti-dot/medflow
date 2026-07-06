@@ -69,6 +69,9 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       ...statusFilter,
       ...(filter.supplierId && { supplierId: filter.supplierId }),
       ...(filter.categoryId && { categoryId: filter.categoryId }),
+      ...(filter.recurringBillId && {
+        recurringBillId: filter.recurringBillId,
+      }),
       ...(filter.search && {
         description: { contains: filter.search, mode: "insensitive" },
       }),
@@ -141,6 +144,23 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       where: { recurringBillId },
       include: USER_NAMES_INCLUDE,
       orderBy: { occurrenceNumber: "asc" },
+    });
+    return rows.map(toDomain);
+  }
+
+  async listByRecurringBillIdsInRange(
+    recurringBillIds: string[],
+    dueDateFrom: Date,
+    dueDateTo: Date,
+  ): Promise<AccountsPayable[]> {
+    const rows = await prisma.accountsPayable.findMany({
+      where: {
+        recurringBillId: { in: recurringBillIds },
+        dueDate: { gte: dueDateFrom, lte: dueDateTo },
+        deletedAt: null,
+      },
+      include: USER_NAMES_INCLUDE,
+      orderBy: { dueDate: "asc" },
     });
     return rows.map(toDomain);
   }

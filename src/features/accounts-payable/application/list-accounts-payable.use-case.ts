@@ -20,6 +20,7 @@ export async function listAccountsPayableUseCase(
       dueDateTo: input.dueDateTo,
       supplierId: input.supplierId,
       categoryId: input.categoryId,
+      recurringBillId: input.recurringBillId,
       search: input.search,
       deletedOnly: input.deletedOnly,
     },

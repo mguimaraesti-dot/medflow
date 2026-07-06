@@ -30,6 +30,8 @@ export interface ListAccountsPayableFilter {
   dueDateTo?: Date;
   supplierId?: string;
   categoryId?: string;
+  /** Só as ocorrências de uma recorrência — usado pela aba "Próximas Ocorrências" do Drawer. */
+  recurringBillId?: string;
   /** Busca livre por descrição (contains, case-insensitive). */
   search?: string;
   /**
@@ -84,6 +86,18 @@ export interface AccountsPayableRepository {
 
   /** Todas as ocorrências de uma recorrência, ordenadas por occurrenceNumber — usado pro Drawer (X de Y) e pra propagar edição/cancelamento às próximas. */
   listByRecurringBill(recurringBillId: string): Promise<AccountsPayable[]>;
+
+  /**
+   * Ocorrências reais (já geradas) de várias recorrências dentro de um
+   * intervalo de datas — usado pela "Programação" mensal (tela de
+   * planejamento de Recorrências). Uma única consulta em lote em vez de
+   * uma por recorrência (evita N+1).
+   */
+  listByRecurringBillIdsInRange(
+    recurringBillIds: string[],
+    dueDateFrom: Date,
+    dueDateTo: Date,
+  ): Promise<AccountsPayable[]>;
 
   /**
    * Só marca o ciclo de vida (Pendente -> Pago) — MVP atual não faz
