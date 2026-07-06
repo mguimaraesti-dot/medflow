@@ -105,14 +105,14 @@ export function FileDropZone({
           }
         }}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors",
+          "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-3 text-center transition-colors",
           dragActive
             ? "border-primary bg-primary/5"
             : "border-border hover:border-ring/50 hover:bg-muted/30",
           disabled && "pointer-events-none opacity-50",
         )}
       >
-        <Upload className="text-muted-foreground h-5 w-5" />
+        <Upload className="text-muted-foreground h-4 w-4" />
         <p className="text-sm font-medium">
           Arraste arquivos aqui ou clique para selecionar
         </p>

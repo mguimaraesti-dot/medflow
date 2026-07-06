@@ -359,6 +359,15 @@ export function AccountsPayableTable({
                     canPay &&
                     (payable.displayStatus === "PENDING" ||
                       payable.displayStatus === "OVERDUE");
+                  // Cancelar só existe pra: (a) conta PAGA (correção
+                  // pontual) ou (b) conta PENDENTE que pertence a uma
+                  // recorrência (único jeito de "encerrar recorrência").
+                  // Conta pendente avulsa usa Excluir, não Cancelar.
+                  const canCancelThis =
+                    canPay &&
+                    ((payable.status === "PENDING" &&
+                      payable.recurringBillId) ||
+                      payable.status === "PAID");
 
                   return (
                     <TableRow
@@ -496,58 +505,72 @@ export function AccountsPayableTable({
                               Ver
                             </Button>
                           )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Mais ações</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onView(payable)}>
-                                <Eye className="h-4 w-4" />
-                                Visualizar
-                              </DropdownMenuItem>
-                              {canCreate && payable.status === "PENDING" && (
+                          {payable.status === "PAID" && canCancelThis && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleCancel(payable.id)}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Cancelar
+                            </Button>
+                          )}
+                          {payable.status === "PENDING" && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Mais ações</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onClick={() => onEdit(payable)}
+                                  onClick={() => onView(payable)}
                                 >
-                                  <Pencil className="h-4 w-4" />
-                                  Editar
+                                  <Eye className="h-4 w-4" />
+                                  Visualizar
                                 </DropdownMenuItem>
-                              )}
-                              {canCreate && (
-                                <DropdownMenuItem
-                                  onClick={() => onDuplicate(payable)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                  Duplicar
-                                </DropdownMenuItem>
-                              )}
-                              {canPayThis && (
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  onClick={() =>
-                                    payable.recurringBillId
-                                      ? setCancelScopeTarget(payable)
-                                      : handleCancel(payable.id)
-                                  }
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Cancelar
-                                </DropdownMenuItem>
-                              )}
-                              {canDelete && payable.status === "PENDING" && (
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  onClick={() => setDeletingTarget(payable)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                {canCreate && (
+                                  <DropdownMenuItem
+                                    onClick={() => onEdit(payable)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                )}
+                                {canCreate && (
+                                  <DropdownMenuItem
+                                    onClick={() => onDuplicate(payable)}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                    Duplicar
+                                  </DropdownMenuItem>
+                                )}
+                                {canCancelThis && payable.recurringBillId && (
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() =>
+                                      setCancelScopeTarget(payable)
+                                    }
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    Cancelar
+                                  </DropdownMenuItem>
+                                )}
+                                {canDelete && (
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => setDeletingTarget(payable)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

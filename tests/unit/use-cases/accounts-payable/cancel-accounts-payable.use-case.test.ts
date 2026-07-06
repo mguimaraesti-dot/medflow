@@ -23,12 +23,12 @@ describe("cancelAccountsPayableUseCase", () => {
     ).rejects.toThrow(NotFoundError);
   });
 
-  it("bloqueia cancelar uma conta já paga", async () => {
+  it("bloqueia cancelar uma conta já cancelada", async () => {
     const accountsPayableRepository = {
       findById: vi.fn().mockResolvedValue({
         id: "payable-1",
         organizationId: "org-1",
-        status: "PAID",
+        status: "CANCELLED",
       }),
     } as unknown as AccountsPayableRepository;
 
@@ -37,6 +37,62 @@ describe("cancelAccountsPayableUseCase", () => {
         accountsPayableRepository,
       }),
     ).rejects.toThrow(PayableAlreadyProcessedError);
+  });
+
+  it("cancela uma conta PAGA com sucesso (correção pontual)", async () => {
+    const cancel = vi.fn().mockResolvedValue({
+      id: "payable-1",
+      status: "CANCELLED",
+    });
+    const accountsPayableRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: "payable-1",
+        organizationId: "org-1",
+        status: "PAID",
+      }),
+      cancel,
+    } as unknown as AccountsPayableRepository;
+
+    const result = await cancelAccountsPayableUseCase(
+      "payable-1",
+      "user-1",
+      "org-1",
+      { accountsPayableRepository },
+    );
+
+    expect(cancel).toHaveBeenCalledWith("payable-1");
+    expect(result.status).toBe("CANCELLED");
+  });
+
+  it("cancelar uma conta PAGA com scope SERIES não encerra a recorrência", async () => {
+    const cancel = vi.fn().mockResolvedValue({
+      id: "payable-1",
+      status: "CANCELLED",
+    });
+    const accountsPayableRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: "payable-1",
+        organizationId: "org-1",
+        status: "PAID",
+        recurringBillId: "recurring-1",
+      }),
+      cancel,
+      listByRecurringBill: vi.fn(),
+    } as unknown as AccountsPayableRepository;
+    const deactivate = vi.fn();
+    const recurringBillRepository = {
+      deactivate,
+    } as unknown as import("@/features/recurring-bills/domain/recurring-bill.repository").RecurringBillRepository;
+
+    await cancelAccountsPayableUseCase(
+      "payable-1",
+      "user-1",
+      "org-1",
+      { accountsPayableRepository, recurringBillRepository },
+      { scope: "SERIES" },
+    );
+
+    expect(deactivate).not.toHaveBeenCalled();
   });
 
   it("cancela uma conta pendente com sucesso", async () => {

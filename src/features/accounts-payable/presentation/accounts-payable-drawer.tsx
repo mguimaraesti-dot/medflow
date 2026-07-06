@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   Download,
@@ -8,6 +9,7 @@ import {
   Pencil,
   Repeat,
   Trash2,
+  XCircle,
 } from "lucide-react";
 import {
   Sheet,
@@ -21,6 +23,7 @@ import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/components/empty-state";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
+import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
 import {
   STATUS_META,
   getAccountsPayableAttachments,
@@ -32,6 +35,7 @@ import {
 import { useRecurringBill } from "./use-recurring-bill";
 import { useAccountsPayableAuditLog } from "./use-accounts-payable-audit-log";
 import { useRecurringBillOccurrences } from "./use-recurring-bill-occurrences";
+import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
 import {
@@ -40,6 +44,7 @@ import {
   formatDateTimeBR,
 } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
+import { ApiError } from "@/shared/lib/api-client";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -74,6 +79,8 @@ export function AccountsPayableDrawer({
 }) {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [cancelScopeOpen, setCancelScopeOpen] = useState(false);
+  const cancelAccountsPayable = useCancelAccountsPayable();
 
   const { data: recurringBill } = useRecurringBill(
     payable?.recurringBillId ?? null,
@@ -124,6 +131,43 @@ export function AccountsPayableDrawer({
     canEdit && payable !== null && payable.status === "PENDING";
   const canDeleteThis =
     canDelete && payable !== null && payable.status === "PENDING";
+  // Mesma regra da tabela: Cancelar só existe pra conta PAGA (correção
+  // pontual) ou PENDENTE de uma recorrência (única forma de "encerrar
+  // recorrência"). Conta pendente avulsa usa Excluir, não Cancelar.
+  const canCancelThis =
+    canPay &&
+    payable !== null &&
+    ((payable.status === "PENDING" && Boolean(payable.recurringBillId)) ||
+      payable.status === "PAID");
+
+  async function handleCancel(scope: "SINGLE" | "SERIES" = "SINGLE") {
+    if (!payable) return;
+    try {
+      await cancelAccountsPayable.mutateAsync({
+        accountsPayableId: payable.id,
+        scope,
+      });
+      toast.success(
+        scope === "SERIES" ? "Recorrência encerrada." : "Conta cancelada.",
+      );
+      setCancelScopeOpen(false);
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Não foi possível cancelar.",
+      );
+    }
+  }
+
+  function onCancelClick() {
+    if (payable?.status === "PENDING" && payable.recurringBillId) {
+      setCancelScopeOpen(true);
+    } else {
+      void handleCancel("SINGLE");
+    }
+  }
 
   return (
     <>
@@ -370,7 +414,10 @@ export function AccountsPayableDrawer({
                 </div>
               </Tabs>
 
-              {(canPayThis || canEditThis || canDeleteThis) && (
+              {(canPayThis ||
+                canEditThis ||
+                canDeleteThis ||
+                canCancelThis) && (
                 <div className="flex gap-2 border-t p-4">
                   {canPayThis && (
                     <Button
@@ -391,6 +438,17 @@ export function AccountsPayableDrawer({
                     >
                       <Pencil className="h-4 w-4" />
                       Editar conta
+                    </Button>
+                  )}
+                  {canCancelThis && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={onCancelClick}
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Cancelar
                     </Button>
                   )}
                   {canDeleteThis && (
@@ -422,6 +480,18 @@ export function AccountsPayableDrawer({
         open={deleting}
         onOpenChange={setDeleting}
         onDeleted={() => onOpenChange(false)}
+      />
+
+      <AccountsPayableRecurrenceScopeDialog
+        open={cancelScopeOpen}
+        onOpenChange={setCancelScopeOpen}
+        title="Esta conta pertence a uma recorrência"
+        description="Como deseja cancelar?"
+        singleLabel="Apenas esta conta"
+        seriesLabel="Encerrar recorrência"
+        confirmLabel="Confirmar"
+        isPending={cancelAccountsPayable.isPending}
+        onConfirm={(scope) => handleCancel(scope)}
       />
     </>
   );

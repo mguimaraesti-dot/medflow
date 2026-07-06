@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
-import { getCategoryIcon } from "@/shared/lib/lucide-icon-map";
 import { useCreateCategory } from "@/features/categories/presentation/use-create-category";
 import { ApiError } from "@/shared/lib/api-client";
 import { cn } from "@/shared/lib/utils";
@@ -65,7 +64,6 @@ export function CategoryCombobox({
 
   const createCategory = useCreateCategory();
   const selected = categories?.find((category) => category.id === value);
-  const SelectedIcon = getCategoryIcon(selected?.icon);
 
   async function handleCreate() {
     setError(null);
@@ -99,13 +97,7 @@ export function CategoryCombobox({
             className="w-full justify-between font-normal"
           >
             {selected ? (
-              <span className="flex items-center gap-2">
-                <SelectedIcon
-                  className="h-4 w-4"
-                  style={{ color: selected.color }}
-                />
-                {selected.name}
-              </span>
+              <span>{selected.name}</span>
             ) : (
               <span className="text-muted-foreground">
                 Selecione a categoria
@@ -120,31 +112,24 @@ export function CategoryCombobox({
             <CommandList>
               <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
               <CommandGroup>
-                {categories?.map((category) => {
-                  const Icon = getCategoryIcon(category.icon);
-                  return (
-                    <CommandItem
-                      key={category.id}
-                      value={category.name}
-                      onSelect={() => {
-                        onChange(category.id);
-                        setOpen(false);
-                      }}
-                    >
-                      <Icon
-                        className="h-4 w-4"
-                        style={{ color: category.color }}
-                      />
-                      {category.name}
-                      <Check
-                        className={cn(
-                          "ml-auto h-4 w-4",
-                          category.id === value ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                    </CommandItem>
-                  );
-                })}
+                {categories?.map((category) => (
+                  <CommandItem
+                    key={category.id}
+                    value={category.name}
+                    onSelect={() => {
+                      onChange(category.id);
+                      setOpen(false);
+                    }}
+                  >
+                    {category.name}
+                    <Check
+                      className={cn(
+                        "ml-auto h-4 w-4",
+                        category.id === value ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </CommandItem>
+                ))}
               </CommandGroup>
               <CommandGroup>
                 <CommandItem

@@ -15,7 +15,7 @@ import { ApiError } from "@/shared/lib/api-client";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { FileDropZone } from "@/shared/components/file-drop-zone";
 import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Card, CardContent } from "@/shared/ui/card";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -64,9 +64,9 @@ const PERIODICITY_LABEL: Record<Periodicity, string> = {
 };
 
 /**
- * Organizado em 3 Cards (Informações da Conta / Dados do Boleto /
- * Documentos, Sprint 06) para reduzir rolagem e melhorar a leitura em
- * telas desktop comuns. `initialValues` é usado pelo "Duplicar"
+ * Um único Card com seções separadas por divisor (Sprint 07) — 3 Cards
+ * com header próprio (Sprint 06) consumiam espaço vertical demais e
+ * geravam rolagem em 1366x768. `initialValues` é usado pelo "Duplicar"
  * (pré-preenche fornecedor/categoria/valor/descrição, mas não o
  * vencimento — o usuário escolhe uma nova data).
  */
@@ -139,13 +139,10 @@ export function AccountsPayableForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Informações da Conta</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-5 sm:grid-cols-2">
+        <CardContent className="space-y-2 p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="supplierId">Fornecedor</Label>
               <Controller
@@ -219,7 +216,7 @@ export function AccountsPayableForm({
             </div>
           </div>
 
-          <div className="space-y-4 rounded-lg border p-3">
+          <div className="space-y-2 rounded-lg border p-2">
             <label className="flex items-center gap-2 text-sm font-medium">
               <Checkbox
                 checked={isRecurring}
@@ -228,7 +225,7 @@ export function AccountsPayableForm({
               Conta recorrente
             </label>
             {isRecurring && (
-              <div className="space-y-4 pl-6">
+              <div className="grid gap-3 pl-6 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="periodicity">Periodicidade</Label>
                   <Select
@@ -237,10 +234,7 @@ export function AccountsPayableForm({
                       setPeriodicity(value as Periodicity)
                     }
                   >
-                    <SelectTrigger
-                      id="periodicity"
-                      className="w-full sm:w-[220px]"
-                    >
+                    <SelectTrigger id="periodicity" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -262,6 +256,7 @@ export function AccountsPayableForm({
                     onValueChange={(value) =>
                       setRecurrenceEnd(value as RecurrenceEnd)
                     }
+                    className="flex flex-wrap items-center gap-x-4 gap-y-1"
                   >
                     <label className="flex items-center gap-2 text-sm">
                       <RadioGroupItem value="UNLIMITED" />
@@ -280,7 +275,7 @@ export function AccountsPayableForm({
                           onChange={(event) =>
                             setOccurrenceCount(event.target.value)
                           }
-                          className="h-8 w-20"
+                          className="h-7 w-16"
                         />
                         ocorrências
                       </span>
@@ -293,22 +288,20 @@ export function AccountsPayableForm({
 
           <div className="space-y-2">
             <Label htmlFor="description">Observação</Label>
-            <Textarea id="description" rows={2} {...register("description")} />
+            <Textarea
+              id="description"
+              rows={1}
+              className="min-h-9"
+              {...register("description")}
+            />
             {errors.description && (
               <p className="text-destructive text-sm">
                 {errors.description.message}
               </p>
             )}
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Dados do Boleto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-3 border-t pt-2 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="barcode">Código de Barras</Label>
               <Controller
@@ -332,15 +325,11 @@ export function AccountsPayableForm({
               <Input id="pixKey" {...register("pixKey")} />
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Documentos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FileDropZone files={attachments} onChange={setAttachments} />
+          <div className="space-y-1 border-t pt-2">
+            <Label>Documentos</Label>
+            <FileDropZone files={attachments} onChange={setAttachments} />
+          </div>
         </CardContent>
       </Card>
 

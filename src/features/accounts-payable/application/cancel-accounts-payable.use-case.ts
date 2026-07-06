@@ -16,10 +16,13 @@ interface Deps {
 }
 
 /**
- * "SINGLE" cancela só esta ocorrência (comportamento de sempre, inalterado
- * pra contas avulsas). "SERIES" também encerra a recorrência (desativa o
+ * "SINGLE" cancela só esta ocorrência — vale tanto pra uma conta PENDENTE
+ * avulsa quanto pra uma correção pontual de conta já PAGA (ex: pagamento
+ * duplicado). "SERIES" também encerra a recorrência (desativa o
  * RecurringBill) e cancela as demais ocorrências ainda PENDENTES da série —
- * nunca exclui nada, nunca toca ocorrências já pagas ou já canceladas.
+ * só faz sentido a partir de uma ocorrência ainda PENDENTE (encerrar uma
+ * série é uma decisão sobre o futuro, não uma correção de pagamento já
+ * feito); nunca exclui nada, nunca toca ocorrências já pagas ou canceladas.
  */
 export async function cancelAccountsPayableUseCase(
   accountsPayableId: string,
@@ -34,11 +37,14 @@ export async function cancelAccountsPayableUseCase(
     throw new NotFoundError("Conta a pagar", accountsPayableId);
   }
 
-  if (payable.status !== "PENDING") {
+  if (payable.status !== "PENDING" && payable.status !== "PAID") {
     throw new PayableAlreadyProcessedError(accountsPayableId);
   }
 
-  const endingSeries = input.scope === "SERIES" && payable.recurringBillId;
+  const endingSeries =
+    input.scope === "SERIES" &&
+    payable.recurringBillId &&
+    payable.status === "PENDING";
 
   const cancelled =
     await deps.accountsPayableRepository.cancel(accountsPayableId);

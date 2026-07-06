@@ -22,7 +22,7 @@ export function AccountsPayableFormDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] gap-2 overflow-y-auto p-3 sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Nova conta a pagar</DialogTitle>
         </DialogHeader>
