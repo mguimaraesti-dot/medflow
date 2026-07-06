@@ -14,7 +14,11 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import { formatDateOnlyBR, formatSmartDueDate } from "@/shared/lib/format";
+import {
+  formatDateOnlyBR,
+  formatSmartDueDate,
+  formatTimeBR,
+} from "@/shared/lib/format";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 import type { PayableStatus } from "../domain/accounts-payable.entity";
 import type {
@@ -52,6 +56,50 @@ export const STATUS_META: Record<
     icon: Ban,
   },
 };
+
+/**
+ * Cores fixas por nome de categoria (Sprint UX/UI 11) — a mesma categoria
+ * usa sempre a mesma cor, independente do `color` cadastrado no banco.
+ * Categorias fora deste mapa continuam usando `category.color` (definido
+ * pelo usuário no cadastro), sem quebrar categorias customizadas.
+ */
+export const CATEGORY_COLOR_OVERRIDES: Record<string, string> = {
+  Energia:
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  Internet:
+    "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  Software:
+    "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  Marketing:
+    "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-500",
+  Impostos: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+};
+
+/**
+ * Nunca "0 conta(s)" (Sprint UX/UI 11) — linguagem natural + pluralização
+ * correta pros cards de resumo.
+ */
+export function formatCardSubtitle(
+  count: number,
+  type: "hoje" | "pagas" | "generic" = "generic",
+): string {
+  if (count === 0) {
+    if (type === "hoje") return "Nenhum vencimento";
+    if (type === "pagas") return "Nenhum pagamento";
+    return "Nenhuma conta";
+  }
+  return `${count} ${count === 1 ? "conta" : "contas"}`;
+}
+
+/** "Confirmado por" simplificado na tabela — nome completo/origem/data completa ficam só no tooltip. */
+export function formatShortConfirmedAt(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const shortDate = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(date);
+  return `${shortDate} • ${formatTimeBR(date)}`;
+}
 
 export interface DueDateDisplay {
   top: string;

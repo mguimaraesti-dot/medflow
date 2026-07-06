@@ -24,7 +24,9 @@ import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import {
+  CATEGORY_COLOR_OVERRIDES,
   STATUS_META,
+  formatShortConfirmedAt,
   getAccountsPayableAttachments,
   getDueDateDisplay,
   getPaymentConfirmationDetail,
@@ -98,12 +100,12 @@ function SortableHead({
 }: {
   label: string;
   field: SortField;
-  sort: { field: SortField; direction: SortDirection };
+  sort: { field: SortField; direction: SortDirection } | null;
   onSort: (field: SortField) => void;
   align?: "right";
   className?: string;
 }) {
-  const active = sort.field === field;
+  const active = sort?.field === field;
   return (
     <TableHead
       className={cn(
@@ -162,7 +164,10 @@ export function AccountsPayableTable({
   dueDateFrom?: Date;
   dueDateTo?: Date;
   visibleColumns: VisibleColumns;
-  onView: (payable: AccountsPayableResponseDTO) => void;
+  onView: (
+    payable: AccountsPayableResponseDTO,
+    tab?: "account" | "history" | "attachments",
+  ) => void;
   onEdit: (payable: AccountsPayableResponseDTO) => void;
   onDuplicate: (payable: AccountsPayableResponseDTO) => void;
   onCreateNew: () => void;
@@ -174,10 +179,12 @@ export function AccountsPayableTable({
     useState<AccountsPayableResponseDTO | null>(null);
   const [deletingTarget, setDeletingTarget] =
     useState<AccountsPayableResponseDTO | null>(null);
+  // `null` = sem ordenação (ordem padrão do backend, dueDate asc) — 3º
+  // clique numa coluna limpa a ordenação em vez de alternar pra sempre.
   const [sort, setSort] = useState<{
     field: SortField;
     direction: SortDirection;
-  }>({ field: "DUE_DATE", direction: "asc" });
+  } | null>(null);
 
   const { data, isLoading } = useAccountsPayable({
     status: status === "ALL" ? undefined : status,
@@ -204,15 +211,16 @@ export function AccountsPayableTable({
   );
 
   function toggleSort(field: SortField) {
-    setSort((prev) =>
-      prev.field === field
-        ? { field, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { field, direction: "asc" },
-    );
+    setSort((prev) => {
+      if (!prev || prev.field !== field) return { field, direction: "asc" };
+      if (prev.direction === "asc") return { field, direction: "desc" };
+      return null;
+    });
   }
 
   const sortedItems = useMemo(() => {
     if (!data) return [];
+    if (!sort) return data.items;
     const items = [...data.items];
     const dir = sort.direction === "asc" ? 1 : -1;
 
@@ -312,9 +320,9 @@ export function AccountsPayableTable({
 
       {!isLoading && data && data.items.length > 0 && (
         <>
-          <div className="overflow-x-auto">
+          <div className="max-h-[65vh] overflow-x-auto overflow-y-auto">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-muted/50 sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
                   <SortableHead
                     label="Vencimento"
@@ -335,6 +343,7 @@ export function AccountsPayableTable({
                       field="CATEGORY"
                       sort={sort}
                       onSort={toggleSort}
+                      className="hidden lg:table-cell"
                     />
                   )}
                   <SortableHead
@@ -355,6 +364,7 @@ export function AccountsPayableTable({
                     field="RECURRING"
                     sort={sort}
                     onSort={toggleSort}
+                    className="hidden lg:table-cell"
                   />
                   {visibleColumns.confirmedBy && (
                     <SortableHead
@@ -362,6 +372,7 @@ export function AccountsPayableTable({
                       field="CONFIRMED_BY"
                       sort={sort}
                       onSort={toggleSort}
+                      className="hidden lg:table-cell"
                     />
                   )}
                   {visibleColumns.attachments && (
@@ -370,6 +381,7 @@ export function AccountsPayableTable({
                       field="ATTACHMENTS"
                       sort={sort}
                       onSort={toggleSort}
+                      className="hidden lg:table-cell"
                     />
                   )}
                   <TableHead className="pr-4 text-right">Ações</TableHead>
@@ -400,7 +412,7 @@ export function AccountsPayableTable({
                   return (
                     <TableRow
                       key={payable.id}
-                      className="hover:bg-muted/50 cursor-pointer"
+                      className="hover:bg-muted/50 cursor-pointer transition-shadow hover:shadow-[inset_3px_0_0_0_var(--primary)]"
                       onClick={() => onView(payable)}
                     >
                       <TableCell className="pl-4">
@@ -420,14 +432,21 @@ export function AccountsPayableTable({
                         {supplierById.get(payable.supplierId)?.name ?? "—"}
                       </TableCell>
                       {visibleColumns.category && (
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {category ? (
                             <Badge
                               variant="outline"
-                              style={{
-                                borderColor: category.color,
-                                color: category.color,
-                              }}
+                              className={
+                                CATEGORY_COLOR_OVERRIDES[category.name]
+                              }
+                              style={
+                                CATEGORY_COLOR_OVERRIDES[category.name]
+                                  ? undefined
+                                  : {
+                                      borderColor: category.color,
+                                      color: category.color,
+                                    }
+                              }
                             >
                               {category.name}
                             </Badge>
@@ -436,7 +455,7 @@ export function AccountsPayableTable({
                           )}
                         </TableCell>
                       )}
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-medium tabular-nums">
                         {formatCurrencyBRL(payable.amount)}
                       </TableCell>
                       <TableCell>
@@ -448,7 +467,7 @@ export function AccountsPayableTable({
                           {badge.label}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         {payable.recurringBillId ? (
                           <Badge
                             variant="outline"
@@ -464,19 +483,35 @@ export function AccountsPayableTable({
                         )}
                       </TableCell>
                       {visibleColumns.confirmedBy && (
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {paymentConfirmation ? (
-                            <div className="space-y-0.5">
-                              <p className="text-sm font-medium">
-                                {paymentConfirmation.userName}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                {paymentConfirmation.source} ·{" "}
-                                {formatDateTimeBR(
-                                  paymentConfirmation.confirmedAt,
-                                )}
-                              </p>
-                            </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="cursor-help space-y-0.5">
+                                  <p className="text-sm font-medium">
+                                    {paymentConfirmation.userName.split(" ")[0]}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs">
+                                    {formatShortConfirmedAt(
+                                      paymentConfirmation.confirmedAt,
+                                    )}
+                                  </p>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-medium">
+                                  {paymentConfirmation.userName}
+                                </p>
+                                <p className="text-xs">
+                                  Origem: {paymentConfirmation.source}
+                                </p>
+                                <p className="text-xs">
+                                  {formatDateTimeBR(
+                                    paymentConfirmation.confirmedAt,
+                                  )}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
                           ) : (
                             <span className="text-muted-foreground text-sm">
                               —
@@ -485,7 +520,10 @@ export function AccountsPayableTable({
                         </TableCell>
                       )}
                       {visibleColumns.attachments && (
-                        <TableCell onClick={(event) => event.stopPropagation()}>
+                        <TableCell
+                          className="hidden lg:table-cell"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {attachments.length === 0 ? (
                             <span className="text-muted-foreground text-sm">
                               —
@@ -493,10 +531,14 @@ export function AccountsPayableTable({
                           ) : (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="text-muted-foreground inline-flex cursor-default items-center gap-1 text-sm">
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-foreground inline-flex cursor-pointer items-center gap-1 text-sm"
+                                  onClick={() => onView(payable, "attachments")}
+                                >
                                   <Paperclip className="h-3.5 w-3.5" />
                                   {attachments.length}
-                                </span>
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <ul className="space-y-0.5">
@@ -559,6 +601,25 @@ export function AccountsPayableTable({
                                 >
                                   <XCircle className="h-4 w-4" />
                                   Cancelar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                          {(payable.status === "CANCELLED" ||
+                            (payable.status === "PAID" && !canCancelThis)) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Mais ações</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => onView(payable)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Visualizar
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

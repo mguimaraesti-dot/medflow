@@ -73,6 +73,7 @@ export function AccountsPayableDrawer({
   onOpenChange,
   onEdit,
   onOpenOccurrence,
+  initialTab = "account",
 }: {
   payable: AccountsPayableResponseDTO | null;
   supplierName?: string;
@@ -84,6 +85,8 @@ export function AccountsPayableDrawer({
   onOpenChange: (open: boolean) => void;
   onEdit?: (payable: AccountsPayableResponseDTO) => void;
   onOpenOccurrence?: (payable: AccountsPayableResponseDTO) => void;
+  /** Aba que abre por padrão (ex: clique no ícone de anexo abre direto em "attachments"). */
+  initialTab?: "account" | "history" | "attachments";
 }) {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -210,7 +213,8 @@ export function AccountsPayableDrawer({
               </SheetHeader>
 
               <Tabs
-                defaultValue="account"
+                key={initialTab}
+                defaultValue={initialTab}
                 className="flex min-h-0 flex-1 flex-col"
               >
                 <TabsList variant="line" className="mx-4">

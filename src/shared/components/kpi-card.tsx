@@ -14,6 +14,24 @@ const ICON_TONE_CLASSES: Record<IconTone, string> = {
   slate: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
 };
 
+const TONE_RING_CLASSES: Record<IconTone, string> = {
+  blue: "ring-blue-500",
+  green: "ring-green-500",
+  red: "ring-red-500",
+  amber: "ring-amber-500",
+  violet: "ring-violet-500",
+  slate: "ring-slate-500",
+};
+
+const TONE_BORDER_CLASSES: Record<IconTone, string> = {
+  blue: "border-blue-500/50",
+  green: "border-green-500/50",
+  red: "border-red-500/50",
+  amber: "border-amber-500/50",
+  violet: "border-violet-500/50",
+  slate: "border-slate-500/50",
+};
+
 export function KpiCard({
   label,
   value,
@@ -22,6 +40,9 @@ export function KpiCard({
   iconTone,
   comparison,
   compact,
+  onClick,
+  active,
+  emphasized,
 }: {
   label: string;
   value: string;
@@ -32,13 +53,37 @@ export function KpiCard({
   comparison?: ReactNode;
   /** Versão ~25% mais baixa (menos padding, texto menor) — usada em telas onde a tabela precisa de mais espaço. */
   compact?: boolean;
+  /** Card vira um atalho de filtro clicável (Sprint UX/UI 11) — sem isso, card só exibe (comportamento original). */
+  onClick?: () => void;
+  /** Anel colorido (usa `iconTone`) — indica que este card é o filtro atualmente aplicado. */
+  active?: boolean;
+  /** Destaque persistente mais discreto que `active` — usado quando há algo que merece atenção (ex: contas vencidas) mesmo sem o filtro estar selecionado. */
+  emphasized?: boolean;
 }) {
   return (
     <Card
       className={cn(
         "hover:border-ring/40 transition-colors",
         compact ? "py-2.5" : "py-4",
+        onClick && "cursor-pointer",
+        active &&
+          iconTone &&
+          cn("ring-2 ring-offset-1", TONE_RING_CLASSES[iconTone]),
+        !active && emphasized && iconTone && TONE_BORDER_CLASSES[iconTone],
       )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
     >
       <CardHeader
         className={cn(

@@ -8,10 +8,9 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
-  Filter,
   Plus,
   Search,
-  SlidersHorizontal,
+  Settings2,
   Wallet,
   X,
 } from "lucide-react";
@@ -25,6 +24,7 @@ import { AccountsPayableFormDialog } from "./accounts-payable-form-dialog";
 import { AccountsPayableDrawer } from "./accounts-payable-drawer";
 import { AccountsPayableEditDialog } from "./accounts-payable-edit-dialog";
 import { useAccountsPayableSummaryTrend } from "./use-accounts-payable-summary-trend";
+import { formatCardSubtitle } from "./accounts-payable-helpers";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
 import {
@@ -40,16 +40,10 @@ import { cn } from "@/shared/lib/utils";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { Label } from "@/shared/ui/label";
+import { Separator } from "@/shared/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -81,7 +75,7 @@ function TrendComparison({
 }) {
   return (
     <div className="space-y-0.5">
-      <p>{countLabel ?? `${count} conta(s)`}</p>
+      <p>{countLabel ?? formatCardSubtitle(count)}</p>
       {changePercent !== null && (
         <p className="flex items-center gap-1">
           {changePercent >= 0 ? (
@@ -128,9 +122,20 @@ export function AccountsPayableScreen({
   const [viewing, setViewing] = useState<AccountsPayableResponseDTO | null>(
     null,
   );
+  const [viewingTab, setViewingTab] = useState<
+    "account" | "history" | "attachments"
+  >("account");
   const [editing, setEditing] = useState<AccountsPayableResponseDTO | null>(
     null,
   );
+
+  function handleView(
+    payable: AccountsPayableResponseDTO,
+    tab: "account" | "history" | "attachments" = "account",
+  ) {
+    setViewingTab(tab);
+    setViewing(payable);
+  }
 
   const { data: categories } = useCategories("OUT");
   const { data: suppliers } = useSuppliers();
@@ -189,6 +194,37 @@ export function AccountsPayableScreen({
     Boolean(recurringOnly) ||
     Boolean(search.trim());
 
+  // Cards de resumo como atalhos de filtro (Sprint UX/UI 11) — "ativo" é
+  // derivado de {status, periodPreset}, nunca um estado novo duplicado.
+  function filterByTotal() {
+    setStatus("ALL");
+  }
+  function filterByDueToday() {
+    setPeriodPreset("TODAY");
+    setPeriodCustom(undefined);
+    setStatus("PENDING");
+  }
+  function filterByUpcoming() {
+    setStatus("PENDING");
+  }
+  function filterByOverdue() {
+    setStatus("OVERDUE");
+  }
+  function filterByPaid() {
+    setStatus("PAID");
+  }
+
+  const isTotalActive = status === "ALL";
+  const isDueTodayActive = status === "PENDING" && periodPreset === "TODAY";
+  const isUpcomingActive = status === "PENDING" && periodPreset !== "TODAY";
+  const isOverdueActive = status === "OVERDUE";
+  const isPaidActive = status === "PAID";
+
+  const paidPercentOfPeriod =
+    summary && Number(summary.total.amount) > 0
+      ? (Number(summary.paid.amount) / Number(summary.total.amount)) * 100
+      : null;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -230,6 +266,8 @@ export function AccountsPayableScreen({
             icon={Wallet}
             iconTone="blue"
             compact
+            onClick={filterByTotal}
+            active={isTotalActive}
           />
           <KpiCard
             label="Hoje"
@@ -237,7 +275,13 @@ export function AccountsPayableScreen({
             comparison={
               <TrendComparison
                 count={summary.dueToday.count}
-                countLabel={`${summary.dueToday.count} conta(s) vencem hoje`}
+                countLabel={
+                  summary.dueToday.count === 0
+                    ? "Nenhum vencimento"
+                    : `${formatCardSubtitle(summary.dueToday.count)} ${
+                        summary.dueToday.count === 1 ? "vence" : "vencem"
+                      } hoje`
+                }
                 changePercent={trend?.dueToday ?? null}
                 comparisonLabel="ontem"
               />
@@ -245,6 +289,9 @@ export function AccountsPayableScreen({
             icon={CalendarClock}
             iconTone="blue"
             compact
+            onClick={filterByDueToday}
+            active={isDueTodayActive}
+            emphasized={summary.dueToday.count > 0}
           />
           <KpiCard
             label="A vencer"
@@ -258,6 +305,8 @@ export function AccountsPayableScreen({
             icon={Clock}
             iconTone="green"
             compact
+            onClick={filterByUpcoming}
+            active={isUpcomingActive}
           />
           <KpiCard
             label="Vencidas"
@@ -271,19 +320,30 @@ export function AccountsPayableScreen({
             icon={AlertTriangle}
             iconTone="red"
             compact
+            onClick={filterByOverdue}
+            active={isOverdueActive}
+            emphasized={summary.overdue.count > 0}
           />
           <KpiCard
             label="Pagas"
             value={formatCurrencyBRL(summary.paid.amount)}
             comparison={
-              <TrendComparison
-                count={summary.paid.count}
-                changePercent={trend?.paid ?? null}
-              />
+              <div className="space-y-0.5">
+                <TrendComparison
+                  count={summary.paid.count}
+                  countLabel={formatCardSubtitle(summary.paid.count, "pagas")}
+                  changePercent={trend?.paid ?? null}
+                />
+                {paidPercentOfPeriod !== null && (
+                  <p>{paidPercentOfPeriod.toFixed(0)}% do período</p>
+                )}
+              </div>
             }
             icon={CheckCircle2}
             iconTone="violet"
             compact
+            onClick={filterByPaid}
+            active={isPaidActive}
           />
         </div>
       )}
@@ -292,7 +352,7 @@ export function AccountsPayableScreen({
         <div className="relative min-w-[220px] flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
-            placeholder="Buscar por fornecedor, descrição ou número..."
+            placeholder="Buscar fornecedor, descrição ou boleto..."
             className="pl-9"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -303,7 +363,7 @@ export function AccountsPayableScreen({
           value={status}
           onValueChange={(value) => setStatus(value as StatusFilter)}
         >
-          <SelectTrigger size="sm" className="w-full lg:w-[150px]">
+          <SelectTrigger size="sm" className="w-full lg:w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -321,7 +381,7 @@ export function AccountsPayableScreen({
             setCategoryId(value === "ALL" ? undefined : value)
           }
         >
-          <SelectTrigger size="sm" className="w-full lg:w-[170px]">
+          <SelectTrigger size="sm" className="w-full lg:w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -344,11 +404,11 @@ export function AccountsPayableScreen({
             )
           }
         >
-          <SelectTrigger size="sm" className="w-full lg:w-[170px]">
+          <SelectTrigger size="sm" className="w-full lg:w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Todas (recorrência)</SelectItem>
+            <SelectItem value="ALL">Todas as recorrências</SelectItem>
             <SelectItem value="RECURRING">Apenas recorrentes</SelectItem>
             <SelectItem value="NON_RECURRING">
               Apenas não recorrentes
@@ -356,95 +416,96 @@ export function AccountsPayableScreen({
           </SelectContent>
         </Select>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              <Filter className="h-4 w-4" />
-              Mais filtros
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 space-y-2">
-            <Label htmlFor="supplier-filter">Fornecedor</Label>
-            <Select
-              value={supplierId ?? "ALL"}
-              onValueChange={(value) =>
-                setSupplierId(value === "ALL" ? undefined : value)
-              }
-            >
-              <SelectTrigger id="supplier-filter" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Todos os fornecedores</SelectItem>
-                {suppliers?.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </PopoverContent>
-        </Popover>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              <SlidersHorizontal className="h-4 w-4" />
-              Colunas
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Colunas visíveis</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.category}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({
-                  ...prev,
-                  category: checked,
-                }))
-              }
-              onSelect={(event) => event.preventDefault()}
-            >
-              Categoria
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.confirmedBy}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({
-                  ...prev,
-                  confirmedBy: checked,
-                }))
-              }
-              onSelect={(event) => event.preventDefault()}
-            >
-              Confirmado por
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={visibleColumns.attachments}
-              onCheckedChange={(checked) =>
-                setVisibleColumns((prev) => ({
-                  ...prev,
-                  attachments: checked,
-                }))
-              }
-              onSelect={(event) => event.preventDefault()}
-            >
-              Documentos
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {canCreate && (
           <Button
             type="button"
             onClick={openCreate}
-            className={cn("lg:ml-auto")}
+            className={cn(
+              "h-12 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px hover:shadow-md lg:ml-auto",
+            )}
           >
             <Plus className="h-4 w-4" />
             Nova Conta
           </Button>
         )}
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Mais opções"
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="supplier-filter">Fornecedor</Label>
+              <Select
+                value={supplierId ?? "ALL"}
+                onValueChange={(value) =>
+                  setSupplierId(value === "ALL" ? undefined : value)
+                }
+              >
+                <SelectTrigger id="supplier-filter" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Todos os fornecedores</SelectItem>
+                  {suppliers?.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>Colunas visíveis</Label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visibleColumns.category}
+                  onCheckedChange={(checked) =>
+                    setVisibleColumns((prev) => ({
+                      ...prev,
+                      category: checked === true,
+                    }))
+                  }
+                />
+                Categoria
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visibleColumns.confirmedBy}
+                  onCheckedChange={(checked) =>
+                    setVisibleColumns((prev) => ({
+                      ...prev,
+                      confirmedBy: checked === true,
+                    }))
+                  }
+                />
+                Confirmado por
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visibleColumns.attachments}
+                  onCheckedChange={(checked) =>
+                    setVisibleColumns((prev) => ({
+                      ...prev,
+                      attachments: checked === true,
+                    }))
+                  }
+                />
+                Documentos
+              </label>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -542,7 +603,7 @@ export function AccountsPayableScreen({
           dueDateFrom={range.from}
           dueDateTo={range.to}
           visibleColumns={visibleColumns}
-          onView={setViewing}
+          onView={handleView}
           onEdit={setEditing}
           onDuplicate={handleDuplicate}
           onCreateNew={openCreate}
@@ -568,6 +629,7 @@ export function AccountsPayableScreen({
           setEditing(payable);
         }}
         onOpenOccurrence={setViewing}
+        initialTab={viewingTab}
       />
       <AccountsPayableEditDialog
         payable={editing}
