@@ -1,48 +1,47 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { requirePermission } from "@/core/permissions/rbac.middleware";
 import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { handleApiError } from "@/core/errors/error-handler";
 import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
-import { recurringBillsScheduleQuerySchema } from "@/features/recurring-bills/application/dtos/recurring-bills-schedule.dto";
-import { toRecurringBillsScheduleResponseDTO } from "@/features/recurring-bills/application/dtos/recurring-bills-schedule.response-dto";
-import { getRecurringBillsScheduleUseCase } from "@/features/recurring-bills/application/get-recurring-bills-schedule.use-case";
+import { toRecurringBillInsightsResponseDTO } from "@/features/recurring-bills/application/dtos/recurring-bill-insights.response-dto";
+import { getRecurringBillInsightsUseCase } from "@/features/recurring-bills/application/get-recurring-bill-insights.use-case";
 import { PrismaRecurringBillRepository } from "@/features/recurring-bills/infrastructure/prisma-recurring-bill.repository";
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 
 const recurringBillRepository = new PrismaRecurringBillRepository();
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
 
-/** Programação financeira (mês/ano) das recorrências ativas — só ocorrências já geradas. */
-export async function GET(request: NextRequest) {
+/** Detalhe + resumo financeiro + saúde + insight automático de uma recorrência — usado pelo Card de Recorrência e pelo Drawer "Linha do Tempo". */
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const requestId = generateRequestId();
 
   try {
     const user = await requirePermission(PERMISSIONS.PAYABLE_READ);
     if (!user.organizationId) {
       throw new ForbiddenError(
-        "consultar programação de recorrências sem organização vinculada",
+        "consultar insights de recorrência sem organização vinculada",
       );
     }
+    const { id } = await params;
 
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-    const input = recurringBillsScheduleQuerySchema.parse(searchParams);
-
-    const result = await getRecurringBillsScheduleUseCase(
-      input.month,
-      input.year,
+    const result = await getRecurringBillInsightsUseCase(
+      id,
       user.organizationId,
       { recurringBillRepository, accountsPayableRepository },
     );
 
     return NextResponse.json({
-      data: toRecurringBillsScheduleResponseDTO(result),
+      data: toRecurringBillInsightsResponseDTO(result),
     });
   } catch (error) {
     return handleApiError(error, {
       requestId,
-      route: "/api/recurring-bills/schedule",
-      useCase: "getRecurringBillsScheduleUseCase",
+      route: "/api/recurring-bills/[id]/insights",
+      useCase: "getRecurringBillInsightsUseCase",
     });
   }
 }

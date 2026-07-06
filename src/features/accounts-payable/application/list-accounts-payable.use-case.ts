@@ -21,6 +21,7 @@ export async function listAccountsPayableUseCase(
       supplierId: input.supplierId,
       categoryId: input.categoryId,
       recurringBillId: input.recurringBillId,
+      recurringOnly: input.recurringOnly,
       search: input.search,
       deletedOnly: input.deletedOnly,
     },

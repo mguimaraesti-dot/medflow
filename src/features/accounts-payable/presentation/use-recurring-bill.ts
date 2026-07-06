@@ -11,6 +11,7 @@ export type RecurrencePeriodicity =
 // usado no PrismaCashFlowEntryRepository.
 export interface RecurringBillDetail {
   id: string;
+  active: boolean;
   periodicity: RecurrencePeriodicity;
   maxOccurrences: number | null;
   firstDueDate: string | null;

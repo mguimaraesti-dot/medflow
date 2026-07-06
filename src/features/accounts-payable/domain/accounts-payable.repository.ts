@@ -30,8 +30,10 @@ export interface ListAccountsPayableFilter {
   dueDateTo?: Date;
   supplierId?: string;
   categoryId?: string;
-  /** Só as ocorrências de uma recorrência — usado pela aba "Próximas Ocorrências" do Drawer. */
+  /** Só as ocorrências de uma recorrência — usado pelo Drawer "Ver Ocorrências"/"Linha do Tempo". */
   recurringBillId?: string;
+  /** Filtro "Recorrência" da tela: só recorrentes ou só avulsas. */
+  recurringOnly?: "RECURRING" | "NON_RECURRING";
   /** Busca livre por descrição (contains, case-insensitive). */
   search?: string;
   /**

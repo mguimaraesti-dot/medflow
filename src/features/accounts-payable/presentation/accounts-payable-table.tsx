@@ -70,6 +70,7 @@ type SortField =
   | "CATEGORY"
   | "AMOUNT"
   | "STATUS"
+  | "RECURRING"
   | "CONFIRMED_BY"
   | "ATTACHMENTS";
 type SortDirection = "asc" | "desc";
@@ -132,6 +133,7 @@ export function AccountsPayableTable({
   canDelete,
   status,
   categoryId,
+  recurringOnly,
   search,
   dueDateFrom,
   dueDateTo,
@@ -146,6 +148,7 @@ export function AccountsPayableTable({
   canDelete: boolean;
   status: StatusFilter;
   categoryId?: string;
+  recurringOnly?: "RECURRING" | "NON_RECURRING";
   search?: string;
   dueDateFrom?: Date;
   dueDateTo?: Date;
@@ -169,6 +172,7 @@ export function AccountsPayableTable({
   const { data, isLoading } = useAccountsPayable({
     status: status === "ALL" ? undefined : status,
     categoryId,
+    recurringOnly,
     search,
     dueDateFrom,
     dueDateTo,
@@ -219,6 +223,12 @@ export function AccountsPayableTable({
             STATUS_META[a.displayStatus].label.localeCompare(
               STATUS_META[b.displayStatus].label,
             ) * dir
+          );
+        case "RECURRING":
+          return (
+            (Number(a.recurringBillId !== null) -
+              Number(b.recurringBillId !== null)) *
+            dir
           );
         case "CONFIRMED_BY": {
           const av = getPaymentConfirmationDetail(a)?.userName ?? "";
@@ -328,6 +338,12 @@ export function AccountsPayableTable({
                     sort={sort}
                     onSort={toggleSort}
                   />
+                  <SortableHead
+                    label="Recorrência"
+                    field="RECURRING"
+                    sort={sort}
+                    onSort={toggleSort}
+                  />
                   {visibleColumns.confirmedBy && (
                     <SortableHead
                       label="Confirmado por"
@@ -389,18 +405,7 @@ export function AccountsPayableTable({
                         </p>
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center gap-1.5">
-                          {supplierById.get(payable.supplierId)?.name ?? "—"}
-                          {payable.recurringBillId && (
-                            <Badge
-                              variant="outline"
-                              className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
-                            >
-                              <Repeat className="h-3 w-3" />
-                              Recorrente
-                            </Badge>
-                          )}
-                        </span>
+                        {supplierById.get(payable.supplierId)?.name ?? "—"}
                       </TableCell>
                       {visibleColumns.category && (
                         <TableCell>
@@ -429,6 +434,21 @@ export function AccountsPayableTable({
                         >
                           {badge.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {payable.recurringBillId ? (
+                          <Badge
+                            variant="outline"
+                            className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
+                          >
+                            <Repeat className="h-3 w-3" />
+                            Recorrente
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            —
+                          </span>
+                        )}
                       </TableCell>
                       {visibleColumns.confirmedBy && (
                         <TableCell>

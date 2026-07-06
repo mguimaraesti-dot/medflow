@@ -151,6 +151,15 @@ export class PayableNotDeletedError extends DomainError {
   }
 }
 
+export class RecurringBillAlreadyEndedError extends DomainError {
+  readonly code = "RECURRING_BILL_ALREADY_ENDED";
+  readonly httpStatus = 409;
+
+  constructor(recurringBillId: string) {
+    super("Esta recorrência já foi encerrada.", { recurringBillId });
+  }
+}
+
 // ---------------------------------------------------------------
 // Motor de Tesouraria (docs/decisions/adr-tesouraria.md)
 // ---------------------------------------------------------------

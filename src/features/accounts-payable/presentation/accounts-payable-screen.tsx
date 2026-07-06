@@ -93,6 +93,9 @@ export function AccountsPayableScreen({
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [categoryId, setCategoryId] = useState<string | undefined>();
+  const [recurringOnly, setRecurringOnly] = useState<
+    "RECURRING" | "NON_RECURRING" | undefined
+  >();
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     category: true,
     confirmedBy: true,
@@ -285,6 +288,28 @@ export function AccountsPayableScreen({
           </SelectContent>
         </Select>
 
+        <Select
+          value={recurringOnly ?? "ALL"}
+          onValueChange={(value) =>
+            setRecurringOnly(
+              value === "ALL"
+                ? undefined
+                : (value as "RECURRING" | "NON_RECURRING"),
+            )
+          }
+        >
+          <SelectTrigger size="sm" className="w-full lg:w-[170px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todas (recorrência)</SelectItem>
+            <SelectItem value="RECURRING">Apenas recorrentes</SelectItem>
+            <SelectItem value="NON_RECURRING">
+              Apenas não recorrentes
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="outline" size="sm">
@@ -353,6 +378,7 @@ export function AccountsPayableScreen({
           canDelete={canDelete}
           status={status}
           categoryId={categoryId}
+          recurringOnly={recurringOnly}
           search={search.trim() || undefined}
           dueDateFrom={range.from}
           dueDateTo={range.to}
@@ -382,6 +408,7 @@ export function AccountsPayableScreen({
           setViewing(null);
           setEditing(payable);
         }}
+        onOpenOccurrence={setViewing}
       />
       <AccountsPayableEditDialog
         payable={editing}

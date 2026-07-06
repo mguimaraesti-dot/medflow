@@ -72,6 +72,12 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       ...(filter.recurringBillId && {
         recurringBillId: filter.recurringBillId,
       }),
+      ...(filter.recurringOnly === "RECURRING" && {
+        recurringBillId: { not: null },
+      }),
+      ...(filter.recurringOnly === "NON_RECURRING" && {
+        recurringBillId: null,
+      }),
       ...(filter.search && {
         description: { contains: filter.search, mode: "insensitive" },
       }),

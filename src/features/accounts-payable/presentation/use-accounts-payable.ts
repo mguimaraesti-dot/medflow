@@ -10,8 +10,10 @@ export interface AccountsPayableFilter {
   dueDateFrom?: Date;
   dueDateTo?: Date;
   categoryId?: string;
-  /** Só as ocorrências de uma recorrência — usado pela aba "Próximas Ocorrências" do Drawer. */
+  /** Só as ocorrências de uma recorrência — usado pelo Drawer "Ver Ocorrências"/"Linha do Tempo". */
   recurringBillId?: string;
+  /** Filtro "Recorrência" da tela: só recorrentes ou só avulsas. */
+  recurringOnly?: "RECURRING" | "NON_RECURRING";
   search?: string;
   page?: number;
   pageSize?: number;
@@ -28,6 +30,7 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
   if (filter.categoryId) params.set("categoryId", filter.categoryId);
   if (filter.recurringBillId)
     params.set("recurringBillId", filter.recurringBillId);
+  if (filter.recurringOnly) params.set("recurringOnly", filter.recurringOnly);
   if (filter.search) params.set("search", filter.search);
   if (filter.deletedOnly) params.set("deletedOnly", "true");
   params.set("page", String(filter.page ?? 1));

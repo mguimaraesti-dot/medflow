@@ -9,6 +9,8 @@ export const listAccountsPayableSchema = paginationSchema.extend({
   supplierId: cuidSchema.optional(),
   categoryId: cuidSchema.optional(),
   recurringBillId: cuidSchema.optional(),
+  /** Filtro "Recorrência" da tela: todas / só recorrentes / só avulsas. */
+  recurringOnly: z.enum(["RECURRING", "NON_RECURRING"]).optional(),
   search: z.string().trim().min(1).max(200).optional(),
   /** `true` só na tela "Contas Excluídas" — nunca combinado com o filtro padrão. */
   deletedOnly: z.coerce.boolean().optional(),

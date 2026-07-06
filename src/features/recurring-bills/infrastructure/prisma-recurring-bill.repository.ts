@@ -10,13 +10,6 @@ export class PrismaRecurringBillRepository implements RecurringBillRepository {
     return prisma.recurringBill.findUnique({ where: { id } });
   }
 
-  async listActive(organizationId: string): Promise<RecurringBill[]> {
-    return prisma.recurringBill.findMany({
-      where: { organizationId, active: true },
-      orderBy: { dueDay: "asc" },
-    });
-  }
-
   async create(data: CreateRecurringBillInput): Promise<RecurringBill> {
     return prisma.recurringBill.create({
       data: {

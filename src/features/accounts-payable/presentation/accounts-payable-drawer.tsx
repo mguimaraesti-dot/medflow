@@ -3,9 +3,12 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  Ban,
   CheckCircle2,
   Download,
+  Eye,
   FileText,
+  History,
   Pencil,
   Repeat,
   Trash2,
@@ -24,6 +27,9 @@ import { EmptyState } from "@/shared/components/empty-state";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
+import { EndRecurringBillDialog } from "./end-recurring-bill-dialog";
+import { RecurringBillOccurrencesDrawer } from "./recurring-bill-occurrences-drawer";
+import { RecurringBillTimelineDrawer } from "./recurring-bill-timeline-drawer";
 import {
   STATUS_META,
   getAccountsPayableAttachments,
@@ -33,8 +39,8 @@ import {
   toAccountsPayableEvents,
 } from "./accounts-payable-helpers";
 import { useRecurringBill } from "./use-recurring-bill";
+import { useRecurringBillInsights } from "./use-recurring-bill-insights";
 import { useAccountsPayableAuditLog } from "./use-accounts-payable-audit-log";
-import { useRecurringBillOccurrences } from "./use-recurring-bill-occurrences";
 import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
@@ -66,6 +72,7 @@ export function AccountsPayableDrawer({
   open,
   onOpenChange,
   onEdit,
+  onOpenOccurrence,
 }: {
   payable: AccountsPayableResponseDTO | null;
   supplierName?: string;
@@ -76,10 +83,14 @@ export function AccountsPayableDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit?: (payable: AccountsPayableResponseDTO) => void;
+  onOpenOccurrence?: (payable: AccountsPayableResponseDTO) => void;
 }) {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [cancelScopeOpen, setCancelScopeOpen] = useState(false);
+  const [occurrencesDrawerOpen, setOccurrencesDrawerOpen] = useState(false);
+  const [timelineDrawerOpen, setTimelineDrawerOpen] = useState(false);
+  const [endRecurrenceOpen, setEndRecurrenceOpen] = useState(false);
   const cancelAccountsPayable = useCancelAccountsPayable();
 
   const { data: recurringBill } = useRecurringBill(
@@ -89,11 +100,9 @@ export function AccountsPayableDrawer({
     payable && recurringBill
       ? getRecurrenceDisplay(recurringBill, payable.occurrenceNumber)
       : null;
-
-  const { data: occurrencesResult } = useRecurringBillOccurrences(
+  const { data: insights } = useRecurringBillInsights(
     payable?.recurringBillId ?? null,
   );
-  const occurrences = occurrencesResult?.items ?? [];
 
   const { data: auditLog } = useAccountsPayableAuditLog(payable?.id ?? null);
   const { data: suppliers } = useSuppliers();
@@ -208,11 +217,6 @@ export function AccountsPayableDrawer({
                   <TabsTrigger value="account">Conta</TabsTrigger>
                   <TabsTrigger value="history">Histórico</TabsTrigger>
                   <TabsTrigger value="attachments">Documentos</TabsTrigger>
-                  {payable.recurringBillId && (
-                    <TabsTrigger value="occurrences">
-                      Próximas Ocorrências
-                    </TabsTrigger>
-                  )}
                 </TabsList>
 
                 <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -266,20 +270,36 @@ export function AccountsPayableDrawer({
                       </div>
                     )}
 
-                    {recurrenceDisplay && (
-                      <div className="space-y-2 rounded-lg border p-3">
-                        <p className="flex items-center gap-1.5 text-sm font-medium">
-                          <Repeat className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                          Recorrente
-                        </p>
+                    {recurrenceDisplay && recurringBill && (
+                      <div className="space-y-3 rounded-lg border p-3">
+                        <div className="flex items-center justify-between">
+                          <p className="flex items-center gap-1.5 text-sm font-medium">
+                            <Repeat className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                            Recorrência
+                          </p>
+                          <Badge
+                            variant="outline"
+                            className={
+                              recurringBill.active
+                                ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-500"
+                                : "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400"
+                            }
+                          >
+                            {recurringBill.active ? "Ativa" : "Encerrada"}
+                          </Badge>
+                        </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <Field
                             label="Periodicidade"
                             value={recurrenceDisplay.periodicityLabel}
                           />
                           <Field
-                            label="Ocorrência"
-                            value={recurrenceDisplay.occurrenceLabel}
+                            label="Próxima geração"
+                            value={
+                              insights?.nextGenerationDate
+                                ? formatDateOnlyBR(insights.nextGenerationDate)
+                                : "—"
+                            }
                           />
                           <Field
                             label="Início"
@@ -289,6 +309,42 @@ export function AccountsPayableDrawer({
                             label="Fim"
                             value={recurrenceDisplay.endLabel}
                           />
+                          <Field
+                            label="Ocorrências geradas"
+                            value={insights?.occurrencesGenerated ?? "—"}
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setOccurrencesDrawerOpen(true)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Ver Ocorrências
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTimelineDrawerOpen(true)}
+                          >
+                            <History className="h-3.5 w-3.5" />
+                            Linha do Tempo
+                          </Button>
+                          {recurringBill.active && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setEndRecurrenceOpen(true)}
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              Encerrar Recorrência
+                            </Button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -359,58 +415,6 @@ export function AccountsPayableDrawer({
                       </ul>
                     )}
                   </TabsContent>
-
-                  {payable.recurringBillId && (
-                    <TabsContent value="occurrences" className="mt-4">
-                      {occurrences.length === 0 ? (
-                        <EmptyState
-                          icon={Repeat}
-                          title="Nenhuma ocorrência encontrada."
-                          description="As próximas contas geradas por esta recorrência aparecem aqui."
-                        />
-                      ) : (
-                        <ul className="space-y-2">
-                          {occurrences.map((occurrence) => {
-                            const occurrenceBadge =
-                              STATUS_META[occurrence.displayStatus];
-                            const isCurrent = occurrence.id === payable.id;
-                            return (
-                              <li
-                                key={occurrence.id}
-                                className={cn(
-                                  "flex items-center justify-between rounded-lg border p-3",
-                                  isCurrent && "border-primary/50 bg-primary/5",
-                                )}
-                              >
-                                <div>
-                                  <p className="flex items-center gap-1.5 text-sm font-medium">
-                                    {formatDateOnlyBR(occurrence.dueDate)}
-                                    {isCurrent && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-primary border-primary/30"
-                                      >
-                                        Atual
-                                      </Badge>
-                                    )}
-                                  </p>
-                                  <p className="text-muted-foreground text-xs">
-                                    {formatCurrencyBRL(occurrence.amount)}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant="outline"
-                                  className={occurrenceBadge.badgeClassName}
-                                >
-                                  {occurrenceBadge.label}
-                                </Badge>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </TabsContent>
-                  )}
                 </div>
               </Tabs>
 
@@ -493,6 +497,36 @@ export function AccountsPayableDrawer({
         isPending={cancelAccountsPayable.isPending}
         onConfirm={(scope) => handleCancel(scope)}
       />
+
+      {payable?.recurringBillId && (
+        <>
+          <RecurringBillOccurrencesDrawer
+            recurringBillId={payable.recurringBillId}
+            currentPayableId={payable.id}
+            open={occurrencesDrawerOpen}
+            onOpenChange={setOccurrencesDrawerOpen}
+            onOpenAccount={(occurrence) => {
+              setOccurrencesDrawerOpen(false);
+              onOpenOccurrence?.(occurrence);
+            }}
+          />
+          <RecurringBillTimelineDrawer
+            recurringBillId={payable.recurringBillId}
+            currentPayableId={payable.id}
+            open={timelineDrawerOpen}
+            onOpenChange={setTimelineDrawerOpen}
+            onOpenAccount={(occurrence) => {
+              setTimelineDrawerOpen(false);
+              onOpenOccurrence?.(occurrence);
+            }}
+          />
+          <EndRecurringBillDialog
+            recurringBillId={payable.recurringBillId}
+            open={endRecurrenceOpen}
+            onOpenChange={setEndRecurrenceOpen}
+          />
+        </>
+      )}
     </>
   );
 }

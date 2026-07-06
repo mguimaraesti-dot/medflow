@@ -379,6 +379,19 @@ export function toAccountsPayableEvents(
   return events;
 }
 
+/** "Competência" — mês/ano abreviado (ex: "Jul/2026") usado nas listagens de ocorrências de uma recorrência. */
+export function formatCompetencia(dueDate: string | Date): string {
+  const date = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+    .format(date)
+    .replace(".", "");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export const PERIODICITY_LABEL: Record<RecurrencePeriodicity, string> = {
   MONTHLY: "Mensal",
   BIWEEKLY: "Quinzenal",

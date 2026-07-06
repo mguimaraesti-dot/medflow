@@ -18,7 +18,6 @@ export interface CreateRecurringBillInput {
 
 export interface RecurringBillRepository {
   findById(id: string): Promise<RecurringBill | null>;
-  listActive(organizationId: string): Promise<RecurringBill[]>;
   create(data: CreateRecurringBillInput): Promise<RecurringBill>;
   deactivate(id: string): Promise<RecurringBill>;
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/core/permissions/rbac.middleware";
 import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { handleApiError } from "@/core/errors/error-handler";
+import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
 import { toRecurringBillResponseDTO } from "@/features/recurring-bills/application/dtos/recurring-bill.response-dto";
 import { deactivateRecurringBillUseCase } from "@/features/recurring-bills/application/deactivate-recurring-bill.use-case";
@@ -16,12 +17,20 @@ export async function POST(
   const requestId = generateRequestId();
 
   try {
-    await requirePermission(PERMISSIONS.PAYABLE_CREATE);
+    const user = await requirePermission(PERMISSIONS.PAYABLE_CREATE);
+    if (!user.organizationId) {
+      throw new ForbiddenError(
+        "encerrar recorrência sem organização vinculada",
+      );
+    }
     const { id } = await params;
 
-    const result = await deactivateRecurringBillUseCase(id, {
-      recurringBillRepository,
-    });
+    const result = await deactivateRecurringBillUseCase(
+      id,
+      user.organizationId,
+      user.id,
+      { recurringBillRepository },
+    );
 
     return NextResponse.json({ data: toRecurringBillResponseDTO(result) });
   } catch (error) {
