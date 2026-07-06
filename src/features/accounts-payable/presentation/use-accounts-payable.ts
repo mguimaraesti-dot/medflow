@@ -10,6 +10,8 @@ export interface AccountsPayableFilter {
   dueDateFrom?: Date;
   dueDateTo?: Date;
   categoryId?: string;
+  /** Filtro "Fornecedor" da barra "Mais filtros" — já existe ponta a ponta no backend. */
+  supplierId?: string;
   /** Só as ocorrências de uma recorrência — usado pelo Drawer "Ver Ocorrências"/"Linha do Tempo". */
   recurringBillId?: string;
   /** Filtro "Recorrência" da tela: só recorrentes ou só avulsas. */
@@ -28,6 +30,7 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
     params.set("dueDateFrom", filter.dueDateFrom.toISOString());
   if (filter.dueDateTo) params.set("dueDateTo", filter.dueDateTo.toISOString());
   if (filter.categoryId) params.set("categoryId", filter.categoryId);
+  if (filter.supplierId) params.set("supplierId", filter.supplierId);
   if (filter.recurringBillId)
     params.set("recurringBillId", filter.recurringBillId);
   if (filter.recurringOnly) params.set("recurringOnly", filter.recurringOnly);

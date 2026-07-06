@@ -12,6 +12,7 @@ export interface AccountsPayableSummaryBucketDTO {
 export interface AccountsPayableSummaryResponseDTO {
   total: AccountsPayableSummaryBucketDTO;
   dueToday: AccountsPayableSummaryBucketDTO;
+  dueYesterday: AccountsPayableSummaryBucketDTO;
   upcoming: AccountsPayableSummaryBucketDTO;
   overdue: AccountsPayableSummaryBucketDTO;
   paid: AccountsPayableSummaryBucketDTO;
@@ -32,6 +33,7 @@ export function toAccountsPayableSummaryResponseDTO(
   return {
     total: toBucketDTO(summary.total),
     dueToday: toBucketDTO(summary.dueToday),
+    dueYesterday: toBucketDTO(summary.dueYesterday),
     upcoming: toBucketDTO(summary.upcoming),
     overdue: toBucketDTO(summary.overdue),
     paid: toBucketDTO(summary.paid),

@@ -14,6 +14,8 @@ export interface AccountsPayableSummaryBucket {
 export interface AccountsPayableSummary {
   total: AccountsPayableSummaryBucket;
   dueToday: AccountsPayableSummaryBucket;
+  /** Só para comparação (tendência do card "Hoje") — nunca entra na soma de `total`. */
+  dueYesterday: AccountsPayableSummaryBucket;
   upcoming: AccountsPayableSummaryBucket;
   overdue: AccountsPayableSummaryBucket;
   paid: AccountsPayableSummaryBucket;

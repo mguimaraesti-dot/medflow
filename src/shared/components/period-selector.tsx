@@ -16,7 +16,8 @@ import {
 } from "@/shared/ui/select";
 import { formatDateOnlyBR } from "@/shared/lib/format";
 
-export type PeriodPreset = "TODAY" | "WEEK" | "MONTH" | "YEAR" | "CUSTOM";
+export type PeriodPreset =
+  "TODAY" | "WEEK" | "MONTH" | "NEXT_MONTH" | "YEAR" | "CUSTOM";
 
 export interface PeriodRange {
   from: Date;
@@ -62,6 +63,12 @@ export function computePeriodRange(
     return { from: start, to: endOfDayUTC(end) };
   }
 
+  if (preset === "NEXT_MONTH") {
+    const start = utcDate(today.getUTCFullYear(), today.getUTCMonth() + 1, 1);
+    const end = utcDate(today.getUTCFullYear(), today.getUTCMonth() + 2, 0);
+    return { from: start, to: endOfDayUTC(end) };
+  }
+
   if (preset === "YEAR") {
     const start = utcDate(today.getUTCFullYear(), 0, 1);
     const end = utcDate(today.getUTCFullYear(), 11, 31);
@@ -71,10 +78,11 @@ export function computePeriodRange(
   return custom ?? { from: today, to: endOfDayUTC(today) };
 }
 
-const PRESET_OPTIONS = [
+export const PERIOD_PRESET_OPTIONS = [
   { value: "TODAY" as const, label: "Hoje" },
   { value: "WEEK" as const, label: "Esta Semana" },
   { value: "MONTH" as const, label: "Este Mês" },
+  { value: "NEXT_MONTH" as const, label: "Próximo Mês" },
   { value: "YEAR" as const, label: "Este Ano" },
   { value: "CUSTOM" as const, label: "Personalizado" },
 ];
@@ -169,7 +177,7 @@ export function PeriodSelector({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {PRESET_OPTIONS.map((option) => (
+            {PERIOD_PRESET_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
@@ -184,7 +192,7 @@ export function PeriodSelector({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <SegmentedControl
-        options={PRESET_OPTIONS}
+        options={PERIOD_PRESET_OPTIONS}
         value={preset}
         onChange={handlePresetChange}
       />

@@ -19,7 +19,7 @@ function pctChange(current: number, previous: number): number | null {
 }
 
 export type AccountsPayableSummaryTrend = Record<
-  "total" | "upcoming" | "overdue" | "paid",
+  "total" | "dueToday" | "upcoming" | "overdue" | "paid",
   number | null
 >;
 
@@ -59,6 +59,13 @@ function computeTrend(
     total: pctChange(
       Number(current.total.amount),
       Number(previous.total.amount),
+    ),
+    // "Hoje" compara com "ontem" (dia anterior real), não com o período
+    // anterior de mesma duração — os dois buckets já vêm na mesma
+    // resposta (`current`), sem precisar de outra chamada.
+    dueToday: pctChange(
+      Number(current.dueToday.amount),
+      Number(current.dueYesterday.amount),
     ),
     upcoming: pctChange(
       Number(current.upcoming.amount),

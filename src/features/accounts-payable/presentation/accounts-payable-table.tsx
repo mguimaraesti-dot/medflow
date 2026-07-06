@@ -37,6 +37,13 @@ import { ApiError } from "@/shared/lib/api-client";
 import { EmptyState } from "@/shared/components/empty-state";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import {
@@ -100,7 +107,7 @@ function SortableHead({
   return (
     <TableHead
       className={cn(
-        "hover:text-foreground cursor-pointer transition-colors select-none",
+        "text-foreground hover:text-foreground/80 cursor-pointer font-medium transition-colors select-none",
         align === "right" && "text-right",
         className,
       )}
@@ -133,6 +140,7 @@ export function AccountsPayableTable({
   canDelete,
   status,
   categoryId,
+  supplierId,
   recurringOnly,
   search,
   dueDateFrom,
@@ -148,6 +156,7 @@ export function AccountsPayableTable({
   canDelete: boolean;
   status: StatusFilter;
   categoryId?: string;
+  supplierId?: string;
   recurringOnly?: "RECURRING" | "NON_RECURRING";
   search?: string;
   dueDateFrom?: Date;
@@ -159,6 +168,7 @@ export function AccountsPayableTable({
   onCreateNew: () => void;
 }) {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [cancelScopeTarget, setCancelScopeTarget] =
     useState<AccountsPayableResponseDTO | null>(null);
@@ -172,11 +182,13 @@ export function AccountsPayableTable({
   const { data, isLoading } = useAccountsPayable({
     status: status === "ALL" ? undefined : status,
     categoryId,
+    supplierId,
     recurringOnly,
     search,
     dueDateFrom,
     dueDateTo,
     page,
+    pageSize,
   });
   const { data: suppliers } = useSuppliers();
   const { data: categories } = useCategories();
@@ -302,7 +314,7 @@ export function AccountsPayableTable({
         <>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted/50">
                 <TableRow className="hover:bg-transparent">
                   <SortableHead
                     label="Vencimento"
@@ -432,6 +444,7 @@ export function AccountsPayableTable({
                           variant="outline"
                           className={badge.badgeClassName}
                         >
+                          <badge.icon className="h-3 w-3" />
                           {badge.label}
                         </Badge>
                       </TableCell>
@@ -526,16 +539,29 @@ export function AccountsPayableTable({
                             </Button>
                           )}
                           {payable.status === "PAID" && canCancelThis && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleCancel(payable.id)}
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              Cancelar
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Mais ações</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => onView(payable)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Visualizar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  onClick={() => handleCancel(payable.id)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Cancelar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                           {payable.status === "PENDING" && (
                             <DropdownMenu>
@@ -600,17 +626,36 @@ export function AccountsPayableTable({
             </Table>
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t px-4 py-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm">
             <span className="text-muted-foreground">
               Mostrando {(data.page - 1) * data.pageSize + 1} a{" "}
               {Math.min(data.page * data.pageSize, data.total)} de {data.total}{" "}
               conta(s)
             </span>
-            <PageNav
-              page={data.page}
-              totalPages={data.totalPages}
-              onChange={setPage}
-            />
+            <div className="flex items-center gap-3">
+              <PageNav
+                page={data.page}
+                totalPages={data.totalPages}
+                onChange={setPage}
+              />
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger size="sm" className="w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 por página</SelectItem>
+                  <SelectItem value="20">20 por página</SelectItem>
+                  <SelectItem value="50">50 por página</SelectItem>
+                  <SelectItem value="100">100 por página</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </>
       )}

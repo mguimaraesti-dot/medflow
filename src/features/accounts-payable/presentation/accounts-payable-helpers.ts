@@ -1,7 +1,10 @@
 import {
+  AlertTriangle,
+  Ban,
   Building2,
   CalendarClock,
   CheckCircle2,
+  Clock,
   FilePlus,
   Pencil,
   Repeat as RepeatIcon,
@@ -22,27 +25,31 @@ import type { AccountsPayableAuditLogEntry } from "./use-accounts-payable-audit-
 
 export const STATUS_META: Record<
   PayableStatus,
-  { label: string; badgeClassName: string }
+  { label: string; badgeClassName: string; icon: LucideIcon }
 > = {
   PENDING: {
     label: "Pendente",
     badgeClassName:
       "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    icon: Clock,
   },
   OVERDUE: {
     label: "Vencida",
     badgeClassName:
       "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+    icon: AlertTriangle,
   },
   PAID: {
     label: "Paga",
     badgeClassName:
       "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-500",
+    icon: CheckCircle2,
   },
   CANCELLED: {
     label: "Cancelada",
     badgeClassName:
       "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    icon: Ban,
   },
 };
 

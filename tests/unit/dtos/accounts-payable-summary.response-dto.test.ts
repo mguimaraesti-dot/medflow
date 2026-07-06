@@ -10,6 +10,7 @@ function buildSummary(
   return {
     total: zero,
     dueToday: zero,
+    dueYesterday: zero,
     upcoming: zero,
     overdue: zero,
     paid: zero,
@@ -23,6 +24,7 @@ describe("toAccountsPayableSummaryResponseDTO", () => {
       buildSummary({
         total: { count: 4, amount: new Prisma.Decimal("1326.00") },
         dueToday: { count: 1, amount: new Prisma.Decimal("18.50") },
+        dueYesterday: { count: 2, amount: new Prisma.Decimal("40.00") },
         upcoming: { count: 1, amount: new Prisma.Decimal("428.00") },
         overdue: { count: 1, amount: new Prisma.Decimal("62.40") },
         paid: { count: 1, amount: new Prisma.Decimal("835.60") },
@@ -31,6 +33,7 @@ describe("toAccountsPayableSummaryResponseDTO", () => {
 
     expect(dto.total).toEqual({ count: 4, amount: "1326.00" });
     expect(dto.dueToday).toEqual({ count: 1, amount: "18.50" });
+    expect(dto.dueYesterday).toEqual({ count: 2, amount: "40.00" });
     expect(dto.upcoming).toEqual({ count: 1, amount: "428.00" });
     expect(dto.overdue).toEqual({ count: 1, amount: "62.40" });
     expect(dto.paid).toEqual({ count: 1, amount: "835.60" });
