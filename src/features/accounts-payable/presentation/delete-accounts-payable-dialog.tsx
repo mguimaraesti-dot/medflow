@@ -12,18 +12,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
-import { Button } from "@/shared/ui/button";
 import { Textarea } from "@/shared/ui/textarea";
 import { ApiError } from "@/shared/lib/api-client";
 import { useDeleteAccountsPayable } from "./use-delete-accounts-payable";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
 /**
- * Três variações, conforme o status da conta (regra de negócio — nunca
- * exclusão imediata, sempre confirmação):
- * - PENDING/OVERDUE: confirmação real de soft delete.
- * - PAID: bloqueio explicativo (integridade do histórico financeiro).
- * - CANCELLED: bloqueio explicativo (registro histórico).
+ * Confirmação de soft delete — só é aberto por um gatilho já restrito a
+ * contas PENDENTES (tabela/Drawer nunca mostram "Excluir" fora desse
+ * status), então não precisa mais tratar PAID/CANCELLED aqui. O backend
+ * (`softDeleteAccountsPayableUseCase`) continua validando de qualquer forma.
  */
 export function DeleteAccountsPayableDialog({
   payable,
@@ -41,56 +39,6 @@ export function DeleteAccountsPayableDialog({
   const deleteAccountsPayable = useDeleteAccountsPayable();
 
   if (!payable) return null;
-
-  if (payable.status === "PAID") {
-    return (
-      <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Não é possível excluir</AlertDialogTitle>
-            <AlertDialogDescription>
-              Contas pagas não podem ser excluídas para preservar a integridade
-              do histórico financeiro.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar Conta
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
-  if (payable.status === "CANCELLED") {
-    return (
-      <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Não é possível excluir</AlertDialogTitle>
-            <AlertDialogDescription>
-              Contas canceladas não podem ser excluídas. Elas permanecem apenas
-              para consulta histórica.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Fechar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
 
   async function handleDelete() {
     if (!payable) return;

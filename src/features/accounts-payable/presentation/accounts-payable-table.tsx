@@ -508,10 +508,14 @@ export function AccountsPayableTable({
                                 <Eye className="h-4 w-4" />
                                 Visualizar
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => onEdit(payable)}>
-                                <Pencil className="h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
+                              {canCreate && payable.status === "PENDING" && (
+                                <DropdownMenuItem
+                                  onClick={() => onEdit(payable)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  Editar
+                                </DropdownMenuItem>
+                              )}
                               {canCreate && (
                                 <DropdownMenuItem
                                   onClick={() => onDuplicate(payable)}
@@ -533,7 +537,7 @@ export function AccountsPayableTable({
                                   Cancelar
                                 </DropdownMenuItem>
                               )}
-                              {canDelete && (
+                              {canDelete && payable.status === "PENDING" && (
                                 <DropdownMenuItem
                                   variant="destructive"
                                   onClick={() => setDeletingTarget(payable)}

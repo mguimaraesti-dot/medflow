@@ -118,6 +118,12 @@ export function AccountsPayableDrawer({
     payable !== null &&
     (payable.displayStatus === "PENDING" ||
       payable.displayStatus === "OVERDUE");
+  // Conta paga ou cancelada é só consulta — editar/excluir nunca aparecem
+  // fora do status PENDING (mesma regra do backend).
+  const canEditThis =
+    canEdit && payable !== null && payable.status === "PENDING";
+  const canDeleteThis =
+    canDelete && payable !== null && payable.status === "PENDING";
 
   return (
     <>
@@ -364,7 +370,7 @@ export function AccountsPayableDrawer({
                 </div>
               </Tabs>
 
-              {(canPayThis || canEdit || canDelete) && (
+              {(canPayThis || canEditThis || canDeleteThis) && (
                 <div className="flex gap-2 border-t p-4">
                   {canPayThis && (
                     <Button
@@ -376,7 +382,7 @@ export function AccountsPayableDrawer({
                       Confirmar pagamento
                     </Button>
                   )}
-                  {canEdit && (
+                  {canEditThis && (
                     <Button
                       type="button"
                       variant="outline"
@@ -387,7 +393,7 @@ export function AccountsPayableDrawer({
                       Editar conta
                     </Button>
                   )}
-                  {canDelete && (
+                  {canDeleteThis && (
                     <Button
                       type="button"
                       variant="outline"
