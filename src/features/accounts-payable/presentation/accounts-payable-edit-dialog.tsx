@@ -94,7 +94,7 @@ export function AccountsPayableEditDialog({
       toast.success(
         scope === "SERIES"
           ? "Alteração aplicada a esta conta e às próximas."
-          : "Conta atualizada.",
+          : "Conta atualizada com sucesso.",
       );
       setScopeDialogOpen(false);
       setPendingValues(null);
@@ -120,64 +120,66 @@ export function AccountsPayableEditDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Editar conta</DialogTitle>
           </DialogHeader>
 
           {payable && (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Valor</Label>
-                <p className="text-muted-foreground text-sm">
-                  {formatCurrencyBRL(payable.amount)} — não editável
-                </p>
-              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-supplierId">Fornecedor</Label>
+                  <Controller
+                    control={control}
+                    name="supplierId"
+                    render={({ field }) => (
+                      <SupplierCombobox
+                        id="edit-supplierId"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-supplierId">Fornecedor</Label>
-                <Controller
-                  control={control}
-                  name="supplierId"
-                  render={({ field }) => (
-                    <SupplierCombobox
-                      id="edit-supplierId"
-                      value={field.value}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-categoryId">Categoria</Label>
+                  <Controller
+                    control={control}
+                    name="categoryId"
+                    render={({ field }) => (
+                      <CategoryCombobox
+                        id="edit-categoryId"
+                        categories={categories}
+                        type="OUT"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-categoryId">Categoria</Label>
-                <Controller
-                  control={control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <CategoryCombobox
-                      id="edit-categoryId"
-                      categories={categories}
-                      type="OUT"
-                      value={field.value}
-                      onChange={field.onChange}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-dueDate">Vencimento</Label>
-                <Input
-                  id="edit-dueDate"
-                  type="date"
-                  {...register("dueDate", { required: true })}
-                />
-                {errors.dueDate && (
-                  <p className="text-destructive text-sm">
-                    Informe o vencimento.
+                <div className="space-y-2">
+                  <Label>Valor</Label>
+                  <p className="text-muted-foreground flex h-10 items-center text-sm">
+                    {formatCurrencyBRL(payable.amount)} — não editável
                   </p>
-                )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dueDate">Vencimento</Label>
+                  <Input
+                    id="edit-dueDate"
+                    type="date"
+                    {...register("dueDate", { required: true })}
+                  />
+                  {errors.dueDate && (
+                    <p className="text-destructive text-sm">
+                      Informe o vencimento.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">

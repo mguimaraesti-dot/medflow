@@ -246,13 +246,15 @@ export function toAccountsPayableEvents(
         }
 
         if (entry.after?.status === "CANCELLED") {
+          const endedSeries =
+            entry.reason === "Cancelado ao encerrar a recorrência.";
           events.push({
             id: entry.id,
-            label: "Conta cancelada",
+            label: endedSeries ? "Recorrência encerrada" : "Conta cancelada",
             actor,
-            detail: entry.reason ?? undefined,
+            detail: endedSeries ? undefined : (entry.reason ?? undefined),
             date,
-            icon: ShieldCheck,
+            icon: endedSeries ? RepeatIcon : ShieldCheck,
           });
           break;
         }
@@ -276,6 +278,7 @@ export function toAccountsPayableEvents(
         const categoryDiff = fieldDiff("categoryId");
         const supplierDiff = fieldDiff("supplierId");
         const dueDateDiff = fieldDiff("dueDate");
+        const descriptionDiff = fieldDiff("description");
 
         if (categoryDiff) {
           events.push({
@@ -318,7 +321,22 @@ export function toAccountsPayableEvents(
             icon: CalendarClock,
           });
         }
-        if (!categoryDiff && !supplierDiff && !dueDateDiff) {
+        if (descriptionDiff) {
+          events.push({
+            id: `${entry.id}-description`,
+            label: "Observação alterada",
+            actor,
+            detail: changeDetail(descriptionDiff.from, descriptionDiff.to),
+            date,
+            icon: Pencil,
+          });
+        }
+        if (
+          !categoryDiff &&
+          !supplierDiff &&
+          !dueDateDiff &&
+          !descriptionDiff
+        ) {
           // `entry.reason` aqui é sempre o texto padrão de escopo
           // ("...nesta ocorrência"/"...para recorrência") — nunca um motivo
           // customizado, então não faz sentido exibi-lo como detalhe.
