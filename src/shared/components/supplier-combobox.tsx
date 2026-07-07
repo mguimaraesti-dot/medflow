@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCreateSupplier } from "@/features/suppliers/presentation/use-create-supplier";
+import {
+  SupplierFormFields,
+  useSupplierFormState,
+} from "@/features/suppliers/presentation/supplier-form-fields";
 import { ApiError } from "@/shared/lib/api-client";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import {
   Command,
   CommandEmpty,
@@ -39,10 +41,8 @@ export function SupplierCombobox({
 }) {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const form = useSupplierFormState();
 
   const { data: suppliers } = useSuppliers();
   const createSupplier = useCreateSupplier();
@@ -53,21 +53,22 @@ export function SupplierCombobox({
     setError(null);
     try {
       const created = await createSupplier.mutateAsync({
-        name,
-        contactName: contactName.trim() || undefined,
-        phone: phone.trim() || undefined,
+        name: form.name,
+        personType: form.personType,
+        document: form.document.trim() || undefined,
+        phone: form.phone,
+        email: form.email.trim() || undefined,
+        notes: form.notes.trim() || undefined,
       });
       onChange(created.id);
       setCreateOpen(false);
       setOpen(false);
-      setName("");
-      setContactName("");
-      setPhone("");
+      form.reset();
     } catch (createError) {
       setError(
         createError instanceof ApiError
           ? createError.message
-          : "Não foi possível cadastrar o fornecedor.",
+          : "Não foi possível cadastrar o beneficiário.",
       );
     }
   }
@@ -89,7 +90,7 @@ export function SupplierCombobox({
               selected.name
             ) : (
               <span className="text-muted-foreground">
-                Selecione o fornecedor
+                Selecione um beneficiário...
               </span>
             )}
             <ChevronsUpDown className="h-4 w-4 opacity-50" />
@@ -97,9 +98,9 @@ export function SupplierCombobox({
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
           <Command>
-            <CommandInput placeholder="Buscar fornecedor..." />
+            <CommandInput placeholder="Buscar beneficiário..." />
             <CommandList>
-              <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
+              <CommandEmpty>Nenhum beneficiário encontrado.</CommandEmpty>
               <CommandGroup>
                 {suppliers?.map((supplier) => (
                   <CommandItem
@@ -128,7 +129,7 @@ export function SupplierCombobox({
                   }}
                 >
                   <Plus className="h-4 w-4" />
-                  Cadastrar novo fornecedor
+                  Cadastrar novo beneficiário
                 </CommandItem>
               </CommandGroup>
             </CommandList>
@@ -139,49 +140,18 @@ export function SupplierCombobox({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo fornecedor</DialogTitle>
+            <DialogTitle>Novo Beneficiário</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="supplier-name">Nome</Label>
-              <Input
-                id="supplier-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="supplier-contact-name">
-                  Contato (opcional)
-                </Label>
-                <Input
-                  id="supplier-contact-name"
-                  placeholder="Nome da pessoa de contato"
-                  value={contactName}
-                  onChange={(event) => setContactName(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-phone">Telefone (opcional)</Label>
-                <Input
-                  id="supplier-phone"
-                  placeholder="(00) 00000-0000"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
-              </div>
-            </div>
-            {error && (
-              <p className="text-destructive text-sm" role="alert">
-                {error}
-              </p>
-            )}
-          </div>
+          <SupplierFormFields state={form} idPrefix="combobox-supplier" />
+          {error && (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          )}
           <DialogFooter>
             <Button
               type="button"
-              disabled={!name.trim() || createSupplier.isPending}
+              disabled={!form.isValid || createSupplier.isPending}
               onClick={handleCreate}
             >
               {createSupplier.isPending ? "Salvando..." : "Salvar"}

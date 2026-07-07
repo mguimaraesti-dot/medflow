@@ -144,7 +144,7 @@ export function AccountsPayableForm({
         <CardContent className="space-y-2 p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="supplierId">Fornecedor</Label>
+              <Label htmlFor="supplierId">Beneficiário</Label>
               <Controller
                 control={control}
                 name="supplierId"

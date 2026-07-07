@@ -17,7 +17,9 @@ export async function GET() {
   try {
     const user = await requirePermission(PERMISSIONS.PAYABLE_READ);
     if (!user.organizationId) {
-      throw new ForbiddenError("listar fornecedores sem organização vinculada");
+      throw new ForbiddenError(
+        "listar beneficiários sem organização vinculada",
+      );
     }
 
     const result = await listSuppliersUseCase(user.organizationId, {
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(PERMISSIONS.PAYABLE_CREATE);
     if (!user.organizationId) {
       throw new ForbiddenError(
-        "cadastrar fornecedor sem organização vinculada",
+        "cadastrar beneficiário sem organização vinculada",
       );
     }
 

@@ -332,7 +332,7 @@ export function AccountsPayableTable({
                     className="pl-4"
                   />
                   <SortableHead
-                    label="Fornecedor"
+                    label="Beneficiário"
                     field="SUPPLIER"
                     sort={sort}
                     onSort={toggleSort}

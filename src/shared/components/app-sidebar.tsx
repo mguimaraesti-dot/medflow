@@ -36,7 +36,7 @@ const FINANCEIRO: NavItem[] = [
 ];
 
 const CADASTROS: NavItem[] = [
-  { href: "/suppliers", label: "Fornecedores", icon: Building2 },
+  { href: "/suppliers", label: "Beneficiários", icon: Building2 },
   { href: "/categories", label: "Categorias", icon: Tags },
 ];
 

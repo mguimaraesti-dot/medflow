@@ -352,7 +352,7 @@ export function toAccountsPayableEvents(
         if (supplierDiff) {
           events.push({
             id: `${entry.id}-supplier`,
-            label: "Fornecedor alterado",
+            label: "Beneficiário alterado",
             actor,
             detail: changeDetail(
               supplierDiff.from,

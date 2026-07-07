@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSuppliers } from "./use-suppliers";
 import { useCreateSupplier } from "./use-create-supplier";
+import {
+  SupplierFormFields,
+  useSupplierFormState,
+} from "./supplier-form-fields";
 import { ApiError } from "@/shared/lib/api-client";
 import { EmptyState } from "@/shared/components/empty-state";
 import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import {
@@ -22,25 +23,27 @@ import {
 } from "@/shared/ui/table";
 
 export function SuppliersScreen({ canCreate }: { canCreate: boolean }) {
-  const [name, setName] = useState("");
-  const [documentNumber, setDocumentNumber] = useState("");
+  const form = useSupplierFormState();
   const { data: suppliers, isLoading } = useSuppliers();
   const createSupplier = useCreateSupplier();
 
   async function handleCreate() {
     try {
       await createSupplier.mutateAsync({
-        name,
-        document: documentNumber.trim() || undefined,
+        name: form.name,
+        personType: form.personType,
+        document: form.document.trim() || undefined,
+        phone: form.phone,
+        email: form.email.trim() || undefined,
+        notes: form.notes.trim() || undefined,
       });
-      setName("");
-      setDocumentNumber("");
-      toast.success("Fornecedor cadastrado.");
+      form.reset();
+      toast.success("Beneficiário cadastrado com sucesso.");
     } catch (error) {
       toast.error(
         error instanceof ApiError
           ? error.message
-          : "Não foi possível cadastrar o fornecedor.",
+          : "Não foi possível cadastrar o beneficiário.",
       );
     }
   }
@@ -50,41 +53,24 @@ export function SuppliersScreen({ canCreate }: { canCreate: boolean }) {
       {canCreate && (
         <Card>
           <CardHeader>
-            <CardTitle>Novo fornecedor</CardTitle>
+            <CardTitle>Novo Beneficiário</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="supplier-name">Nome</Label>
-                <Input
-                  id="supplier-name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-document">CPF/CNPJ (opcional)</Label>
-                <Input
-                  id="supplier-document"
-                  value={documentNumber}
-                  onChange={(event) => setDocumentNumber(event.target.value)}
-                />
-              </div>
-              <Button
-                type="button"
-                disabled={!name.trim() || createSupplier.isPending}
-                onClick={handleCreate}
-              >
-                {createSupplier.isPending ? "Salvando..." : "Cadastrar"}
-              </Button>
-            </div>
+          <CardContent className="space-y-4">
+            <SupplierFormFields state={form} idPrefix="new-supplier" />
+            <Button
+              type="button"
+              disabled={!form.isValid || createSupplier.isPending}
+              onClick={handleCreate}
+            >
+              {createSupplier.isPending ? "Salvando..." : "Cadastrar"}
+            </Button>
           </CardContent>
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>Fornecedores</CardTitle>
+          <CardTitle>Beneficiários</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && (
@@ -97,8 +83,8 @@ export function SuppliersScreen({ canCreate }: { canCreate: boolean }) {
           {!isLoading && suppliers && suppliers.length === 0 && (
             <EmptyState
               icon={Building2}
-              title="Nenhum fornecedor cadastrado."
-              description="Os fornecedores cadastrados aparecem aqui."
+              title="Nenhum beneficiário cadastrado."
+              description="Os beneficiários cadastrados aparecem aqui."
             />
           )}
 

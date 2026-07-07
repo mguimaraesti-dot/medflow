@@ -217,15 +217,23 @@ model PaymentMethod {
   @@map("payment_methods")
 }
 
+enum SupplierPersonType {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+}
+
 model Supplier {
   id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
   name           String
+  personType     SupplierPersonType @default(PESSOA_JURIDICA)
   document       String?      // CPF/CNPJ, opcional na Sprint 1
   contactName    String?      // pessoa de contato, opcional (Sprint 02 - UX)
   phone          String?      // telefone de contato, opcional (Sprint 02 - UX)
+  email          String?
+  notes          String?
   active         Boolean      @default(true)
 
   accountsPayable AccountsPayable[]

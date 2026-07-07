@@ -129,7 +129,7 @@ export function AccountsPayableEditDialog({
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-supplierId">Fornecedor</Label>
+                  <Label htmlFor="edit-supplierId">Beneficiário</Label>
                   <Controller
                     control={control}
                     name="supplierId"

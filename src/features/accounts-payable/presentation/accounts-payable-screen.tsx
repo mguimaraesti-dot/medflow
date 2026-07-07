@@ -233,7 +233,7 @@ export function AccountsPayableScreen({
             Contas a Pagar
           </h1>
           <p className="text-muted-foreground text-sm">
-            Gerencie pagamentos, boletos e fornecedores.
+            Gerencie pagamentos, boletos e beneficiários.
           </p>
         </div>
         <div className="flex flex-col gap-1">
@@ -352,7 +352,7 @@ export function AccountsPayableScreen({
         <div className="relative min-w-[220px] flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
-            placeholder="Buscar fornecedor, descrição ou boleto..."
+            placeholder="Buscar beneficiário, descrição ou boleto..."
             className="pl-9"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -442,7 +442,7 @@ export function AccountsPayableScreen({
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="supplier-filter">Fornecedor</Label>
+              <Label htmlFor="supplier-filter">Beneficiário</Label>
               <Select
                 value={supplierId ?? "ALL"}
                 onValueChange={(value) =>
@@ -453,7 +453,7 @@ export function AccountsPayableScreen({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">Todos os fornecedores</SelectItem>
+                  <SelectItem value="ALL">Todos os beneficiários</SelectItem>
                   {suppliers?.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.name}
@@ -539,10 +539,10 @@ export function AccountsPayableScreen({
         )}
         {supplierId && (
           <Badge variant="secondary" className="gap-1">
-            Fornecedor: {supplierName ?? "—"}
+            Beneficiário: {supplierName ?? "—"}
             <button
               type="button"
-              aria-label="Remover filtro de fornecedor"
+              aria-label="Remover filtro de beneficiário"
               onClick={() => setSupplierId(undefined)}
             >
               <X className="h-3 w-3" />

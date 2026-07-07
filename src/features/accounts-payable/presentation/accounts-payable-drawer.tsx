@@ -229,7 +229,7 @@ export function AccountsPayableDrawer({
                       Informações principais
                     </p>
                     <div className="grid grid-cols-2 gap-4">
-                      <Field label="Fornecedor" value={supplierName ?? "—"} />
+                      <Field label="Beneficiário" value={supplierName ?? "—"} />
                       <Field label="Categoria" value={categoryName ?? "—"} />
                       <Field
                         label="Vencimento"

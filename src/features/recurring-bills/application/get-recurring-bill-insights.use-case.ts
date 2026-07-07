@@ -235,7 +235,7 @@ export async function getRecurringBillInsightsUseCase(
       averageLeadDays,
       increaseCount,
       cumulativeChangePercent: Math.round(cumulativeChangePercent),
-      recommendation: "Avaliar renegociação com o fornecedor.",
+      recommendation: "Avaliar renegociação com o beneficiário.",
     };
   } else {
     insight = {

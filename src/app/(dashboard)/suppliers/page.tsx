@@ -10,7 +10,7 @@ export default async function SuppliersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Fornecedores</h1>
+      <h1 className="text-xl font-semibold">Beneficiários</h1>
       <SuppliersScreen canCreate={canCreate} />
     </div>
   );

@@ -92,7 +92,7 @@ export function DeletedAccountsPayableTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="pl-4">Fornecedor</TableHead>
+            <TableHead className="pl-4">Beneficiário</TableHead>
             <TableHead>Categoria</TableHead>
             <TableHead className="text-right">Valor</TableHead>
             <TableHead>Vencimento</TableHead>
