@@ -176,7 +176,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
             name="type"
             render={({ field }) => (
               <SegmentedControl
-                size="lg"
+                fullWidth={false}
                 value={field.value}
                 onChange={(next) => {
                   field.onChange(next);
