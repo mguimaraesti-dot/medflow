@@ -176,7 +176,7 @@ export function PeriodSelector({
           value={preset}
           onValueChange={(value) => handlePresetChange(value as PeriodPreset)}
         >
-          <SelectTrigger size={size} className="w-[170px]">
+          <SelectTrigger size={size} className="w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

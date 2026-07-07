@@ -35,7 +35,6 @@ import {
 } from "@/shared/components/period-selector";
 import { KpiCard } from "@/shared/components/kpi-card";
 import { formatCurrencyBRL } from "@/shared/lib/format";
-import { cn } from "@/shared/lib/utils";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
@@ -221,8 +220,6 @@ export function AccountsPayableScreen({
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold tracking-tight">Contas a Pagar</h1>
-
       {summary && (
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
           <KpiCard
@@ -319,12 +316,12 @@ export function AccountsPayableScreen({
         </div>
       )}
 
-      <div className="flex flex-col flex-wrap gap-3 lg:flex-row lg:items-center">
-        <div className="relative min-w-[340px] flex-1">
+      <div className="flex flex-col flex-wrap gap-2 lg:flex-row lg:items-center">
+        <div className="relative min-w-[180px] flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
-            placeholder="Buscar beneficiário, descrição ou boleto..."
-            className="pl-9"
+            placeholder="Buscar contas..."
+            className="h-8 pl-9"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
@@ -345,7 +342,7 @@ export function AccountsPayableScreen({
           value={status}
           onValueChange={(value) => setStatus(value as StatusFilter)}
         >
-          <SelectTrigger size="sm" className="w-full lg:w-auto">
+          <SelectTrigger size="sm" className="w-full lg:w-[130px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -363,7 +360,7 @@ export function AccountsPayableScreen({
             setCategoryId(value === "ALL" ? undefined : value)
           }
         >
-          <SelectTrigger size="sm" className="w-full lg:w-auto">
+          <SelectTrigger size="sm" className="w-full lg:w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -386,7 +383,7 @@ export function AccountsPayableScreen({
             )
           }
         >
-          <SelectTrigger size="sm" className="w-full lg:w-auto">
+          <SelectTrigger size="sm" className="w-full lg:w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -401,10 +398,9 @@ export function AccountsPayableScreen({
         {canCreate && (
           <Button
             type="button"
+            size="sm"
             onClick={openCreate}
-            className={cn(
-              "h-12 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px hover:shadow-md lg:ml-auto",
-            )}
+            className="lg:ml-auto"
           >
             <Plus className="h-4 w-4" />
             Nova Conta
@@ -417,6 +413,7 @@ export function AccountsPayableScreen({
               type="button"
               variant="outline"
               size="icon"
+              className="h-8 w-8"
               aria-label="Mais opções"
             >
               <Settings2 className="h-4 w-4" />
