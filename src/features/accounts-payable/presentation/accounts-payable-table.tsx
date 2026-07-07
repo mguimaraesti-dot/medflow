@@ -176,7 +176,7 @@ export function AccountsPayableTable({
   onCreateNew: () => void;
 }) {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(100);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [cancelScopeTarget, setCancelScopeTarget] =
     useState<AccountsPayableResponseDTO | null>(null);

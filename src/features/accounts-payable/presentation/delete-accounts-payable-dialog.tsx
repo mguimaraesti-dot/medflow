@@ -62,17 +62,8 @@ export function DeleteAccountsPayableDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Excluir Conta</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-2">
-              <p>Esta conta será removida da listagem principal.</p>
-              <p>
-                Ela permanecerá armazenada para fins de auditoria e poderá ser
-                restaurada posteriormente.
-              </p>
-              <p>Deseja continuar?</p>
-            </div>
-          </AlertDialogDescription>
+          <AlertDialogTitle>Excluir conta</AlertDialogTitle>
+          <AlertDialogDescription>Deseja continuar?</AlertDialogDescription>
         </AlertDialogHeader>
 
         <Textarea
@@ -94,7 +85,7 @@ export function DeleteAccountsPayableDialog({
               void handleDelete();
             }}
           >
-            {deleteAccountsPayable.isPending ? "Excluindo..." : "Excluir Conta"}
+            {deleteAccountsPayable.isPending ? "Excluindo..." : "Excluir conta"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
