@@ -2,9 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 
-export function LogoutButton({ className }: { className?: string }) {
+export function LogoutButton({
+  className,
+  iconOnly,
+}: {
+  className?: string;
+  /** Sidebar recolhida — só o ícone, com o rótulo acessível via `sr-only`. */
+  iconOnly?: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +25,22 @@ export function LogoutButton({ className }: { className?: string }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (iconOnly) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className={className}
+        onClick={handleLogout}
+        disabled={loading}
+        aria-label="Sair"
+      >
+        <LogOut className="h-4 w-4" />
+      </Button>
+    );
   }
 
   return (
