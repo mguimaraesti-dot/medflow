@@ -13,45 +13,69 @@ import type {
 } from "../domain/cash-register-day.repository";
 import type { CashRegisterDay } from "../domain/cash-register-day.entity";
 
+const OPENED_BY_INCLUDE = { openedBy: { select: { name: true } } } as const;
+
+type RowWithOpenedBy = Prisma.CashRegisterDayGetPayload<{
+  include: typeof OPENED_BY_INCLUDE;
+}>;
+
+/** Achata `row.openedBy.name` no campo denormalizado do domínio — nunca expõe o tipo do Prisma. */
+function toDomainDay(row: RowWithOpenedBy): CashRegisterDay {
+  const { openedBy, ...day } = row;
+  return { ...day, openedByUserName: openedBy.name };
+}
+
 export class PrismaCashRegisterDayRepository implements CashRegisterDayRepository {
   async findById(id: string): Promise<CashRegisterDay | null> {
-    return prisma.cashRegisterDay.findUnique({ where: { id } });
+    const row = await prisma.cashRegisterDay.findUnique({
+      where: { id },
+      include: OPENED_BY_INCLUDE,
+    });
+    return row ? toDomainDay(row) : null;
   }
 
   async findByOrganizationAndDate(
     organizationId: string,
     date: Date,
   ): Promise<CashRegisterDay | null> {
-    return prisma.cashRegisterDay.findUnique({
+    const row = await prisma.cashRegisterDay.findUnique({
       where: { organizationId_date: { organizationId, date } },
+      include: OPENED_BY_INCLUDE,
     });
+    return row ? toDomainDay(row) : null;
   }
 
   async findLastClosed(
     organizationId: string,
   ): Promise<CashRegisterDay | null> {
-    return prisma.cashRegisterDay.findFirst({
+    const row = await prisma.cashRegisterDay.findFirst({
       where: { organizationId, status: "CLOSED" },
       orderBy: { date: "desc" },
+      include: OPENED_BY_INCLUDE,
     });
+    return row ? toDomainDay(row) : null;
   }
 
   async findOpenByOrganization(
     organizationId: string,
   ): Promise<CashRegisterDay | null> {
-    return prisma.cashRegisterDay.findFirst({
+    const row = await prisma.cashRegisterDay.findFirst({
       where: { organizationId, status: "OPEN" },
       orderBy: { date: "desc" },
+      include: OPENED_BY_INCLUDE,
     });
+    return row ? toDomainDay(row) : null;
   }
 
   async findPendingConferenceByOrganization(
     organizationId: string,
   ): Promise<CashRegisterDay | null> {
-    return prisma.cashRegisterDay.findFirst({
+    const row = await prisma.cashRegisterDay.findFirst({
       where: { organizationId, status: "PENDING_CONFERENCE" },
       orderBy: { date: "desc" },
+      include: OPENED_BY_INCLUDE,
     });
+    return row ? toDomainDay(row) : null;
   }
 
   async list(
@@ -74,11 +98,12 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
         orderBy: { date: "desc" },
         skip: (pagination.page - 1) * pagination.pageSize,
         take: pagination.pageSize,
+        include: OPENED_BY_INCLUDE,
       }),
       prisma.cashRegisterDay.count({ where }),
     ]);
 
-    return buildPaginatedResult(items, total, pagination);
+    return buildPaginatedResult(items.map(toDomainDay), total, pagination);
   }
 
   /**
@@ -133,6 +158,7 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
           openingBalance: data.openingBalance,
           openedByUserId: data.openedByUserId,
         },
+        include: OPENED_BY_INCLUDE,
       });
 
       await tx.safeMovement.create({
@@ -146,7 +172,7 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
         },
       });
 
-      return cashRegisterDay;
+      return toDomainDay(cashRegisterDay);
     });
   }
 
@@ -154,7 +180,7 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
     id: string,
     data: CloseCashRegisterDayInput,
   ): Promise<CashRegisterDay> {
-    return prisma.cashRegisterDay.update({
+    const row = await prisma.cashRegisterDay.update({
       where: { id },
       data: {
         status: "PENDING_CONFERENCE",
@@ -165,7 +191,9 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
         closedByUserId: data.closedByUserId,
         closedAt: new Date(),
       },
+      include: OPENED_BY_INCLUDE,
     });
+    return toDomainDay(row);
   }
 
   /**
@@ -205,7 +233,7 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
         },
       });
 
-      return tx.cashRegisterDay.update({
+      const updated = await tx.cashRegisterDay.update({
         where: { id },
         data: {
           status: "CLOSED",
@@ -217,7 +245,9 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
           totalOut: data.totalOut,
           closingBalance: data.closingBalance,
         },
+        include: OPENED_BY_INCLUDE,
       });
+      return toDomainDay(updated);
     });
   }
 
@@ -225,21 +255,23 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
     id: string,
     data: RejectConferenceInput,
   ): Promise<CashRegisterDay> {
-    return prisma.cashRegisterDay.update({
+    const row = await prisma.cashRegisterDay.update({
       where: { id },
       data: {
         status: "OPEN",
         rejectedAt: new Date(),
         rejectionReason: data.reason,
       },
+      include: OPENED_BY_INCLUDE,
     });
+    return toDomainDay(row);
   }
 
   async reopen(
     id: string,
     data: ReopenCashRegisterDayInput,
   ): Promise<CashRegisterDay> {
-    return prisma.cashRegisterDay.update({
+    const row = await prisma.cashRegisterDay.update({
       where: { id },
       data: {
         status: "OPEN",
@@ -247,6 +279,8 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
         reopenedAt: new Date(),
         reopenCount: { increment: 1 },
       },
+      include: OPENED_BY_INCLUDE,
     });
+    return toDomainDay(row);
   }
 }

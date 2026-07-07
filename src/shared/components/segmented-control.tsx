@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 export interface SegmentedControlOption<T extends string> {
@@ -7,6 +8,7 @@ export interface SegmentedControlOption<T extends string> {
   label: string;
   /** Classe de fundo do indicador quando este segmento está ativo (ex: "bg-green-600"). */
   activeClassName?: string;
+  icon?: LucideIcon;
 }
 
 export function SegmentedControl<T extends string>({
@@ -44,26 +46,30 @@ export function SegmentedControl<T extends string>({
           transform: `translateX(${activeIndex * 100}%)`,
         }}
       />
-      {options.map((option, index) => (
-        <button
-          key={option.value}
-          type="button"
-          role="tab"
-          aria-selected={index === activeIndex}
-          disabled={disabled}
-          onClick={() => onChange(option.value)}
-          className={cn(
-            "relative z-10 flex-1 rounded-md font-medium transition-colors",
-            size === "lg" ? "px-6 py-3 text-base" : "px-4 py-1.5 text-sm",
-            index === activeIndex
-              ? "text-white"
-              : "text-muted-foreground hover:text-foreground",
-            disabled && "cursor-not-allowed opacity-50",
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
+      {options.map((option, index) => {
+        const Icon = option.icon;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="tab"
+            aria-selected={index === activeIndex}
+            disabled={disabled}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-md font-medium transition-colors duration-200",
+              size === "lg" ? "px-6 py-3 text-base" : "px-4 py-1.5 text-sm",
+              index === activeIndex
+                ? "text-white"
+                : "text-muted-foreground hover:text-foreground",
+              disabled && "cursor-not-allowed opacity-50",
+            )}
+          >
+            {Icon && <Icon className="h-4 w-4" />}
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

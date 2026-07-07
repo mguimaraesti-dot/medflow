@@ -25,6 +25,8 @@ export interface CashRegisterDay {
   closingBalance: Prisma.Decimal | null;
 
   openedByUserId: string;
+  /** Denormalizado só pra exibição (card "Saldo Atual") — via join na infraestrutura. */
+  openedByUserName: string;
   openedAt: Date;
 
   closedByUserId: string | null;

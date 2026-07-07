@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { cn } from "@/shared/lib/utils";
 import { baseCreateCashFlowEntrySchema } from "../application/dtos/create-cash-flow-entry.dto";
 import { useCreateCashFlowEntry } from "./use-create-cash-flow-entry";
 import { useCategories } from "@/features/categories/presentation/use-categories";
@@ -38,6 +39,8 @@ const WITHDRAWAL_REASON_OPTIONS = [
   "Outros",
 ] as const;
 const WITHDRAWAL_REASON_OTHER = "Outros";
+
+const fieldClassName = "h-11 rounded-xl";
 
 // O formulário nunca coleta `occurredAt` (o use case usa o horário do
 // servidor por padrão) — omitido aqui para evitar o tipo `unknown` que
@@ -90,11 +93,12 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
   });
 
   const type = watch("type");
+  const isIn = type === "IN";
   const { data: categories } = useCategories(type);
   const { data: paymentMethods } = usePaymentMethods();
   // Caixa Recepção só opera em dinheiro/PIX na prática — restringe as opções
   // exibidas por tipo de lançamento (Refinamento UX/UI Caixa Recepção).
-  const allowedNames = type === "IN" ? ["Dinheiro", "PIX"] : ["Dinheiro"];
+  const allowedNames = isIn ? ["Dinheiro", "PIX"] : ["Dinheiro"];
   const availablePaymentMethods = paymentMethods?.filter((method) =>
     allowedNames.includes(method.name),
   );
@@ -148,9 +152,9 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <Card>
+    <Card className="rounded-2xl shadow-sm">
       <CardHeader>
-        <CardTitle>Novo lançamento</CardTitle>
+        <CardTitle>Novo Lançamento</CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -187,18 +191,20 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                     value: "IN",
                     label: "Entrada",
                     activeClassName: "bg-green-600",
+                    icon: ArrowDownCircle,
                   },
                   {
                     value: "OUT",
                     label: "Saída",
                     activeClassName: "bg-destructive",
+                    icon: ArrowUpCircle,
                   },
                 ]}
               />
             )}
           />
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="amount">Valor</Label>
               <Controller
@@ -211,6 +217,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                     disabled={disabled}
                     value={field.value}
                     onChange={field.onChange}
+                    className={fieldClassName}
                   />
                 )}
               />
@@ -243,120 +250,141 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                 </p>
               )}
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Forma de pagamento</Label>
-            <Controller
-              control={control}
-              name="paymentMethodId"
-              render={({ field }) => (
-                <PaymentMethodPicker
-                  disabled={disabled}
-                  paymentMethods={availablePaymentMethods}
-                  value={field.value}
-                  onChange={field.onChange}
-                />
+            <div className="space-y-2">
+              <Label>Forma de pagamento</Label>
+              <Controller
+                control={control}
+                name="paymentMethodId"
+                render={({ field }) => (
+                  <PaymentMethodPicker
+                    disabled={disabled}
+                    paymentMethods={availablePaymentMethods}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              {errors.paymentMethodId && (
+                <p className="text-destructive text-sm">
+                  {errors.paymentMethodId.message}
+                </p>
               )}
-            />
-            {errors.paymentMethodId && (
-              <p className="text-destructive text-sm">
-                {errors.paymentMethodId.message}
-              </p>
+            </div>
+
+            {isIn && (
+              <div className="space-y-2">
+                <Label htmlFor="patientName">Nome do Paciente</Label>
+                <Input
+                  id="patientName"
+                  disabled={disabled}
+                  className={fieldClassName}
+                  {...register("patientName")}
+                />
+                {errors.patientName && (
+                  <p className="text-destructive text-sm">
+                    {errors.patientName.message}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!isIn && (
+              <div className="space-y-2">
+                <Label htmlFor="withdrawalReasonOption">
+                  Justificativa da Retirada
+                </Label>
+                <Select
+                  value={withdrawalReasonOption}
+                  onValueChange={(next) => {
+                    setWithdrawalReasonOption(next);
+                    setValue(
+                      "withdrawalReason",
+                      next === WITHDRAWAL_REASON_OTHER ? "" : next,
+                    );
+                  }}
+                  disabled={disabled}
+                >
+                  <SelectTrigger
+                    id="withdrawalReasonOption"
+                    className={cn(fieldClassName, "w-full")}
+                  >
+                    <SelectValue placeholder="Selecione a justificativa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WITHDRAWAL_REASON_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.withdrawalReason && (
+                  <p className="text-destructive text-sm">
+                    {errors.withdrawalReason.message}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
-          {type === "IN" && (
-            <div className="space-y-2">
-              <Label htmlFor="patientName">Nome do Paciente</Label>
-              <Input
-                id="patientName"
-                disabled={disabled}
-                {...register("patientName")}
-              />
-              {errors.patientName && (
-                <p className="text-destructive text-sm">
-                  {errors.patientName.message}
-                </p>
-              )}
-            </div>
+          {!isIn && withdrawalReasonOption === WITHDRAWAL_REASON_OTHER && (
+            <Input
+              aria-label="Justificativa da retirada (digitada)"
+              placeholder="Digite a justificativa"
+              disabled={disabled}
+              className={fieldClassName}
+              {...register("withdrawalReason")}
+            />
           )}
 
-          {type === "OUT" && (
-            <div className="space-y-2">
-              <Label htmlFor="withdrawalReasonOption">
-                Justificativa da Retirada
-              </Label>
-              <Select
-                value={withdrawalReasonOption}
-                onValueChange={(next) => {
-                  setWithdrawalReasonOption(next);
-                  setValue(
-                    "withdrawalReason",
-                    next === WITHDRAWAL_REASON_OTHER ? "" : next,
-                  );
-                }}
-                disabled={disabled}
-              >
-                <SelectTrigger id="withdrawalReasonOption" className="w-full">
-                  <SelectValue placeholder="Selecione a justificativa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WITHDRAWAL_REASON_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {withdrawalReasonOption === WITHDRAWAL_REASON_OTHER && (
-                <Input
-                  aria-label="Justificativa da retirada (digitada)"
-                  placeholder="Digite a justificativa"
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            {isIn && (
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="description">Descrição (opcional)</Label>
+                <Textarea
+                  id="description"
+                  rows={2}
                   disabled={disabled}
-                  {...register("withdrawalReason")}
+                  className="rounded-xl"
+                  {...register("description")}
                 />
-              )}
-              {errors.withdrawalReason && (
-                <p className="text-destructive text-sm">
-                  {errors.withdrawalReason.message}
-                </p>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {type === "IN" && (
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição (opcional)</Label>
-              <Textarea
-                id="description"
-                rows={2}
-                disabled={disabled}
-                {...register("description")}
-              />
+            <div className={cn("space-y-1.5", !isIn && "flex-1")}>
+              <Button
+                type="submit"
+                disabled={disabled || createCashFlowEntry.isPending}
+                className={cn(
+                  "h-12 w-full rounded-xl text-base font-semibold shadow-sm transition-colors duration-200 lg:w-auto lg:min-w-56",
+                  isIn
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-destructive hover:bg-destructive/90",
+                )}
+              >
+                {createCashFlowEntry.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Registrando...
+                  </>
+                ) : isIn ? (
+                  "Registrar Entrada"
+                ) : (
+                  "Registrar Saída"
+                )}
+              </Button>
+              <p className="text-muted-foreground text-center text-xs">
+                Pressione Enter para salvar
+              </p>
             </div>
-          )}
+          </div>
 
           {serverError && (
             <p className="text-destructive text-sm" role="alert">
               {serverError}
             </p>
           )}
-
-          <Button
-            type="submit"
-            disabled={disabled || createCashFlowEntry.isPending}
-            className="from-primary to-brand-secondary w-full bg-gradient-to-b shadow-sm"
-          >
-            {createCashFlowEntry.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Lançando...
-              </>
-            ) : (
-              "Lançar"
-            )}
-          </Button>
         </form>
       </CardContent>
     </Card>

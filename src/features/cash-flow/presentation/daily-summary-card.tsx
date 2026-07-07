@@ -2,24 +2,41 @@
 
 import { useCashRegisterToday } from "@/features/cash-register/presentation/use-cash-register-today";
 import { formatCurrencyBRL } from "@/shared/lib/format";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { cn } from "@/shared/lib/utils";
+import { Card, CardContent } from "@/shared/ui/card";
 import { Skeleton } from "@/shared/ui/skeleton";
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "positive" | "negative";
+}) {
   return (
-    <div className="flex items-center justify-between border-b py-2 text-sm last:border-b-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium tabular-nums">{value}</span>
+    <div className="space-y-1">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p
+        className={cn(
+          "text-xl font-bold tracking-tight",
+          tone === "positive" && "text-green-600 dark:text-green-500",
+          tone === "negative" && "text-destructive",
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }
 
-/** "Resumo do Dia" — vai no rodapé da Caixa Recepção (Refinamento UX/UI). */
+/** "Resumo Financeiro" — vai no rodapé da Caixa Recepção (Refinamento UX/UI). */
 export function DailySummaryCard() {
   const { data: today, isLoading } = useCashRegisterToday();
 
   if (isLoading) {
-    return <Skeleton className="h-64 w-full" />;
+    return <Skeleton className="h-24 w-full" />;
   }
 
   if (!today) {
@@ -33,51 +50,41 @@ export function DailySummaryCard() {
   const difference = today.difference !== null ? Number(today.difference) : 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Resumo do Dia</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <SummaryRow
+    <Card className="rounded-2xl shadow-sm">
+      <CardContent className="grid grid-cols-2 gap-6 p-6 sm:grid-cols-3 lg:grid-cols-6">
+        <SummaryStat
           label="Saldo Inicial"
           value={formatCurrencyBRL(today.openingBalance)}
         />
-        <SummaryRow
+        <SummaryStat
           label="Entradas"
           value={formatCurrencyBRL(today.totalIn ?? "0")}
+          tone="positive"
         />
-        <SummaryRow
+        <SummaryStat
           label="Saídas"
           value={formatCurrencyBRL(today.totalOut ?? "0")}
+          tone="negative"
         />
-        <SummaryRow
+        <SummaryStat
           label="Saldo Esperado"
           value={formatCurrencyBRL(expectedBalance.toFixed(2))}
         />
-        <SummaryRow
+        <SummaryStat
           label="Saldo Contado"
           value={
             hasCounted ? formatCurrencyBRL(today.countedAmount ?? "0") : "—"
           }
         />
-        <SummaryRow
+        <SummaryStat
           label="Diferença"
-          value={
+          value={hasCounted ? formatCurrencyBRL(today.difference ?? "0") : "—"}
+          tone={
             hasCounted
-              ? `${difference === 0 ? "🟢" : "🔴"} ${formatCurrencyBRL(today.difference ?? "0")}`
-              : "—"
-          }
-        />
-        <SummaryRow
-          label="Status"
-          value={
-            today.status === "OPEN"
-              ? "🟢 Caixa Aberto"
-              : hasCounted
-                ? difference === 0
-                  ? "🟢 Sem diferença"
-                  : "🔴 Diferença encontrada"
-                : "🔴 Caixa Fechado"
+              ? difference === 0
+                ? "positive"
+                : "negative"
+              : undefined
           }
         />
       </CardContent>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Lock } from "lucide-react";
 import {
   closeCashRegisterSchema,
   type CloseCashRegisterInput,
@@ -72,11 +73,12 @@ export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
       <DialogTrigger asChild>
         <Button
           type="button"
-          variant="destructive"
-          size="sm"
+          variant="outline"
+          className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive h-11 rounded-xl transition-colors duration-200"
           disabled={disabled}
         >
-          Fechar
+          <Lock className="h-4 w-4" />
+          Fechar Caixa
         </Button>
       </DialogTrigger>
       <DialogContent>

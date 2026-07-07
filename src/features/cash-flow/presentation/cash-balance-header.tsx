@@ -12,7 +12,8 @@ import { useOpenCashRegister } from "@/features/cash-register/presentation/use-o
 import { CloseRegisterDialog } from "@/features/cash-register/presentation/close-register-dialog";
 import { ReopenRegisterDialog } from "@/features/cash-register/presentation/reopen-register-dialog";
 import { ApiError } from "@/shared/lib/api-client";
-import { formatCurrencyBRL } from "@/shared/lib/format";
+import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -120,19 +121,33 @@ export function CashBalanceHeader({
   const isOpen = today.status === "OPEN";
 
   return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+    <Card className="rounded-2xl shadow-sm">
+      <CardContent className="flex flex-wrap items-center justify-between gap-6 p-8">
         <div>
           <p className="text-muted-foreground text-sm">Saldo Atual</p>
-          <p className="text-4xl font-bold tracking-tight">
+          <p className="text-5xl font-bold tracking-tight">
             {formatCurrencyBRL(currentBalance)}
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <span className="flex items-center gap-1.5 text-base font-semibold">
-            {isOpen ? "🟢 Caixa Aberto" : "🔴 Caixa Fechado"}
-          </span>
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <span className="flex items-center justify-end gap-1.5 text-base font-semibold">
+              <span
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full",
+                  isOpen ? "bg-green-500" : "bg-destructive",
+                )}
+              />
+              {isOpen ? "Caixa Aberto" : "Caixa Fechado"}
+            </span>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Aberto hoje às {formatTimeBR(today.openedAt)}
+              <br />
+              por {today.openedByUserName}
+            </p>
+          </div>
+
           {isOpen && <CloseRegisterDialog disabled={!canClose} />}
           {today.status === "CLOSED" && canReopen && (
             <ReopenRegisterDialog cashRegisterDayId={today.id} />
