@@ -8,9 +8,9 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
+  Columns3,
   Plus,
   Search,
-  Settings2,
   Wallet,
   X,
 } from "lucide-react";
@@ -39,8 +39,6 @@ import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { Checkbox } from "@/shared/ui/checkbox";
-import { Label } from "@/shared/ui/label";
-import { Separator } from "@/shared/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import {
   Select,
@@ -109,6 +107,7 @@ export function AccountsPayableScreen({
   >();
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     category: true,
+    recurring: true,
     confirmedBy: true,
     attachments: true,
   });
@@ -317,7 +316,7 @@ export function AccountsPayableScreen({
       )}
 
       <div className="flex flex-col flex-wrap gap-2 lg:flex-row lg:items-center">
-        <div className="relative w-full lg:w-[160px]">
+        <div className="relative w-full lg:w-[220px]">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Buscar contas..."
@@ -405,6 +404,86 @@ export function AccountsPayableScreen({
           </SelectContent>
         </Select>
 
+        <Select
+          value={supplierId ?? "ALL"}
+          onValueChange={(value) =>
+            setSupplierId(value === "ALL" ? undefined : value)
+          }
+        >
+          <SelectTrigger size="sm" className="w-full lg:w-[150px]">
+            <SelectValue>
+              {supplierId ? (supplierName ?? "—") : "Beneficiários"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todos os beneficiários</SelectItem>
+            {suppliers?.map((supplier) => (
+              <SelectItem key={supplier.id} value={supplier.id}>
+                {supplier.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="outline" size="sm">
+              <Columns3 className="h-4 w-4" />
+              Colunas
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-56 space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={visibleColumns.category}
+                onCheckedChange={(checked) =>
+                  setVisibleColumns((prev) => ({
+                    ...prev,
+                    category: checked === true,
+                  }))
+                }
+              />
+              Categoria
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={visibleColumns.recurring}
+                onCheckedChange={(checked) =>
+                  setVisibleColumns((prev) => ({
+                    ...prev,
+                    recurring: checked === true,
+                  }))
+                }
+              />
+              Recorrência
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={visibleColumns.confirmedBy}
+                onCheckedChange={(checked) =>
+                  setVisibleColumns((prev) => ({
+                    ...prev,
+                    confirmedBy: checked === true,
+                  }))
+                }
+              />
+              Confirmado por
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={visibleColumns.attachments}
+                onCheckedChange={(checked) =>
+                  setVisibleColumns((prev) => ({
+                    ...prev,
+                    attachments: checked === true,
+                  }))
+                }
+              />
+              Documentos
+            </label>
+          </PopoverContent>
+        </Popover>
+
         {canCreate && (
           <Button
             type="button"
@@ -416,87 +495,6 @@ export function AccountsPayableScreen({
             Nova Conta
           </Button>
         )}
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              aria-label="Mais opções"
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="supplier-filter">Beneficiários</Label>
-              <Select
-                value={supplierId ?? "ALL"}
-                onValueChange={(value) =>
-                  setSupplierId(value === "ALL" ? undefined : value)
-                }
-              >
-                <SelectTrigger id="supplier-filter" className="w-full">
-                  <SelectValue>
-                    {supplierId ? (supplierName ?? "—") : "Beneficiários"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">Todos os beneficiários</SelectItem>
-                  {suppliers?.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Colunas visíveis</Label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={visibleColumns.category}
-                  onCheckedChange={(checked) =>
-                    setVisibleColumns((prev) => ({
-                      ...prev,
-                      category: checked === true,
-                    }))
-                  }
-                />
-                Categoria
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={visibleColumns.confirmedBy}
-                  onCheckedChange={(checked) =>
-                    setVisibleColumns((prev) => ({
-                      ...prev,
-                      confirmedBy: checked === true,
-                    }))
-                  }
-                />
-                Confirmado por
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={visibleColumns.attachments}
-                  onCheckedChange={(checked) =>
-                    setVisibleColumns((prev) => ({
-                      ...prev,
-                      attachments: checked === true,
-                    }))
-                  }
-                />
-                Documentos
-              </label>
-            </div>
-          </PopoverContent>
-        </Popover>
       </div>
 
       {hasNonDefaultFilters && (

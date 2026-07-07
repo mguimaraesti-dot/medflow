@@ -73,6 +73,7 @@ export type StatusFilter = "ALL" | "PENDING" | "OVERDUE" | "PAID" | "CANCELLED";
 
 export interface VisibleColumns {
   category: boolean;
+  recurring: boolean;
   confirmedBy: boolean;
   attachments: boolean;
 }
@@ -365,13 +366,15 @@ export function AccountsPayableTable({
                     sort={sort}
                     onSort={toggleSort}
                   />
-                  <SortableHead
-                    label="Recorrência"
-                    field="RECURRING"
-                    sort={sort}
-                    onSort={toggleSort}
-                    className="hidden lg:table-cell"
-                  />
+                  {visibleColumns.recurring && (
+                    <SortableHead
+                      label="Recorrência"
+                      field="RECURRING"
+                      sort={sort}
+                      onSort={toggleSort}
+                      className="hidden lg:table-cell"
+                    />
+                  )}
                   {visibleColumns.confirmedBy && (
                     <SortableHead
                       label="Confirmado por"
@@ -484,21 +487,23 @@ export function AccountsPayableTable({
                           {badge.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {payable.recurringBillId ? (
-                          <Badge
-                            variant="outline"
-                            className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
-                          >
-                            <Repeat className="h-3 w-3" />
-                            Recorrente
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
+                      {visibleColumns.recurring && (
+                        <TableCell className="hidden lg:table-cell">
+                          {payable.recurringBillId ? (
+                            <Badge
+                              variant="outline"
+                              className="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
+                            >
+                              <Repeat className="h-3 w-3" />
+                              Recorrente
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                      )}
                       {visibleColumns.confirmedBy && (
                         <TableCell className="hidden w-[110px] lg:table-cell">
                           {paymentConfirmation ? (
