@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { Input } from "@/shared/ui/input";
 import { cn } from "@/shared/lib/utils";
 
@@ -17,19 +17,16 @@ function formatCentsToBRL(cents: number): string {
  * esquerda (padrão de mask BR — o cursor sempre vai pro fim, é
  * intencional). Expõe o valor numérico puro pro RHF via `onChange`.
  */
-export function CurrencyInput({
-  value,
-  onChange,
-  disabled,
-  id,
-  className,
-}: {
-  value: number | undefined;
-  onChange: (value: number) => void;
-  disabled?: boolean;
-  id?: string;
-  className?: string;
-}) {
+export const CurrencyInput = forwardRef<
+  HTMLInputElement,
+  {
+    value: number | undefined;
+    onChange: (value: number) => void;
+    disabled?: boolean;
+    id?: string;
+    className?: string;
+  }
+>(function CurrencyInput({ value, onChange, disabled, id, className }, ref) {
   const [display, setDisplay] = useState("");
 
   useEffect(() => {
@@ -48,6 +45,7 @@ export function CurrencyInput({
         R$
       </span>
       <Input
+        ref={ref}
         id={id}
         inputMode="decimal"
         disabled={disabled}
@@ -58,4 +56,4 @@ export function CurrencyInput({
       />
     </div>
   );
-}
+});

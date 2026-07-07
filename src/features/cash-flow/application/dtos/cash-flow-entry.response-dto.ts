@@ -17,6 +17,8 @@ export interface CashFlowEntryResponseDTO {
   categoryId: string;
   paymentMethodId: string;
   accountsPayableId: string | null;
+  patientName: string | null;
+  withdrawalReason: string | null;
   createdByUserId: string;
   createdByUserName: string;
   createdAt: Date;
@@ -38,6 +40,8 @@ export function toCashFlowEntryResponseDTO(
     categoryId: entry.categoryId,
     paymentMethodId: entry.paymentMethodId,
     accountsPayableId: entry.accountsPayableId,
+    patientName: entry.patientName,
+    withdrawalReason: entry.withdrawalReason,
     createdByUserId: entry.createdByUserId,
     createdByUserName: entry.createdByUserName,
     createdAt: entry.createdAt,

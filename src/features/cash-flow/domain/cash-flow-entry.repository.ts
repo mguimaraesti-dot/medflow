@@ -16,6 +16,8 @@ export interface CreateCashFlowEntryInput {
   paymentMethodId: string;
   accountsPayableId?: string;
   createdByUserId: string;
+  patientName?: string;
+  withdrawalReason?: string;
 }
 
 export interface ListCashFlowEntriesFilter {

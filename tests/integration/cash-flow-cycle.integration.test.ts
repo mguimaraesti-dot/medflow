@@ -160,7 +160,7 @@ describe.skipIf(!hasTestDb)(
 
       const { reversal } = await reverseCashFlowEntryUseCase(
         expense.id,
-        {},
+        { description: "Motivo do estorno de teste" },
         userId,
         { cashFlowEntryRepository, cashRegisterDayRepository },
       );

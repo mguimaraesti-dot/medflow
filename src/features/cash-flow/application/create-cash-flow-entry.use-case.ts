@@ -44,6 +44,8 @@ export async function createCashFlowEntryUseCase(
     categoryId: input.categoryId,
     paymentMethodId: input.paymentMethodId,
     createdByUserId,
+    patientName: input.patientName,
+    withdrawalReason: input.withdrawalReason,
   });
 
   await prisma.auditLog.create({
@@ -52,7 +54,12 @@ export async function createCashFlowEntryUseCase(
       entity: "CashFlowEntry",
       entityId: entry.id,
       action: "CREATE",
-      after: { type: entry.type, amount: input.amount.toFixed(2) },
+      after: {
+        type: entry.type,
+        amount: input.amount.toFixed(2),
+        patientName: input.patientName,
+        withdrawalReason: input.withdrawalReason,
+      },
     },
   });
 

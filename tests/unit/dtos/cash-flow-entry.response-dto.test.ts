@@ -15,6 +15,8 @@ function buildEntry(overrides: Partial<CashFlowEntry> = {}): CashFlowEntry {
     categoryId: "cat-1",
     paymentMethodId: "pm-1",
     accountsPayableId: null,
+    patientName: null,
+    withdrawalReason: null,
     createdByUserId: "user-1",
     createdByUserName: "Usuário Teste",
     createdAt: new Date("2026-07-03T10:00:00Z"),

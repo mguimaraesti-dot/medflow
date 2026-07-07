@@ -14,11 +14,14 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   disabled,
+  size = "default",
 }: {
   options: SegmentedControlOption<T>[];
   value: T;
   onChange: (value: T) => void;
   disabled?: boolean;
+  /** "lg" — botões maiores, usado no formulário de Novo Lançamento da Caixa Recepção. */
+  size?: "default" | "lg";
 }) {
   const activeIndex = Math.max(
     0,
@@ -50,7 +53,8 @@ export function SegmentedControl<T extends string>({
           disabled={disabled}
           onClick={() => onChange(option.value)}
           className={cn(
-            "relative z-10 flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+            "relative z-10 flex-1 rounded-md font-medium transition-colors",
+            size === "lg" ? "px-6 py-3 text-base" : "px-4 py-1.5 text-sm",
             index === activeIndex
               ? "text-white"
               : "text-muted-foreground hover:text-foreground",

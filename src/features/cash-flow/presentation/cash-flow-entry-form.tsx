@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { createCashFlowEntrySchema } from "../application/dtos/create-cash-flow-entry.dto";
+import { baseCreateCashFlowEntrySchema } from "../application/dtos/create-cash-flow-entry.dto";
 import { useCreateCashFlowEntry } from "./use-create-cash-flow-entry";
 import { useCategories } from "@/features/categories/presentation/use-categories";
 import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
@@ -16,16 +16,26 @@ import { SegmentedControl } from "@/shared/components/segmented-control";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { PaymentMethodPicker } from "@/shared/components/payment-method-picker";
 import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
 // O formulário nunca coleta `occurredAt` (o use case usa o horário do
 // servidor por padrão) — omitido aqui para evitar o tipo `unknown` que
-// `z.coerce.date()` produz na entrada do resolver do RHF.
-const cashFlowEntryFormSchema = createCashFlowEntrySchema.omit({
-  occurredAt: true,
-});
+// `z.coerce.date()` produz na entrada do resolver do RHF. As mesmas
+// regras condicionais de `createCashFlowEntrySchema` são reaplicadas
+// aqui em cima do schema já sem `occurredAt`.
+const cashFlowEntryFormSchema = baseCreateCashFlowEntrySchema
+  .omit({ occurredAt: true })
+  .refine((data) => data.type !== "IN" || Boolean(data.patientName), {
+    path: ["patientName"],
+    message: "Informe o nome do paciente",
+  })
+  .refine((data) => data.type !== "OUT" || Boolean(data.withdrawalReason), {
+    path: ["withdrawalReason"],
+    message: "Informe a justificativa da retirada",
+  });
 type CashFlowEntryFormValues = z.infer<typeof cashFlowEntryFormSchema>;
 
 const emptyFormValues: CashFlowEntryFormValues = {
@@ -34,11 +44,14 @@ const emptyFormValues: CashFlowEntryFormValues = {
   categoryId: "",
   paymentMethodId: "",
   description: "",
+  patientName: "",
+  withdrawalReason: "",
 };
 
 export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
   const [serverError, setServerError] = useState<string | null>(null);
   const createCashFlowEntry = useCreateCashFlowEntry();
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -63,13 +76,40 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
     allowedNames.includes(method.name),
   );
 
+  useEffect(() => {
+    amountInputRef.current?.focus();
+  }, []);
+
+  // F2/F3 trocam o tipo do lançamento de qualquer lugar da tela, exceto
+  // quando um diálogo (Fechar Caixa, Estornar, etc.) está aberto — nunca
+  // competem com atalhos do próprio diálogo.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (document.querySelector('[role="dialog"]')) return;
+      if (event.key === "F2") {
+        event.preventDefault();
+        setValue("type", "IN");
+        setValue("paymentMethodId", "");
+      } else if (event.key === "F3") {
+        event.preventDefault();
+        setValue("type", "OUT");
+        setValue("paymentMethodId", "");
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [setValue]);
+
   async function onSubmit(values: CashFlowEntryFormValues) {
     setServerError(null);
     try {
       await createCashFlowEntry.mutateAsync(values);
       reset({ ...emptyFormValues, type });
+      amountInputRef.current?.focus();
       toast.success(
-        values.type === "IN" ? "Entrada lançada." : "Saída lançada.",
+        values.type === "IN"
+          ? "✅ Entrada registrada com sucesso"
+          : "✅ Saída registrada com sucesso",
       );
     } catch (error) {
       const message =
@@ -89,6 +129,14 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
       <CardContent>
         <form
           onSubmit={handleSubmit(onSubmit)}
+          onKeyDown={(event) => {
+            // Esc só é tratado aqui (não em `window`) pra nunca competir
+            // com o Esc nativo do Radix fechando um Dialog aberto.
+            if (event.key === "Escape") {
+              reset({ ...emptyFormValues, type });
+              amountInputRef.current?.focus();
+            }
+          }}
           className="space-y-5"
           noValidate
         >
@@ -97,6 +145,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
             name="type"
             render={({ field }) => (
               <SegmentedControl
+                size="lg"
                 value={field.value}
                 onChange={(next) => {
                   field.onChange(next);
@@ -129,6 +178,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                 name="amount"
                 render={({ field }) => (
                   <CurrencyInput
+                    ref={amountInputRef}
                     id="amount"
                     disabled={disabled}
                     value={field.value}
@@ -187,6 +237,41 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
               </p>
             )}
           </div>
+
+          {type === "IN" && (
+            <div className="space-y-2">
+              <Label htmlFor="patientName">Nome do Paciente</Label>
+              <Input
+                id="patientName"
+                disabled={disabled}
+                {...register("patientName")}
+              />
+              {errors.patientName && (
+                <p className="text-destructive text-sm">
+                  {errors.patientName.message}
+                </p>
+              )}
+            </div>
+          )}
+
+          {type === "OUT" && (
+            <div className="space-y-2">
+              <Label htmlFor="withdrawalReason">
+                Justificativa da Retirada
+              </Label>
+              <Textarea
+                id="withdrawalReason"
+                rows={2}
+                disabled={disabled}
+                {...register("withdrawalReason")}
+              />
+              {errors.withdrawalReason && (
+                <p className="text-destructive text-sm">
+                  {errors.withdrawalReason.message}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrição (opcional)</Label>

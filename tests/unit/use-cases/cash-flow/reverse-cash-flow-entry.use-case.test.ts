@@ -21,10 +21,12 @@ describe("reverseCashFlowEntryUseCase", () => {
     const cashRegisterDayRepository = {} as CashRegisterDayRepository;
 
     await expect(
-      reverseCashFlowEntryUseCase("entry-x", {}, "user-1", {
-        cashFlowEntryRepository,
-        cashRegisterDayRepository,
-      }),
+      reverseCashFlowEntryUseCase(
+        "entry-x",
+        { description: "Motivo do estorno de teste" },
+        "user-1",
+        { cashFlowEntryRepository, cashRegisterDayRepository },
+      ),
     ).rejects.toThrow(NotFoundError);
   });
 
@@ -43,10 +45,12 @@ describe("reverseCashFlowEntryUseCase", () => {
     } as unknown as CashRegisterDayRepository;
 
     await expect(
-      reverseCashFlowEntryUseCase("entry-1", {}, "user-1", {
-        cashFlowEntryRepository,
-        cashRegisterDayRepository,
-      }),
+      reverseCashFlowEntryUseCase(
+        "entry-1",
+        { description: "Motivo do estorno de teste" },
+        "user-1",
+        { cashFlowEntryRepository, cashRegisterDayRepository },
+      ),
     ).rejects.toThrow(DuplicateReversalError);
 
     expect(cashFlowEntryRepository.reverse).not.toHaveBeenCalled();
@@ -66,10 +70,12 @@ describe("reverseCashFlowEntryUseCase", () => {
     } as unknown as CashRegisterDayRepository;
 
     await expect(
-      reverseCashFlowEntryUseCase("entry-1", {}, "user-1", {
-        cashFlowEntryRepository,
-        cashRegisterDayRepository,
-      }),
+      reverseCashFlowEntryUseCase(
+        "entry-1",
+        { description: "Motivo do estorno de teste" },
+        "user-1",
+        { cashFlowEntryRepository, cashRegisterDayRepository },
+      ),
     ).rejects.toThrow(CashRegisterClosedError);
 
     expect(cashFlowEntryRepository.reverse).not.toHaveBeenCalled();
@@ -94,12 +100,18 @@ describe("reverseCashFlowEntryUseCase", () => {
       findById: vi.fn().mockResolvedValue({ id: "day-1", status: "OPEN" }),
     } as unknown as CashRegisterDayRepository;
 
-    const result = await reverseCashFlowEntryUseCase("entry-1", {}, "user-1", {
-      cashFlowEntryRepository,
-      cashRegisterDayRepository,
-    });
+    const result = await reverseCashFlowEntryUseCase(
+      "entry-1",
+      { description: "Motivo do estorno de teste" },
+      "user-1",
+      { cashFlowEntryRepository, cashRegisterDayRepository },
+    );
 
-    expect(reverse).toHaveBeenCalledWith("entry-1", "user-1", undefined);
+    expect(reverse).toHaveBeenCalledWith(
+      "entry-1",
+      "user-1",
+      "Motivo do estorno de teste",
+    );
     expect(result.reversal.reversalOfEntryId).toBe("entry-1");
     expect(result.original.isReversed).toBe(true);
   });

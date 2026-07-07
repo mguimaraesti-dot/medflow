@@ -1,11 +1,16 @@
 import { z } from "zod";
 
 /**
- * `description` é opcional — se omitida, o use case gera automaticamente
- * "Estorno referente ao lançamento #..." (US06, critério de aceite).
+ * `description` (rótulo na UI: "Justificativa") passou a ser obrigatória
+ * (Refinamento UX Caixa Recepção, item 13) — mantém o nome de campo
+ * original (coluna já existente) pra não propagar rename em cascata pela
+ * API/use case/repositório.
  */
 export const reverseCashFlowEntrySchema = z.object({
-  description: z.string().trim().max(500).optional(),
+  description: z
+    .string()
+    .trim()
+    .min(10, "A justificativa precisa ter pelo menos 10 caracteres"),
 });
 
 export type ReverseCashFlowEntryInput = z.infer<

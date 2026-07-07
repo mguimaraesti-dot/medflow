@@ -79,6 +79,8 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
         paymentMethodId: data.paymentMethodId,
         accountsPayableId: data.accountsPayableId,
         createdByUserId: data.createdByUserId,
+        patientName: data.patientName,
+        withdrawalReason: data.withdrawalReason,
       },
       include: CREATED_BY_INCLUDE,
     });

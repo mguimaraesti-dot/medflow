@@ -21,6 +21,11 @@ export interface CashFlowEntry {
   paymentMethodId: string;
   accountsPayableId: string | null;
 
+  /** Nome do paciente pagando — obrigatório no formulário quando `type === "IN"`. */
+  patientName: string | null;
+  /** Justificativa da retirada — obrigatória no formulário quando `type === "OUT"`. */
+  withdrawalReason: string | null;
+
   createdByUserId: string;
   /** Denormalizado só pra exibição (coluna "Usuário" da tabela) — via join na infraestrutura. */
   createdByUserName: string;

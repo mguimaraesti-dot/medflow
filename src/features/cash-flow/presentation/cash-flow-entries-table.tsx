@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { MoreHorizontal, Receipt } from "lucide-react";
+import { useMemo, useState } from "react";
+import { MoreHorizontal, Receipt, Search } from "lucide-react";
 import { useCashFlowEntries } from "./use-cash-flow-entries";
 import { ReverseEntryDialog } from "./reverse-entry-dialog";
 import { useCategories } from "@/features/categories/presentation/use-categories";
+import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
+import { cn } from "@/shared/lib/utils";
 import { EmptyState } from "@/shared/components/empty-state";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 import { Skeleton } from "@/shared/ui/skeleton";
 import {
   DropdownMenu,
@@ -26,6 +29,16 @@ import {
 } from "@/shared/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
+type QuickFilter = "IN" | "OUT" | "CASH" | "PIX" | "REVERSED";
+
+const QUICK_FILTERS: { value: QuickFilter; label: string }[] = [
+  { value: "IN", label: "Entradas" },
+  { value: "OUT", label: "Saídas" },
+  { value: "CASH", label: "Dinheiro" },
+  { value: "PIX", label: "PIX" },
+  { value: "REVERSED", label: "Estornados" },
+];
+
 export function CashFlowEntriesTable({
   cashRegisterDayId,
   canReverse,
@@ -33,24 +46,93 @@ export function CashFlowEntriesTable({
   cashRegisterDayId: string | undefined;
   canReverse: boolean;
 }) {
-  const [page, setPage] = useState(1);
   const [reversingEntryId, setReversingEntryId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(null);
 
+  // Tela já escopada ao dia aberto (não há navegação entre dias) — busca
+  // tudo de uma vez (mesmo teto já usado em outros pontos desta tela pra
+  // "o dia inteiro") e filtra/busca no cliente, sem paginação.
   const { data, isLoading } = useCashFlowEntries(
-    { cashRegisterDayId, page },
+    { cashRegisterDayId, pageSize: 100 },
     { enabled: Boolean(cashRegisterDayId) },
   );
   const { data: categories } = useCategories();
-  const categoryById = new Map(
-    categories?.map((category) => [category.id, category]),
+  const { data: paymentMethods } = usePaymentMethods();
+  const categoryById = useMemo(
+    () => new Map(categories?.map((category) => [category.id, category])),
+    [categories],
+  );
+  const paymentMethodById = useMemo(
+    () => new Map(paymentMethods?.map((method) => [method.id, method])),
+    [paymentMethods],
   );
 
   const isTodayEmpty = !cashRegisterDayId && !isLoading;
 
+  const filteredItems = useMemo(() => {
+    const items = data?.items ?? [];
+    const searchLower = search.trim().toLowerCase();
+
+    return items.filter((entry) => {
+      if (activeFilter === "IN" && entry.type !== "IN") return false;
+      if (activeFilter === "OUT" && entry.type !== "OUT") return false;
+      if (activeFilter === "REVERSED" && !entry.isReversed) return false;
+      if (
+        (activeFilter === "CASH" || activeFilter === "PIX") &&
+        paymentMethodById.get(entry.paymentMethodId)?.name !==
+          (activeFilter === "CASH" ? "Dinheiro" : "PIX")
+      ) {
+        return false;
+      }
+
+      if (!searchLower) return true;
+      const haystack = [
+        entry.description,
+        categoryById.get(entry.categoryId)?.name,
+        entry.patientName,
+        entry.withdrawalReason,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(searchLower);
+    });
+  }, [data?.items, search, activeFilter, categoryById, paymentMethodById]);
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle>Lançamentos</CardTitle>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-[220px]">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Input
+              placeholder="Pesquisar lançamento..."
+              className="h-8 pl-9"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+          {QUICK_FILTERS.map((filter) => (
+            <Button
+              key={filter.value}
+              type="button"
+              size="sm"
+              variant={activeFilter === filter.value ? "default" : "outline"}
+              className={cn(
+                activeFilter !== filter.value && "text-muted-foreground",
+              )}
+              onClick={() =>
+                setActiveFilter((current) =>
+                  current === filter.value ? null : filter.value,
+                )
+              }
+            >
+              {filter.label}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading && (
@@ -61,45 +143,46 @@ export function CashFlowEntriesTable({
           </div>
         )}
 
-        {!isLoading && (isTodayEmpty || data?.items.length === 0) && (
+        {!isLoading && (isTodayEmpty || filteredItems.length === 0) && (
           <EmptyState
             icon={Receipt}
             title={
               isTodayEmpty
                 ? "Nenhum caixa aberto hoje."
-                : "Nenhuma movimentação registrada hoje."
+                : "Nenhuma movimentação encontrada."
             }
             description={
               isTodayEmpty
                 ? "Abra o caixa para começar a lançar."
-                : "Os lançamentos de hoje aparecem aqui."
+                : "Ajuste a busca ou os filtros aplicados."
             }
           />
         )}
 
-        {!isLoading && data && data.items.length > 0 && (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Estorno</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.items.map((entry) => (
-                    <TableRow key={entry.id} className="hover:bg-muted/50">
-                      <TableCell className="text-muted-foreground">
-                        {formatDateTimeBR(entry.occurredAt)}
-                      </TableCell>
-                      <TableCell>
+        {!isLoading && filteredItems.length > 0 && (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Hora</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Paciente / Justificativa</TableHead>
+                  <TableHead>Forma de Pagamento</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((entry) => (
+                  <TableRow key={entry.id} className="hover:bg-muted/50">
+                    <TableCell className="text-muted-foreground">
+                      {formatDateTimeBR(entry.occurredAt)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1">
                         <Badge
                           variant={
                             entry.type === "IN" ? "default" : "destructive"
@@ -107,99 +190,79 @@ export function CashFlowEntriesTable({
                         >
                           {entry.type === "IN" ? "Entrada" : "Saída"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor:
-                                categoryById.get(entry.categoryId)?.color ??
-                                "#64748B",
-                            }}
-                          />
-                          {categoryById.get(entry.categoryId)?.name ?? "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell
-                        className={
-                          entry.type === "IN"
-                            ? "font-medium text-green-600 dark:text-green-500"
-                            : "text-destructive font-medium"
-                        }
-                      >
-                        {entry.type === "IN" ? "+" : "-"}
-                        {formatCurrencyBRL(entry.amount)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {entry.description ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {entry.createdByUserName}
-                      </TableCell>
-                      <TableCell>
                         {entry.isReversed && (
                           <Badge variant="secondary">Estornado</Badge>
                         )}
                         {entry.reversalOfEntryId && (
                           <Badge variant="outline">Estorno</Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {canReverse &&
-                          !entry.isReversed &&
-                          !entry.reversalOfEntryId && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Ações</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  onClick={() => setReversingEntryId(entry.id)}
-                                >
-                                  Estornar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Página {data.page} de {data.totalPages} · {data.total}{" "}
-                lançamento(s)
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= data.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Próxima
-                </Button>
-              </div>
-            </div>
-          </>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor:
+                              categoryById.get(entry.categoryId)?.color ??
+                              "#64748B",
+                          }}
+                        />
+                        {categoryById.get(entry.categoryId)?.name ?? "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {entry.type === "IN"
+                        ? (entry.patientName ?? "—")
+                        : (entry.withdrawalReason ?? "—")}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {paymentMethodById.get(entry.paymentMethodId)?.name ??
+                        "—"}
+                    </TableCell>
+                    <TableCell
+                      className={
+                        entry.type === "IN"
+                          ? "text-base font-semibold text-green-600 dark:text-green-500"
+                          : "text-destructive text-base font-semibold"
+                      }
+                    >
+                      {entry.type === "IN" ? "+" : "-"}
+                      {formatCurrencyBRL(entry.amount)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {entry.description ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {entry.createdByUserName}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {canReverse &&
+                        !entry.isReversed &&
+                        !entry.reversalOfEntryId && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Ações</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => setReversingEntryId(entry.id)}
+                              >
+                                Estornar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
 

@@ -61,6 +61,7 @@ export async function reverseCashFlowEntryUseCase(
       entity: "CashFlowEntry",
       entityId: entryId,
       action: "REVERSAL",
+      reason: input.description,
       after: { reversalEntryId: result.reversal.id },
     },
   });

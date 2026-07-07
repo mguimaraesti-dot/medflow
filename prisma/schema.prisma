@@ -324,6 +324,13 @@ model CashFlowEntry {
   description        String?
   occurredAt         DateTime          @default(now())
 
+  // obrigatórios no formulário conforme o tipo (Refinamento UX Caixa
+  // Recepção): nome do paciente pagando (Entrada) / justificativa da
+  // retirada (Saída). Nullable aqui pois estornos gerados pelo sistema
+  // não passam por essa validação.
+  patientName        String?
+  withdrawalReason   String?
+
   categoryId         String
   category           Category          @relation(fields: [categoryId], references: [id])
 
