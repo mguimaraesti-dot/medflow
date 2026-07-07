@@ -2,16 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { Textarea } from "@/shared/ui/textarea";
 import { ApiError } from "@/shared/lib/api-client";
 import { useDeleteAccountsPayable } from "./use-delete-accounts-payable";
@@ -59,36 +50,22 @@ export function DeleteAccountsPayableDialog({
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Excluir conta</AlertDialogTitle>
-          <AlertDialogDescription>Deseja continuar?</AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <Textarea
-          placeholder="Motivo da exclusão (opcional)"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          rows={2}
-        />
-
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setReason("")}>
-            Cancelar
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={deleteAccountsPayable.isPending}
-            onClick={(event) => {
-              event.preventDefault();
-              void handleDelete();
-            }}
-          >
-            {deleteAccountsPayable.isPending ? "Excluindo..." : "Excluir conta"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Excluir conta"
+      confirmLabel="Excluir conta"
+      pendingLabel="Excluindo..."
+      isPending={deleteAccountsPayable.isPending}
+      onConfirm={() => void handleDelete()}
+      onCancel={() => setReason("")}
+    >
+      <Textarea
+        placeholder="Motivo da exclusão (opcional)"
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+        rows={2}
+      />
+    </ConfirmDialog>
   );
 }

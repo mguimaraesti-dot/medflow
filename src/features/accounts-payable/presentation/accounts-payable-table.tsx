@@ -40,6 +40,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { ApiError } from "@/shared/lib/api-client";
 import { EmptyState } from "@/shared/components/empty-state";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -179,6 +180,8 @@ export function AccountsPayableTable({
   const [pageSize, setPageSize] = useState(100);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [cancelScopeTarget, setCancelScopeTarget] =
+    useState<AccountsPayableResponseDTO | null>(null);
+  const [cancelPaymentTarget, setCancelPaymentTarget] =
     useState<AccountsPayableResponseDTO | null>(null);
   const [deletingTarget, setDeletingTarget] =
     useState<AccountsPayableResponseDTO | null>(null);
@@ -609,7 +612,9 @@ export function AccountsPayableTable({
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   variant="destructive"
-                                  onClick={() => handleCancel(payable.id)}
+                                  onClick={() =>
+                                    setCancelPaymentTarget(payable)
+                                  }
                                 >
                                   <XCircle className="h-4 w-4" />
                                   Cancelar
@@ -752,6 +757,21 @@ export function AccountsPayableTable({
           if (!cancelScopeTarget) return;
           await handleCancel(cancelScopeTarget.id, scope);
           setCancelScopeTarget(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={cancelPaymentTarget !== null}
+        onOpenChange={(open) => !open && setCancelPaymentTarget(null)}
+        title="Cancelar pagamento"
+        cancelLabel="Voltar"
+        confirmLabel="Cancelar pagamento"
+        pendingLabel="Cancelando..."
+        isPending={cancelAccountsPayable.isPending}
+        onConfirm={async () => {
+          if (!cancelPaymentTarget) return;
+          await handleCancel(cancelPaymentTarget.id);
+          setCancelPaymentTarget(null);
         }}
       />
 

@@ -317,7 +317,7 @@ export function AccountsPayableScreen({
       )}
 
       <div className="flex flex-col flex-wrap gap-2 lg:flex-row lg:items-center">
-        <div className="relative min-w-[180px] flex-1">
+        <div className="relative w-full lg:w-[160px]">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Buscar contas..."
@@ -343,7 +343,9 @@ export function AccountsPayableScreen({
           onValueChange={(value) => setStatus(value as StatusFilter)}
         >
           <SelectTrigger size="sm" className="w-full lg:w-[130px]">
-            <SelectValue />
+            <SelectValue>
+              {status === "ALL" ? "Status" : STATUS_FILTER_LABEL[status]}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">Todos os status</SelectItem>
@@ -361,7 +363,9 @@ export function AccountsPayableScreen({
           }
         >
           <SelectTrigger size="sm" className="w-full lg:w-[150px]">
-            <SelectValue />
+            <SelectValue>
+              {categoryId ? (categoryName ?? "—") : "Categorias"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">Todas as categorias</SelectItem>
@@ -384,7 +388,13 @@ export function AccountsPayableScreen({
           }
         >
           <SelectTrigger size="sm" className="w-full lg:w-[150px]">
-            <SelectValue />
+            <SelectValue>
+              {recurringOnly === "RECURRING"
+                ? "Apenas recorrentes"
+                : recurringOnly === "NON_RECURRING"
+                  ? "Apenas não recorrentes"
+                  : "Recorrências"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">Todas as recorrências</SelectItem>
@@ -421,7 +431,7 @@ export function AccountsPayableScreen({
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="supplier-filter">Beneficiário</Label>
+              <Label htmlFor="supplier-filter">Beneficiários</Label>
               <Select
                 value={supplierId ?? "ALL"}
                 onValueChange={(value) =>
@@ -429,7 +439,9 @@ export function AccountsPayableScreen({
                 }
               >
                 <SelectTrigger id="supplier-filter" className="w-full">
-                  <SelectValue />
+                  <SelectValue>
+                    {supplierId ? (supplierName ?? "—") : "Beneficiários"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">Todos os beneficiários</SelectItem>

@@ -8,7 +8,6 @@ import {
   Download,
   Eye,
   FileText,
-  History,
   Pencil,
   Repeat,
   Trash2,
@@ -24,12 +23,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/components/empty-state";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
 import { EndRecurringBillDialog } from "./end-recurring-bill-dialog";
 import { RecurringBillOccurrencesDrawer } from "./recurring-bill-occurrences-drawer";
-import { RecurringBillTimelineDrawer } from "./recurring-bill-timeline-drawer";
 import {
   STATUS_META,
   getAccountsPayableAttachments,
@@ -91,8 +90,9 @@ export function AccountsPayableDrawer({
   const [payingId, setPayingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [cancelScopeOpen, setCancelScopeOpen] = useState(false);
+  const [cancelPaymentConfirmOpen, setCancelPaymentConfirmOpen] =
+    useState(false);
   const [occurrencesDrawerOpen, setOccurrencesDrawerOpen] = useState(false);
-  const [timelineDrawerOpen, setTimelineDrawerOpen] = useState(false);
   const [endRecurrenceOpen, setEndRecurrenceOpen] = useState(false);
   const cancelAccountsPayable = useCancelAccountsPayable();
 
@@ -163,6 +163,7 @@ export function AccountsPayableDrawer({
         scope === "SERIES" ? "Recorrência encerrada." : "Conta cancelada.",
       );
       setCancelScopeOpen(false);
+      setCancelPaymentConfirmOpen(false);
       onOpenChange(false);
     } catch (error) {
       toast.error(
@@ -177,7 +178,7 @@ export function AccountsPayableDrawer({
     if (payable?.status === "PENDING" && payable.recurringBillId) {
       setCancelScopeOpen(true);
     } else {
-      void handleCancel("SINGLE");
+      setCancelPaymentConfirmOpen(true);
     }
   }
 
@@ -331,15 +332,6 @@ export function AccountsPayableDrawer({
                           >
                             <Eye className="h-3.5 w-3.5" />
                             Ver Ocorrências
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setTimelineDrawerOpen(true)}
-                          >
-                            <History className="h-3.5 w-3.5" />
-                            Linha do Tempo
                           </Button>
                           {recurringBill.active && (
                             <Button
@@ -506,6 +498,17 @@ export function AccountsPayableDrawer({
         onConfirm={(scope) => handleCancel(scope)}
       />
 
+      <ConfirmDialog
+        open={cancelPaymentConfirmOpen}
+        onOpenChange={setCancelPaymentConfirmOpen}
+        title="Cancelar pagamento"
+        cancelLabel="Voltar"
+        confirmLabel="Cancelar pagamento"
+        pendingLabel="Cancelando..."
+        isPending={cancelAccountsPayable.isPending}
+        onConfirm={() => void handleCancel("SINGLE")}
+      />
+
       {payable?.recurringBillId && (
         <>
           <RecurringBillOccurrencesDrawer
@@ -515,16 +518,6 @@ export function AccountsPayableDrawer({
             onOpenChange={setOccurrencesDrawerOpen}
             onOpenAccount={(occurrence) => {
               setOccurrencesDrawerOpen(false);
-              onOpenOccurrence?.(occurrence);
-            }}
-          />
-          <RecurringBillTimelineDrawer
-            recurringBillId={payable.recurringBillId}
-            currentPayableId={payable.id}
-            open={timelineDrawerOpen}
-            onOpenChange={setTimelineDrawerOpen}
-            onOpenAccount={(occurrence) => {
-              setTimelineDrawerOpen(false);
               onOpenOccurrence?.(occurrence);
             }}
           />
