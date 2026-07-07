@@ -26,14 +26,17 @@ import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import {
   CATEGORY_COLOR_OVERRIDES,
   STATUS_META,
-  formatShortConfirmedAt,
   getAccountsPayableAttachments,
   getDueDateDisplay,
   getPaymentConfirmationDetail,
 } from "./accounts-payable-helpers";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
-import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyBR,
+  formatTimeBR,
+} from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { ApiError } from "@/shared/lib/api-client";
 import { EmptyState } from "@/shared/components/empty-state";
@@ -320,7 +323,7 @@ export function AccountsPayableTable({
 
       {!isLoading && data && data.items.length > 0 && (
         <>
-          <div className="max-h-[65vh] overflow-x-auto overflow-y-auto">
+          <div className="max-h-[65vh] overflow-y-auto">
             <Table>
               <TableHeader className="bg-muted/50 sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
@@ -372,7 +375,7 @@ export function AccountsPayableTable({
                       field="CONFIRMED_BY"
                       sort={sort}
                       onSort={toggleSort}
-                      className="hidden lg:table-cell"
+                      className="hidden w-[110px] lg:table-cell"
                     />
                   )}
                   {visibleColumns.attachments && (
@@ -381,7 +384,7 @@ export function AccountsPayableTable({
                       field="ATTACHMENTS"
                       sort={sort}
                       onSort={toggleSort}
-                      className="hidden lg:table-cell"
+                      className="hidden w-16 lg:table-cell"
                     />
                   )}
                   <TableHead className="pr-4 text-right">Ações</TableHead>
@@ -416,17 +419,28 @@ export function AccountsPayableTable({
                       onClick={() => onView(payable)}
                     >
                       <TableCell className="pl-4">
-                        <p
-                          className={cn(
-                            "font-medium",
-                            DUE_DATE_TONE_CLASS[dueDateDisplay.tone],
-                          )}
-                        >
-                          {dueDateDisplay.top}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {dueDateDisplay.bottom}
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="cursor-help">
+                              <p
+                                className={cn(
+                                  "font-medium",
+                                  DUE_DATE_TONE_CLASS[dueDateDisplay.tone],
+                                )}
+                              >
+                                {dueDateDisplay.top}
+                              </p>
+                              {dueDateDisplay.bottom && (
+                                <p className="text-muted-foreground text-xs">
+                                  {dueDateDisplay.bottom}
+                                </p>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {dueDateDisplay.weekday}, {dueDateDisplay.fullDate}
+                          </TooltipContent>
+                        </Tooltip>
                       </TableCell>
                       <TableCell>
                         {supplierById.get(payable.supplierId)?.name ?? "—"}
@@ -483,20 +497,13 @@ export function AccountsPayableTable({
                         )}
                       </TableCell>
                       {visibleColumns.confirmedBy && (
-                        <TableCell className="hidden lg:table-cell">
+                        <TableCell className="hidden w-[110px] lg:table-cell">
                           {paymentConfirmation ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="cursor-help space-y-0.5">
-                                  <p className="text-sm font-medium">
-                                    {paymentConfirmation.userName.split(" ")[0]}
-                                  </p>
-                                  <p className="text-muted-foreground text-xs">
-                                    {formatShortConfirmedAt(
-                                      paymentConfirmation.confirmedAt,
-                                    )}
-                                  </p>
-                                </div>
+                                <p className="cursor-help truncate text-sm font-medium">
+                                  {paymentConfirmation.userName.split(" ")[0]}
+                                </p>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p className="font-medium">
@@ -506,7 +513,12 @@ export function AccountsPayableTable({
                                   Origem: {paymentConfirmation.source}
                                 </p>
                                 <p className="text-xs">
-                                  {formatDateTimeBR(
+                                  {formatDateOnlyBR(
+                                    paymentConfirmation.confirmedAt,
+                                  )}
+                                </p>
+                                <p className="text-xs">
+                                  {formatTimeBR(
                                     paymentConfirmation.confirmedAt,
                                   )}
                                 </p>
@@ -521,7 +533,7 @@ export function AccountsPayableTable({
                       )}
                       {visibleColumns.attachments && (
                         <TableCell
-                          className="hidden lg:table-cell"
+                          className="hidden w-16 lg:table-cell"
                           onClick={(event) => event.stopPropagation()}
                         >
                           {attachments.length === 0 ? (

@@ -30,7 +30,6 @@ import { useCategories } from "@/features/categories/presentation/use-categories
 import {
   PeriodSelector,
   computePeriodRange,
-  PERIOD_PRESET_OPTIONS,
   type PeriodPreset,
   type PeriodRange,
 } from "@/shared/components/period-selector";
@@ -180,11 +179,6 @@ export function AccountsPayableScreen({
     setRecurringOnly(undefined);
   }
 
-  const periodLabel =
-    periodPreset === "CUSTOM"
-      ? "Personalizado"
-      : (PERIOD_PRESET_OPTIONS.find((option) => option.value === periodPreset)
-          ?.label ?? periodPreset);
   const supplierName = suppliers?.find((s) => s.id === supplierId)?.name;
   const categoryName = categories?.find((c) => c.id === categoryId)?.name;
   const hasNonDefaultFilters =
@@ -348,8 +342,8 @@ export function AccountsPayableScreen({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative min-w-[220px] flex-1">
+      <div className="flex flex-col flex-wrap gap-3 lg:flex-row lg:items-center">
+        <div className="relative min-w-[340px] flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder="Buscar beneficiário, descrição ou boleto..."
@@ -508,75 +502,72 @@ export function AccountsPayableScreen({
         </Popover>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Filtros aplicados:</span>
-        <Badge variant="secondary" className="gap-1">
-          Período: {periodLabel}
-        </Badge>
-        {status !== "ALL" && (
-          <Badge variant="secondary" className="gap-1">
-            Status: {STATUS_FILTER_LABEL[status]}
-            <button
-              type="button"
-              aria-label="Remover filtro de status"
-              onClick={() => setStatus("ALL")}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
-        {categoryId && (
-          <Badge variant="secondary" className="gap-1">
-            Categoria: {categoryName ?? "—"}
-            <button
-              type="button"
-              aria-label="Remover filtro de categoria"
-              onClick={() => setCategoryId(undefined)}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
-        {supplierId && (
-          <Badge variant="secondary" className="gap-1">
-            Beneficiário: {supplierName ?? "—"}
-            <button
-              type="button"
-              aria-label="Remover filtro de beneficiário"
-              onClick={() => setSupplierId(undefined)}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
-        {recurringOnly && (
-          <Badge variant="secondary" className="gap-1">
-            Recorrência:{" "}
-            {recurringOnly === "RECURRING"
-              ? "Apenas recorrentes"
-              : "Apenas não recorrentes"}
-            <button
-              type="button"
-              aria-label="Remover filtro de recorrência"
-              onClick={() => setRecurringOnly(undefined)}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
-        {search.trim() && (
-          <Badge variant="secondary" className="gap-1">
-            Busca: {search.trim()}
-            <button
-              type="button"
-              aria-label="Remover busca"
-              onClick={() => setSearch("")}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
-        {hasNonDefaultFilters && (
+      {hasNonDefaultFilters && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Filtros aplicados:</span>
+          {status !== "ALL" && (
+            <Badge variant="secondary" className="gap-1">
+              Status: {STATUS_FILTER_LABEL[status]}
+              <button
+                type="button"
+                aria-label="Remover filtro de status"
+                onClick={() => setStatus("ALL")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {categoryId && (
+            <Badge variant="secondary" className="gap-1">
+              Categoria: {categoryName ?? "—"}
+              <button
+                type="button"
+                aria-label="Remover filtro de categoria"
+                onClick={() => setCategoryId(undefined)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {supplierId && (
+            <Badge variant="secondary" className="gap-1">
+              Beneficiário: {supplierName ?? "—"}
+              <button
+                type="button"
+                aria-label="Remover filtro de beneficiário"
+                onClick={() => setSupplierId(undefined)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {recurringOnly && (
+            <Badge variant="secondary" className="gap-1">
+              Recorrência:{" "}
+              {recurringOnly === "RECURRING"
+                ? "Apenas recorrentes"
+                : "Apenas não recorrentes"}
+              <button
+                type="button"
+                aria-label="Remover filtro de recorrência"
+                onClick={() => setRecurringOnly(undefined)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {search.trim() && (
+            <Badge variant="secondary" className="gap-1">
+              Busca: {search.trim()}
+              <button
+                type="button"
+                aria-label="Remover busca"
+                onClick={() => setSearch("")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -587,8 +578,8 @@ export function AccountsPayableScreen({
             <X className="h-3.5 w-3.5" />
             Limpar filtros
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
         <AccountsPayableTable

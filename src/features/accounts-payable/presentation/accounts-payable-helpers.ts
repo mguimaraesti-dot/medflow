@@ -14,11 +14,7 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import {
-  formatDateOnlyBR,
-  formatSmartDueDate,
-  formatTimeBR,
-} from "@/shared/lib/format";
+import { formatDateOnlyBR, formatSmartDueDate } from "@/shared/lib/format";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 import type { PayableStatus } from "../domain/accounts-payable.entity";
 import type {
@@ -91,23 +87,18 @@ export function formatCardSubtitle(
   return `${count} ${count === 1 ? "conta" : "contas"}`;
 }
 
-/** "Confirmado por" simplificado na tabela — nome completo/origem/data completa ficam só no tooltip. */
-export function formatShortConfirmedAt(value: string | Date): string {
-  const date = typeof value === "string" ? new Date(value) : value;
-  const shortDate = new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  }).format(date);
-  return `${shortDate} • ${formatTimeBR(date)}`;
-}
-
 export interface DueDateDisplay {
   top: string;
+  /** "" quando não há complemento a exibir na tabela (ex: data distante — dia da semana foi movido pro Tooltip/Drawer). */
   bottom: string;
   tone: "danger" | "warning" | "default";
+  /** Dia da semana abreviado (ex: "Qua") — exibido só no Tooltip/Drawer, nunca direto na tabela (Refinamento Contas a Pagar). */
+  weekday: string;
+  /** Data completa (dd/MM/yyyy) — usada no Drawer quando `bottom` está vazio. */
+  fullDate: string;
 }
 
-/** Linha 1: relativo se estiver perto (Hoje/Amanhã/Há N dias) ou a data curta; linha 2: complementa (data curta ou dia da semana). */
+/** Linha 1: relativo se estiver perto (Hoje/Amanhã/Há N dias) ou a data curta; linha 2: complementa (data curta), nunca o dia da semana. */
 export function getDueDateDisplay(dueDate: string | Date): DueDateDisplay {
   const date = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
   const shortDate = new Intl.DateTimeFormat("pt-BR", {
@@ -115,31 +106,54 @@ export function getDueDateDisplay(dueDate: string | Date): DueDateDisplay {
     month: "short",
     timeZone: "UTC",
   }).format(date);
-
-  const smart = formatSmartDueDate(date);
-
-  if (smart.startsWith("Há")) {
-    return { top: smart, bottom: shortDate, tone: "danger" };
-  }
-  if (smart === "Hoje") {
-    return { top: smart, bottom: shortDate, tone: "warning" };
-  }
-  if (smart === "Amanhã") {
-    return { top: smart, bottom: shortDate, tone: "default" };
-  }
-
-  const weekday = new Intl.DateTimeFormat("pt-BR", {
+  const weekdayRaw = new Intl.DateTimeFormat("pt-BR", {
     weekday: "short",
     timeZone: "UTC",
   })
     .format(date)
     .replace(".", "");
+  const weekday = weekdayRaw.charAt(0).toUpperCase() + weekdayRaw.slice(1);
+  const fullDate = formatDateOnlyBR(date);
 
-  return {
-    top: smart,
-    bottom: weekday.charAt(0).toUpperCase() + weekday.slice(1),
-    tone: "default",
-  };
+  const smart = formatSmartDueDate(date);
+
+  if (smart.startsWith("Há")) {
+    return { top: smart, bottom: shortDate, tone: "danger", weekday, fullDate };
+  }
+  if (smart === "Hoje") {
+    return {
+      top: smart,
+      bottom: shortDate,
+      tone: "warning",
+      weekday,
+      fullDate,
+    };
+  }
+  if (smart === "Amanhã") {
+    return {
+      top: smart,
+      bottom: shortDate,
+      tone: "default",
+      weekday,
+      fullDate,
+    };
+  }
+
+  // Data distante: só "15 Jul." na tabela — dia da semana fica disponível no
+  // Tooltip/Drawer (Refinamento Contas a Pagar).
+  const month = new Intl.DateTimeFormat("pt-BR", {
+    month: "short",
+    timeZone: "UTC",
+  })
+    .format(date)
+    .replace(".", "");
+  const day = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    timeZone: "UTC",
+  }).format(date);
+  const compact = `${day} ${month.charAt(0).toUpperCase()}${month.slice(1)}.`;
+
+  return { top: compact, bottom: "", tone: "default", weekday, fullDate };
 }
 
 export interface AccountsPayableAttachment {

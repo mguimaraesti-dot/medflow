@@ -208,7 +208,8 @@ export function AccountsPayableDrawer({
                 </p>
                 <p className="text-muted-foreground text-sm">
                   {dueDateDisplay.tone === "danger" ? "Venceu" : "Vence"}{" "}
-                  {dueDateDisplay.top.toLowerCase()} · {dueDateDisplay.bottom}
+                  {dueDateDisplay.top.toLowerCase()}
+                  {dueDateDisplay.bottom && ` · ${dueDateDisplay.bottom}`}
                 </p>
               </SheetHeader>
 
@@ -235,7 +236,10 @@ export function AccountsPayableDrawer({
                         label="Vencimento"
                         value={
                           <span className="flex items-center gap-1.5">
-                            {dueDateDisplay.bottom}
+                            {dueDateDisplay.bottom || dueDateDisplay.fullDate}
+                            <span className="text-muted-foreground text-xs">
+                              {dueDateDisplay.weekday}
+                            </span>
                             {(dueDateDisplay.tone === "warning" ||
                               dueDateDisplay.tone === "danger") && (
                               <Badge
