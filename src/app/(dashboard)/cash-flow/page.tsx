@@ -4,10 +4,8 @@ import { CashFlowScreen } from "@/features/cash-flow/presentation/cash-flow-scre
 export default async function CashFlowPage() {
   const user = await getSessionUser();
 
-  return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Fluxo de Caixa</h1>
-      <CashFlowScreen permissions={user?.permissions ?? []} />
-    </div>
-  );
+  // Sem <h1> nesta tela de propósito — o item ativo no menu lateral já
+  // identifica "Caixa Recepção", repetir o título só ocupava espaço vertical
+  // que o operador poderia usar (Refinamento UX/UI Caixa Recepção).
+  return <CashFlowScreen permissions={user?.permissions ?? []} />;
 }

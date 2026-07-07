@@ -35,12 +35,21 @@ export function CashRegisterStatusCard({
   canReopen,
   canConfirmHandoff,
   canRejectConference,
+  hideConferenceActions,
 }: {
   canOpen: boolean;
   canClose: boolean;
   canReopen: boolean;
   canConfirmHandoff: boolean;
   canRejectConference: boolean;
+  /**
+   * Caixa Recepção é uma tela 100% operacional: depois que a secretária
+   * informa o valor contado, o caixa aparece como "Fechado" pra ela — a
+   * dupla conferência (Confirmar recebimento/Rejeitar) continua existindo
+   * e auditada, só não é mais exibida/aguardada nesta tela (Refinamento
+   * UX/UI Caixa Recepção, item 8).
+   */
+  hideConferenceActions?: boolean;
 }) {
   const { data: today, isLoading } = useCashRegisterToday();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -162,7 +171,8 @@ export function CashRegisterStatusCard({
                 variant={
                   today.status === "OPEN"
                     ? "default"
-                    : today.status === "PENDING_CONFERENCE"
+                    : today.status === "PENDING_CONFERENCE" &&
+                        !hideConferenceActions
                       ? "outline"
                       : "secondary"
                 }
@@ -170,26 +180,29 @@ export function CashRegisterStatusCard({
               >
                 {today.status === "OPEN" && "Caixa Aberto"}
                 {today.status === "PENDING_CONFERENCE" &&
-                  "Aguardando conferência"}
+                  (hideConferenceActions
+                    ? "Caixa Fechado"
+                    : "Aguardando conferência")}
                 {today.status === "CLOSED" && "Caixa Fechado"}
               </Badge>
               {today.status === "OPEN" && (
                 <CloseRegisterDialog disabled={!canClose} />
               )}
-              {today.status === "PENDING_CONFERENCE" && (
-                <div className="flex flex-wrap gap-2">
-                  {canRejectConference && <RejectConferenceDialog />}
-                  {canConfirmHandoff && (
-                    <ConfirmHandoffDialog
-                      suggestedAmount={
-                        today.countedAmount
-                          ? Number(today.countedAmount)
-                          : undefined
-                      }
-                    />
-                  )}
-                </div>
-              )}
+              {today.status === "PENDING_CONFERENCE" &&
+                !hideConferenceActions && (
+                  <div className="flex flex-wrap gap-2">
+                    {canRejectConference && <RejectConferenceDialog />}
+                    {canConfirmHandoff && (
+                      <ConfirmHandoffDialog
+                        suggestedAmount={
+                          today.countedAmount
+                            ? Number(today.countedAmount)
+                            : undefined
+                        }
+                      />
+                    )}
+                  </div>
+                )}
               {today.status === "CLOSED" && canReopen && (
                 <ReopenRegisterDialog cashRegisterDayId={today.id} />
               )}

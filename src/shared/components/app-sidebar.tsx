@@ -34,7 +34,7 @@ interface NavItem {
 const FINANCEIRO: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/accounts-payable", label: "Contas a Pagar", icon: Receipt },
-  { href: "/cash-flow", label: "Fluxo de Caixa", icon: ArrowLeftRight },
+  { href: "/cash-flow", label: "Caixa Recepção", icon: ArrowLeftRight },
   { href: "/treasury", label: "Tesouraria", icon: Landmark },
 ];
 

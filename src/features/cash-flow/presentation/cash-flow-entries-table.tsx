@@ -4,11 +4,6 @@ import { useState } from "react";
 import { MoreHorizontal, Receipt } from "lucide-react";
 import { useCashFlowEntries } from "./use-cash-flow-entries";
 import { ReverseEntryDialog } from "./reverse-entry-dialog";
-import {
-  DateQuickFilters,
-  getDateRangeForQuickFilter,
-  type QuickDateFilter,
-} from "./date-quick-filters";
 import { useCategories } from "@/features/categories/presentation/use-categories";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
 import { EmptyState } from "@/shared/components/empty-state";
@@ -39,29 +34,23 @@ export function CashFlowEntriesTable({
   canReverse: boolean;
 }) {
   const [page, setPage] = useState(1);
-  const [quickFilter, setQuickFilter] = useState<QuickDateFilter>("today");
   const [reversingEntryId, setReversingEntryId] = useState<string | null>(null);
 
-  const { dateFrom, dateTo } = getDateRangeForQuickFilter(quickFilter);
-  const { data, isLoading } = useCashFlowEntries({ dateFrom, dateTo, page });
+  const { data, isLoading } = useCashFlowEntries(
+    { cashRegisterDayId, page },
+    { enabled: Boolean(cashRegisterDayId) },
+  );
   const { data: categories } = useCategories();
   const categoryById = new Map(
     categories?.map((category) => [category.id, category]),
   );
 
-  function changeFilter(next: QuickDateFilter) {
-    setQuickFilter(next);
-    setPage(1);
-  }
-
-  const isTodayEmpty =
-    quickFilter === "today" && !cashRegisterDayId && !isLoading;
+  const isTodayEmpty = !cashRegisterDayId && !isLoading;
 
   return (
     <Card>
-      <CardHeader className="flex-col items-start gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader>
         <CardTitle>Lançamentos</CardTitle>
-        <DateQuickFilters value={quickFilter} onChange={changeFilter} />
       </CardHeader>
       <CardContent>
         {isLoading && (
@@ -72,18 +61,18 @@ export function CashFlowEntriesTable({
           </div>
         )}
 
-        {!isLoading && data && data.items.length === 0 && (
+        {!isLoading && (isTodayEmpty || data?.items.length === 0) && (
           <EmptyState
             icon={Receipt}
             title={
               isTodayEmpty
                 ? "Nenhum caixa aberto hoje."
-                : "Nenhuma movimentação registrada."
+                : "Nenhuma movimentação registrada hoje."
             }
             description={
               isTodayEmpty
                 ? "Abra o caixa para começar a lançar."
-                : "Os lançamentos do período aparecem aqui."
+                : "Os lançamentos de hoje aparecem aqui."
             }
           />
         )}

@@ -45,6 +45,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
     control,
     handleSubmit,
     reset,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<CashFlowEntryFormValues>({
@@ -55,6 +56,12 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
   const type = watch("type");
   const { data: categories } = useCategories(type);
   const { data: paymentMethods } = usePaymentMethods();
+  // Caixa Recepção só opera em dinheiro/PIX na prática — restringe as opções
+  // exibidas por tipo de lançamento (Refinamento UX/UI Caixa Recepção).
+  const allowedNames = type === "IN" ? ["Dinheiro", "PIX"] : ["Dinheiro"];
+  const availablePaymentMethods = paymentMethods?.filter((method) =>
+    allowedNames.includes(method.name),
+  );
 
   async function onSubmit(values: CashFlowEntryFormValues) {
     setServerError(null);
@@ -91,7 +98,12 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
             render={({ field }) => (
               <SegmentedControl
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(next) => {
+                  field.onChange(next);
+                  // Forma de pagamento pode não estar mais disponível
+                  // para o novo tipo (ex: PIX só existe em Entrada).
+                  setValue("paymentMethodId", "");
+                }}
                 disabled={disabled}
                 options={[
                   {
@@ -163,7 +175,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
               render={({ field }) => (
                 <PaymentMethodPicker
                   disabled={disabled}
-                  paymentMethods={paymentMethods}
+                  paymentMethods={availablePaymentMethods}
                   value={field.value}
                   onChange={field.onChange}
                 />

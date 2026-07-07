@@ -24,9 +24,12 @@ import {
 } from "@/shared/ui/dialog";
 
 /**
- * Fechar caixa passou a exigir prestação de contas (ADR 2.7/2.8): a
- * secretária informa o valor contado, o caixa vai para
- * `PENDING_CONFERENCE` até a gerência confirmar o handoff ou rejeitar.
+ * Fechar caixa exige prestação de contas (ADR 2.7/2.8): a secretária
+ * informa o valor contado e o caixa é encerrado. Internamente o registro
+ * vai para `PENDING_CONFERENCE` até a gerência confirmar o handoff ou
+ * rejeitar, mas isso é conferência de gestão — a tela da secretária (Caixa
+ * Recepção) não expõe esse estado intermediário (Refinamento UX/UI Caixa
+ * Recepção, item 8).
  */
 export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -81,8 +84,8 @@ export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
           <DialogHeader>
             <DialogTitle>Fechar caixa</DialogTitle>
             <DialogDescription>
-              Informe o valor contado na gaveta. O caixa fica aguardando
-              conferência da gerência até o handoff ser confirmado.
+              Informe o valor contado na gaveta. O caixa é encerrado
+              imediatamente.
             </DialogDescription>
           </DialogHeader>
 
