@@ -5,16 +5,10 @@ import { useCashRegisterToday } from "@/features/cash-register/presentation/use-
 import { CashBalanceHeader } from "./cash-balance-header";
 import { CashFlowEntryForm } from "./cash-flow-entry-form";
 import { CashFlowEntriesTable } from "./cash-flow-entries-table";
-import { RecentActivityCard } from "./recent-activity-card";
 import { DailySummaryCard } from "./daily-summary-card";
-import { useCashFlowEntries } from "./use-cash-flow-entries";
 
 export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const { data: today } = useCashRegisterToday();
-  const { data: todayEntries } = useCashFlowEntries(
-    { cashRegisterDayId: today?.id, pageSize: 100 },
-    { enabled: Boolean(today?.id) },
-  );
   const isRegisterOpen = today?.status === "OPEN";
 
   const can = (permission: string) => permissions.includes(permission);
@@ -34,11 +28,6 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
       <CashFlowEntriesTable
         cashRegisterDayId={today?.id}
         canReverse={can(PERMISSIONS.CASH_FLOW_REVERSE)}
-      />
-
-      <RecentActivityCard
-        entries={todayEntries?.items ?? []}
-        cashRegisterDay={today}
       />
 
       <DailySummaryCard />
