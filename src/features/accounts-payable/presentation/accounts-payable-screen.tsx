@@ -221,30 +221,7 @@ export function AccountsPayableScreen({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Contas a Pagar
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Gerencie pagamentos, boletos e beneficiários.
-          </p>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs font-medium">
-            Período
-          </span>
-          <PeriodSelector
-            variant="select"
-            preset={periodPreset}
-            custom={periodCustom}
-            onChange={(preset, custom) => {
-              setPeriodPreset(preset);
-              setPeriodCustom(custom);
-            }}
-          />
-        </div>
-      </div>
+      <h1 className="text-xl font-semibold tracking-tight">Contas a Pagar</h1>
 
       {summary && (
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
@@ -352,6 +329,17 @@ export function AccountsPayableScreen({
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+
+        <PeriodSelector
+          variant="select"
+          size="sm"
+          preset={periodPreset}
+          custom={periodCustom}
+          onChange={(preset, custom) => {
+            setPeriodPreset(preset);
+            setPeriodCustom(custom);
+          }}
+        />
 
         <Select
           value={status}

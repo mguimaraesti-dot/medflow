@@ -92,12 +92,15 @@ export function PeriodSelector({
   custom,
   onChange,
   variant = "segmented",
+  size = "default",
 }: {
   preset: PeriodPreset;
   custom?: PeriodRange;
   onChange: (preset: PeriodPreset, custom?: PeriodRange) => void;
   /** "select" é um único dropdown (usado em telas que precisam de cabeçalho mais enxuto); "segmented" (default) preserva o comportamento original de botões. */
   variant?: "segmented" | "select";
+  /** Só se aplica à variante "select" — alinha a altura com os demais filtros de uma toolbar (ex: Contas a Pagar). */
+  size?: "sm" | "default";
 }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [fromInput, setFromInput] = useState("");
@@ -173,7 +176,7 @@ export function PeriodSelector({
           value={preset}
           onValueChange={(value) => handlePresetChange(value as PeriodPreset)}
         >
-          <SelectTrigger className="w-[170px]">
+          <SelectTrigger size={size} className="w-[170px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
