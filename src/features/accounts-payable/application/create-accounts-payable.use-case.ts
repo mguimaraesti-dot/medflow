@@ -26,6 +26,7 @@ export async function createAccountsPayableUseCase(
     pixKey: input.pixKey,
     qrCodeUrl: input.qrCodeUrl,
     boletoPdfUrl: input.boletoPdfUrl,
+    paymentOrigin: input.paymentOrigin,
     recurringBillId: input.recurringBillId,
     createdByUserId,
   });

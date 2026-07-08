@@ -22,6 +22,7 @@ describe("createAccountsPayableUseCase", () => {
         description: "Aluguel",
         amount: 2000,
         dueDate,
+        paymentOrigin: "BANCO",
       },
       "user-1",
       "org-1",

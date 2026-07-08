@@ -5,6 +5,7 @@ const DEFAULT_DESCRIPTION: Record<SafeMovementResponseDTO["type"], string> = {
   SANGRIA: "Recebimento do Caixa",
   CASH_REGISTER_HANDOFF: "Recolhimento do Caixa",
   MANUAL_ADJUSTMENT: "Ajuste do Cofre",
+  ACCOUNTS_PAYABLE_PAYMENT: "Pagamento de Conta a Pagar",
 };
 
 /**
@@ -17,7 +18,12 @@ const DEFAULT_DESCRIPTION: Record<SafeMovementResponseDTO["type"], string> = {
  * (dinheiro saiu do Cofre), decidido pelo sinal.
  */
 export function signedAmount(movement: SafeMovementResponseDTO): number {
-  if (movement.type === "FUNDING") return -Number(movement.amount);
+  if (
+    movement.type === "FUNDING" ||
+    movement.type === "ACCOUNTS_PAYABLE_PAYMENT"
+  ) {
+    return -Number(movement.amount);
+  }
   return Number(movement.amount);
 }
 

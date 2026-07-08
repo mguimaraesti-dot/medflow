@@ -3,6 +3,7 @@ import type {
   AccountsPayable,
   PayableStatus,
   PaymentConfirmationSource,
+  PaymentOrigin,
 } from "./accounts-payable.entity";
 import type { AccountsPayableSummary } from "./accounts-payable-summary.entity";
 
@@ -18,6 +19,7 @@ export interface CreateAccountsPayableInput {
   pixKey?: string;
   qrCodeUrl?: string;
   boletoPdfUrl?: string;
+  paymentOrigin?: PaymentOrigin;
   recurringBillId?: string;
   occurrenceNumber?: number;
   createdByUserId: string;
@@ -43,22 +45,36 @@ export interface ListAccountsPayableFilter {
   deletedOnly?: boolean;
 }
 
+/**
+ * `paymentOrigin`/`amount`/`organizationId` vêm do próprio `payable` já
+ * carregado no use case — repassados aqui pra o repositório decidir se
+ * cria um `SafeMovement` (COFRE) e achar o Cofre certo, sem precisar
+ * buscar a conta de novo.
+ */
 export interface MarkAsPaidInput {
   paidByUserId: string;
   paidVia: PaymentConfirmationSource;
+  paymentOrigin: PaymentOrigin;
+  amount: string;
+  organizationId: string;
 }
 
 /**
  * Campos editáveis via `update()` — de propósito, nunca inclui `amount` nem
  * `status`: valor e ciclo de vida continuam imutáveis fora de
- * pagar/cancelar. Só existe pra suportar a edição de contas recorrentes
- * (fornecedor/categoria/vencimento/observação podem mudar entre ocorrências).
+ * pagar/cancelar. Serve tanto pra edição de contas recorrentes
+ * (fornecedor/categoria/vencimento/observação podem mudar entre ocorrências)
+ * quanto pra corrigir/completar dados de pagamento (`paymentOrigin`,
+ * `barcode`, `pixKey`) depois do cadastro inicial.
  */
 export interface UpdateAccountsPayableInput {
   supplierId: string;
   categoryId: string;
   description: string;
   dueDate: Date;
+  paymentOrigin: PaymentOrigin;
+  barcode?: string;
+  pixKey?: string;
 }
 
 export interface SoftDeleteAccountsPayableInput {

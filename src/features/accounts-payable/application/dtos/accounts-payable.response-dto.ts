@@ -3,6 +3,7 @@ import type {
   AccountsPayable,
   PayableStatus,
   PaymentConfirmationSource,
+  PaymentOrigin,
 } from "../../domain/accounts-payable.entity";
 
 export interface AccountsPayableResponseDTO {
@@ -21,6 +22,7 @@ export interface AccountsPayableResponseDTO {
   status: PayableStatus;
   /** Igual a `status`, exceto quando PENDING e já vencida — nunca persistido, só calculado aqui. */
   displayStatus: PayableStatus;
+  paymentOrigin: PaymentOrigin;
   recurringBillId: string | null;
   occurrenceNumber: number | null;
   createdByUserId: string;
@@ -29,6 +31,8 @@ export interface AccountsPayableResponseDTO {
   paidByUserName: string | null;
   paidAt: Date | null;
   paidVia: PaymentConfirmationSource | null;
+  /** Nº da movimentação do Cofre gerada ao pagar via COFRE — `null` sempre que `paymentOrigin` for BANCO ou a conta ainda não foi paga. */
+  paidSafeMovementId: string | null;
   deletedAt: Date | null;
   deletedByUserName: string | null;
   deletionReason: string | null;
@@ -59,6 +63,7 @@ export function toAccountsPayableResponseDTO(
     boletoPdfUrl: payable.boletoPdfUrl,
     status: payable.status,
     displayStatus,
+    paymentOrigin: payable.paymentOrigin,
     recurringBillId: payable.recurringBillId,
     occurrenceNumber: payable.occurrenceNumber,
     createdByUserId: payable.createdByUserId,
@@ -67,6 +72,7 @@ export function toAccountsPayableResponseDTO(
     paidByUserName: payable.paidByUserName,
     paidAt: payable.paidAt,
     paidVia: payable.paidVia,
+    paidSafeMovementId: payable.paidSafeMovementId,
     deletedAt: payable.deletedAt,
     deletedByUserName: payable.deletedByUserName,
     deletionReason: payable.deletionReason,

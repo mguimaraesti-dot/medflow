@@ -9,9 +9,11 @@ export class PrismaSafeRepository implements SafeRepository {
   }
 
   /**
-   * Saldo derivado: -SUM(FUNDING) + SUM(SANGRIA + CASH_REGISTER_HANDOFF)
-   * + SUM(MANUAL_ADJUSTMENT) — os três primeiros tipos têm direção
-   * implícita pelo próprio `type`; `MANUAL_ADJUSTMENT` carrega seu
+   * Saldo derivado: -SUM(FUNDING + ACCOUNTS_PAYABLE_PAYMENT) +
+   * SUM(SANGRIA + CASH_REGISTER_HANDOFF) + SUM(MANUAL_ADJUSTMENT) —
+   * `ACCOUNTS_PAYABLE_PAYMENT` (pagamento de conta com dinheiro do Cofre)
+   * tem a mesma direção de saída que `FUNDING`; os demais tipos têm
+   * direção implícita pelo próprio `type`; `MANUAL_ADJUSTMENT` carrega seu
    * próprio sinal (Coding Standards, item 18.1).
    */
   async getBalance(organizationId: string): Promise<Prisma.Decimal> {
@@ -20,7 +22,10 @@ export class PrismaSafeRepository implements SafeRepository {
 
     const [funding, credits, manualAdjustment] = await Promise.all([
       prisma.safeMovement.aggregate({
-        where: { safeId: safe.id, type: "FUNDING" },
+        where: {
+          safeId: safe.id,
+          type: { in: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
+        },
         _sum: { amount: true },
       }),
       prisma.safeMovement.aggregate({

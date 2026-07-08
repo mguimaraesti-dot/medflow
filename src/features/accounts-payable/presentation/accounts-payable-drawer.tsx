@@ -24,6 +24,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { EmptyState } from "@/shared/components/empty-state";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
+import { CopyButton } from "@/shared/components/copy-button";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
@@ -35,6 +36,7 @@ import {
   getDueDateDisplay,
   getPaymentConfirmationDetail,
   getRecurrenceDisplay,
+  shortMovementNumber,
   toAccountsPayableEvents,
 } from "./accounts-payable-helpers";
 import { useRecurringBill } from "./use-recurring-bill";
@@ -87,7 +89,7 @@ export function AccountsPayableDrawer({
   /** Aba que abre por padrão (ex: clique no ícone de anexo abre direto em "attachments"). */
   initialTab?: "account" | "history" | "attachments";
 }) {
-  const [payingId, setPayingId] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [cancelScopeOpen, setCancelScopeOpen] = useState(false);
   const [cancelPaymentConfirmOpen, setCancelPaymentConfirmOpen] =
@@ -265,17 +267,89 @@ export function AccountsPayableDrawer({
 
                     {paymentConfirmation && (
                       <div className="space-y-2 rounded-lg border p-3">
-                        <p className="flex items-center gap-1.5 text-sm font-medium">
-                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
-                          Confirmado por {paymentConfirmation.userName}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="flex items-center gap-1.5 text-sm font-medium">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                            Confirmado por {paymentConfirmation.userName}
+                          </p>
+                          <Badge variant="outline">
+                            {payable.paymentOrigin === "COFRE"
+                              ? "🟢 Cofre"
+                              : "🏦 Banco"}
+                          </Badge>
+                        </div>
                         <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
                           <span>Origem: {paymentConfirmation.source}</span>
                           <span>
                             Em:{" "}
                             {formatDateTimeBR(paymentConfirmation.confirmedAt)}
                           </span>
+                          {payable.paidSafeMovementId && (
+                            <span>
+                              Nº movimentação:{" "}
+                              {shortMovementNumber(payable.paidSafeMovementId)}
+                            </span>
+                          )}
                         </div>
+                      </div>
+                    )}
+
+                    {(payable.barcode ||
+                      payable.pixKey ||
+                      payable.qrCodeUrl) && (
+                      <div className="space-y-3 rounded-lg border p-3">
+                        <p className="text-sm font-medium">Pagamento</p>
+                        {payable.barcode && (
+                          <div className="flex items-end gap-2">
+                            <div className="min-w-0 flex-1">
+                              <Field
+                                label="Código de barras"
+                                value={
+                                  <span className="block truncate">
+                                    {payable.barcode}
+                                  </span>
+                                }
+                              />
+                            </div>
+                            <CopyButton
+                              value={payable.barcode}
+                              label="Copiar código de barras"
+                              successMessage="Código copiado"
+                            />
+                          </div>
+                        )}
+                        {payable.pixKey && (
+                          <div className="flex items-end gap-2">
+                            <div className="min-w-0 flex-1">
+                              <Field
+                                label="Chave PIX"
+                                value={
+                                  <span className="block truncate">
+                                    {payable.pixKey}
+                                  </span>
+                                }
+                              />
+                            </div>
+                            <CopyButton
+                              value={payable.pixKey}
+                              label="Copiar PIX"
+                              successMessage="PIX copiado"
+                            />
+                          </div>
+                        )}
+                        {payable.qrCodeUrl && (
+                          <div className="space-y-1">
+                            <p className="text-muted-foreground text-xs">
+                              QR Code PIX
+                            </p>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={payable.qrCodeUrl}
+                              alt="QR Code PIX"
+                              className="h-32 w-32 rounded-md border object-contain"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -427,7 +501,7 @@ export function AccountsPayableDrawer({
                     <Button
                       type="button"
                       className="flex-1"
-                      onClick={() => setPayingId(payable.id)}
+                      onClick={() => setPaying(true)}
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Confirmar pagamento
@@ -474,9 +548,9 @@ export function AccountsPayableDrawer({
       </Sheet>
 
       <PayAccountsPayableDialog
-        accountsPayableId={payingId}
-        open={payingId !== null}
-        onOpenChange={(open) => !open && setPayingId(null)}
+        payable={payable}
+        open={paying}
+        onOpenChange={setPaying}
       />
 
       <DeleteAccountsPayableDialog

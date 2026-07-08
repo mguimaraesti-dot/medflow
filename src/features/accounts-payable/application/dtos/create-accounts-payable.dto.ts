@@ -23,6 +23,7 @@ export const createAccountsPayableSchema = z.object({
   pixKey: shortTextSchema(200),
   qrCodeUrl: shortTextSchema(500),
   boletoPdfUrl: shortTextSchema(500),
+  paymentOrigin: z.enum(["BANCO", "COFRE"]).default("BANCO"),
   recurringBillId: cuidSchema.optional(),
   /** Presente só quando "Conta recorrente" está marcada no cadastro. */
   recurrence: recurrenceInputSchema.optional(),

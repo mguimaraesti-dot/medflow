@@ -7,8 +7,10 @@ import { generateRequestId } from "@/core/utils/request-id";
 import { toAccountsPayableResponseDTO } from "@/features/accounts-payable/application/dtos/accounts-payable.response-dto";
 import { payAccountsPayableUseCase } from "@/features/accounts-payable/application/pay-accounts-payable.use-case";
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
+import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
 
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
+const safeRepository = new PrismaSafeRepository();
 
 export async function POST(
   _request: Request,
@@ -27,7 +29,7 @@ export async function POST(
       id,
       user.id,
       user.organizationId,
-      { accountsPayableRepository },
+      { accountsPayableRepository, safeRepository },
     );
 
     return NextResponse.json({ data: toAccountsPayableResponseDTO(result) });

@@ -14,7 +14,11 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import { formatDateOnlyBR, formatSmartDueDate } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyBR,
+  formatSmartDueDate,
+} from "@/shared/lib/format";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 import type { PayableStatus } from "../domain/accounts-payable.entity";
 import type {
@@ -175,6 +179,11 @@ export function getAccountsPayableAttachments(
   return attachments;
 }
 
+/** Não existe um número sequencial real de movimentação — usa os últimos 8 caracteres do id (maiúsculo) como identificador curto pra exibição. */
+export function shortMovementNumber(safeMovementId: string): string {
+  return safeMovementId.slice(-8).toUpperCase();
+}
+
 /** Origem da confirmação (`paidVia`) — hoje sempre "SYSTEM", pois o canal WhatsApp ainda não está integrado. */
 function getPaymentSourceLabel(
   payable: AccountsPayableResponseDTO,
@@ -280,6 +289,27 @@ export function toAccountsPayableEvents(
       case "PAYMENT_CONFIRMED": {
         const paidVia = entry.after?.paidVia;
         const source = paidVia === "WHATSAPP" ? "WhatsApp" : "Sistema";
+
+        if (entry.after?.paymentOrigin === "COFRE") {
+          const amount = entry.after?.amount;
+          const safeMovementId = entry.after?.safeMovementId;
+          const detailParts = [
+            typeof amount === "string" ? formatCurrencyBRL(amount) : null,
+            typeof safeMovementId === "string"
+              ? `Movimentação Nº ${shortMovementNumber(safeMovementId)}`
+              : null,
+          ].filter(Boolean);
+          events.push({
+            id: entry.id,
+            label: "Pagamento realizado utilizando saldo do Cofre",
+            actor,
+            detail: detailParts.join(" · ") || undefined,
+            date,
+            icon: CheckCircle2,
+          });
+          break;
+        }
+
         events.push({
           id: entry.id,
           label: "Pagamento confirmado",

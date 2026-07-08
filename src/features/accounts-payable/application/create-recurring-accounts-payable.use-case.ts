@@ -4,6 +4,7 @@ import type { AccountsPayableRepository } from "../domain/accounts-payable.repos
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
 import type { RecurringBillRepository } from "@/features/recurring-bills/domain/recurring-bill.repository";
 import type { RecurrencePeriodicity } from "@/features/recurring-bills/domain/recurring-bill.entity";
+import type { PaymentOrigin } from "../domain/accounts-payable.entity";
 
 interface Deps {
   accountsPayableRepository: AccountsPayableRepository;
@@ -21,6 +22,7 @@ export interface CreateRecurringAccountsPayableInput {
   pixKey?: string;
   qrCodeUrl?: string;
   boletoPdfUrl?: string;
+  paymentOrigin: PaymentOrigin;
   periodicity: RecurrencePeriodicity;
   /** undefined = sem prazo — gera um lote fixo de próximas ocorrências (`UNLIMITED_BATCH_SIZE`). */
   maxOccurrences?: number;
@@ -103,6 +105,10 @@ export async function createRecurringAccountsPayableUseCase(
       pixKey: isFirst ? input.pixKey : undefined,
       qrCodeUrl: isFirst ? input.qrCodeUrl : undefined,
       boletoPdfUrl: isFirst ? input.boletoPdfUrl : undefined,
+      // Diferente de barcode/pixKey/qrCodeUrl (próprios de cada ocorrência):
+      // origem do pagamento é característica de como a série inteira será
+      // paga, então vale igual pra todas as ocorrências geradas.
+      paymentOrigin: input.paymentOrigin,
       recurringBillId: recurringBill.id,
       occurrenceNumber,
       createdByUserId,

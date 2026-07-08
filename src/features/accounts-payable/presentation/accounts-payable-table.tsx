@@ -179,7 +179,8 @@ export function AccountsPayableTable({
 }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(100);
-  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payingTarget, setPayingTarget] =
+    useState<AccountsPayableResponseDTO | null>(null);
   const [cancelScopeTarget, setCancelScopeTarget] =
     useState<AccountsPayableResponseDTO | null>(null);
   const [cancelPaymentTarget, setCancelPaymentTarget] =
@@ -584,7 +585,7 @@ export function AccountsPayableTable({
                               variant="ghost"
                               size="sm"
                               className="text-green-700 dark:text-green-400"
-                              onClick={() => setPayingId(payable.id)}
+                              onClick={() => setPayingTarget(payable)}
                             >
                               <Check className="h-3.5 w-3.5" />
                               Pagar
@@ -744,9 +745,9 @@ export function AccountsPayableTable({
       )}
 
       <PayAccountsPayableDialog
-        accountsPayableId={payingId}
-        open={payingId !== null}
-        onOpenChange={(open) => !open && setPayingId(null)}
+        payable={payingTarget}
+        open={payingTarget !== null}
+        onOpenChange={(open) => !open && setPayingTarget(null)}
       />
 
       <AccountsPayableRecurrenceScopeDialog

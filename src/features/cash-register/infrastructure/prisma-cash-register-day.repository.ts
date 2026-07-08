@@ -129,7 +129,10 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
 
       const [funding, credits, manualAdjustment] = await Promise.all([
         tx.safeMovement.aggregate({
-          where: { safeId: safe.id, type: "FUNDING" },
+          where: {
+            safeId: safe.id,
+            type: { in: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
+          },
           _sum: { amount: true },
         }),
         tx.safeMovement.aggregate({

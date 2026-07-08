@@ -41,6 +41,9 @@ export async function updateAccountsPayableUseCase(
     categoryId: input.categoryId,
     description: input.description,
     dueDate: input.dueDate,
+    paymentOrigin: input.paymentOrigin,
+    barcode: input.barcode,
+    pixKey: input.pixKey,
   };
 
   const applyToSeries = input.scope === "SERIES" && payable.recurringBillId;
@@ -62,6 +65,9 @@ export async function updateAccountsPayableUseCase(
         categoryId: payable.categoryId,
         description: payable.description,
         dueDate: payable.dueDate,
+        paymentOrigin: payable.paymentOrigin,
+        barcode: payable.barcode,
+        pixKey: payable.pixKey,
       },
       after: changes,
     },
@@ -85,6 +91,10 @@ export async function updateAccountsPayableUseCase(
         description: input.description,
         // Vencimento é sempre o da própria ocorrência — nunca sobrescrito em lote.
         dueDate: sibling.dueDate,
+        // Origem do pagamento é característica da série inteira, propaga
+        // igual às demais — diferente de barcode/pixKey (documento próprio
+        // de cada ocorrência, nunca sobrescrito em lote).
+        paymentOrigin: input.paymentOrigin,
       };
       await deps.accountsPayableRepository.update(sibling.id, siblingChanges);
       await prisma.auditLog.create({

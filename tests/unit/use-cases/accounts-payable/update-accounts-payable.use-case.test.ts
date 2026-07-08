@@ -30,6 +30,7 @@ const baseInput = {
   categoryId: "cat-new",
   description: "Novo",
   dueDate: new Date("2026-08-05T00:00:00.000Z"),
+  paymentOrigin: "BANCO" as const,
   scope: "SINGLE" as const,
 };
 
@@ -126,6 +127,7 @@ describe("updateAccountsPayableUseCase", () => {
       categoryId: "cat-new",
       description: "Novo",
       dueDate: siblingDueDate2,
+      paymentOrigin: "BANCO",
     });
   });
 });

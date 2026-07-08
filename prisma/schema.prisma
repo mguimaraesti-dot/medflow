@@ -372,6 +372,12 @@ enum PaymentConfirmationSource {
   WHATSAPP
 }
 
+/** Fonte do dinheiro usada pra pagar a conta — Banco (padrão, sem efeito no Cofre) ou Cofre (dinheiro em espécie, debita o saldo e gera SafeMovement). */
+enum PaymentOrigin {
+  BANCO
+  COFRE
+}
+
 model AccountsPayable {
   id             String        @id @default(cuid())
   organizationId String
@@ -397,6 +403,11 @@ model AccountsPayable {
 
   status         PayableStatus @default(PENDING)
 
+  // Fonte do dinheiro escolhida no cadastro/edição (distinto de `paidVia`,
+  // que é o canal de confirmação) — decide se a confirmação de pagamento
+  // debita o Cofre automaticamente (ver pay-accounts-payable.use-case).
+  paymentOrigin  PaymentOrigin @default(BANCO)
+
   recurringBillId String?
   recurringBill    RecurringBill? @relation(fields: [recurringBillId], references: [id])
   occurrenceNumber Int?          // posição desta conta na série (1, 2, 3...) — null se não for recorrente
@@ -417,6 +428,10 @@ model AccountsPayable {
   deletionReason   String?
 
   cashFlowEntries CashFlowEntry[]
+  // Movimentação do Cofre gerada ao confirmar pagamento com paymentOrigin
+  // COFRE (ver ACCOUNTS_PAYABLE_PAYMENT em SafeMovementType) — no máximo 1
+  // na prática (uma conta só é paga uma vez).
+  safeMovements   SafeMovement[]
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -468,10 +483,11 @@ model RecurringBill {
 // TESOURARIA (Cofre — docs/decisions/adr-tesouraria.md)
 // ============================================================
 enum SafeMovementType {
-  FUNDING               // abastecimento do caixa (Cofre -> Caixa)
-  SANGRIA               // sangria (Caixa -> Cofre)
-  CASH_REGISTER_HANDOFF // fechamento confirmado (Caixa -> Cofre)
-  MANUAL_ADJUSTMENT     // só Admin — amount pode ser negativo (único tipo sem direção implícita)
+  FUNDING                  // abastecimento do caixa (Cofre -> Caixa)
+  SANGRIA                  // sangria (Caixa -> Cofre)
+  CASH_REGISTER_HANDOFF    // fechamento confirmado (Caixa -> Cofre)
+  MANUAL_ADJUSTMENT        // só Admin — amount pode ser negativo (único tipo sem direção implícita)
+  ACCOUNTS_PAYABLE_PAYMENT // pagamento de Conta a Pagar com dinheiro do Cofre (Cofre -> Fornecedor)
 }
 
 model Safe {
@@ -501,6 +517,9 @@ model SafeMovement {
   relatedCashRegisterDayId String?
   relatedCashRegisterDay   CashRegisterDay? @relation(fields: [relatedCashRegisterDayId], references: [id])
 
+  relatedAccountsPayableId String?
+  relatedAccountsPayable   AccountsPayable? @relation(fields: [relatedAccountsPayableId], references: [id])
+
   performedByUserId String
   performedBy       User    @relation(fields: [performedByUserId], references: [id])
   reason            String? // obrigatório para MANUAL_ADJUSTMENT (validado no DTO)
@@ -509,5 +528,6 @@ model SafeMovement {
 
   @@index([organizationId, type])
   @@index([relatedCashRegisterDayId])
+  @@index([relatedAccountsPayableId])
   @@map("safe_movements")
 }

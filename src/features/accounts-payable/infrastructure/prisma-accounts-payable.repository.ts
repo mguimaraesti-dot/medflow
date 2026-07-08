@@ -19,6 +19,13 @@ const USER_NAMES_INCLUDE = {
   createdBy: { select: { name: true } },
   paidBy: { select: { name: true } },
   deletedBy: { select: { name: true } },
+  // Só pra achar o Nº da movimentação do Cofre gerada ao pagar via COFRE
+  // (ver toDomain) — no máximo 1 na prática, uma conta só é paga uma vez.
+  safeMovements: {
+    where: { type: "ACCOUNTS_PAYABLE_PAYMENT" as const },
+    take: 1,
+    select: { id: true },
+  },
 } as const;
 
 type AccountsPayableRowWithUserNames = Prisma.AccountsPayableGetPayload<{
@@ -26,12 +33,13 @@ type AccountsPayableRowWithUserNames = Prisma.AccountsPayableGetPayload<{
 }>;
 
 function toDomain(row: AccountsPayableRowWithUserNames): AccountsPayable {
-  const { createdBy, paidBy, deletedBy, ...payable } = row;
+  const { createdBy, paidBy, deletedBy, safeMovements, ...payable } = row;
   return {
     ...payable,
     createdByUserName: createdBy.name,
     paidByUserName: paidBy?.name ?? null,
     deletedByUserName: deletedBy?.name ?? null,
+    paidSafeMovementId: safeMovements[0]?.id ?? null,
   };
 }
 
@@ -130,6 +138,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         pixKey: data.pixKey,
         qrCodeUrl: data.qrCodeUrl,
         boletoPdfUrl: data.boletoPdfUrl,
+        paymentOrigin: data.paymentOrigin ?? "BANCO",
         recurringBillId: data.recurringBillId,
         occurrenceNumber: data.occurrenceNumber,
         createdByUserId: data.createdByUserId,
@@ -150,6 +159,9 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         categoryId: data.categoryId,
         description: data.description,
         dueDate: data.dueDate,
+        paymentOrigin: data.paymentOrigin,
+        barcode: data.barcode,
+        pixKey: data.pixKey,
       },
       include: USER_NAMES_INCLUDE,
     });
@@ -184,21 +196,102 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return rows.map(toDomain);
   }
 
+  /**
+   * `paymentOrigin` BANCO: só marca o ciclo de vida, sem tocar o Cofre
+   * (comportamento idêntico ao de antes desta feature). `paymentOrigin`
+   * COFRE: dentro da mesma transação, recalcula o saldo do Cofre (rede de
+   * segurança contra corrida — a checagem "de verdade" já rodou no use
+   * case), cria o `SafeMovement` vinculado e só então marca a conta como
+   * paga — mesmo padrão de `PrismaCashRegisterDayRepository.create()`
+   * (Coding Standards, item 18.2).
+   */
   async markAsPaid(
     id: string,
     data: MarkAsPaidInput,
   ): Promise<AccountsPayable> {
-    const row = await prisma.accountsPayable.update({
-      where: { id },
-      data: {
-        status: "PAID",
-        paidByUserId: data.paidByUserId,
-        paidAt: new Date(),
-        paidVia: data.paidVia,
-      },
-      include: USER_NAMES_INCLUDE,
+    if (data.paymentOrigin !== "COFRE") {
+      const row = await prisma.accountsPayable.update({
+        where: { id },
+        data: {
+          status: "PAID",
+          paidByUserId: data.paidByUserId,
+          paidAt: new Date(),
+          paidVia: data.paidVia,
+        },
+        include: USER_NAMES_INCLUDE,
+      });
+      return toDomain(row);
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const payable = await tx.accountsPayable.findUniqueOrThrow({
+        where: { id },
+      });
+
+      const safe = await tx.safe.findUniqueOrThrow({
+        where: { organizationId: data.organizationId },
+      });
+
+      const [funding, credits, manualAdjustment] = await Promise.all([
+        tx.safeMovement.aggregate({
+          where: {
+            safeId: safe.id,
+            type: { in: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
+          },
+          _sum: { amount: true },
+        }),
+        tx.safeMovement.aggregate({
+          where: {
+            safeId: safe.id,
+            type: { in: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
+          },
+          _sum: { amount: true },
+        }),
+        tx.safeMovement.aggregate({
+          where: { safeId: safe.id, type: "MANUAL_ADJUSTMENT" },
+          _sum: { amount: true },
+        }),
+      ]);
+
+      const safeBalance = (credits._sum.amount ?? new Prisma.Decimal(0))
+        .plus(manualAdjustment._sum.amount ?? new Prisma.Decimal(0))
+        .minus(funding._sum.amount ?? new Prisma.Decimal(0));
+
+      // Rede de segurança contra corrida entre dois pagamentos via Cofre
+      // quase simultâneos — a checagem "de verdade" (com
+      // InsufficientSafeBalanceError) já rodou no use case antes de
+      // chamar este método.
+      if (safeBalance.lessThan(data.amount)) {
+        throw new Error(
+          `Saldo do Cofre insuficiente para pagar a conta (organização ${data.organizationId}).`,
+        );
+      }
+
+      await tx.safeMovement.create({
+        data: {
+          organizationId: data.organizationId,
+          safeId: safe.id,
+          type: "ACCOUNTS_PAYABLE_PAYMENT",
+          amount: data.amount,
+          relatedAccountsPayableId: id,
+          performedByUserId: data.paidByUserId,
+          reason: `Pagamento de "${payable.description}"`,
+        },
+      });
+
+      const row = await tx.accountsPayable.update({
+        where: { id },
+        data: {
+          status: "PAID",
+          paidByUserId: data.paidByUserId,
+          paidAt: new Date(),
+          paidVia: data.paidVia,
+        },
+        include: USER_NAMES_INCLUDE,
+      });
+
+      return toDomain(row);
     });
-    return toDomain(row);
   }
 
   async cancel(id: string): Promise<AccountsPayable> {

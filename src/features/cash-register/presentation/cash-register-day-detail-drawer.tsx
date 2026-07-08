@@ -27,6 +27,7 @@ const SAFE_MOVEMENT_TYPE_LABEL: Record<
   SANGRIA: "Sangria",
   CASH_REGISTER_HANDOFF: "Recolhimento",
   MANUAL_ADJUSTMENT: "Ajuste manual",
+  ACCOUNTS_PAYABLE_PAYMENT: "Pagamento de Conta a Pagar",
 };
 
 export function CashRegisterDayDetailDrawer({

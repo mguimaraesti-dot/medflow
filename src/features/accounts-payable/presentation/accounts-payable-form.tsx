@@ -32,9 +32,13 @@ import type { RecurrenceInput } from "../application/dtos/create-accounts-payabl
 
 // Formulário usa <input type="date"> (string) em vez de z.coerce.date()
 // direto — evita o mesmo problema de tipo `unknown` já resolvido no
-// formulário de lançamento do Fluxo de Caixa (Task 5B).
+// formulário de lançamento do Fluxo de Caixa (Task 5B). `paymentOrigin`
+// perde o `.default()` aqui (o `emptyFormValues`/RHF já cobre o valor
+// inicial) — combinar resolver do zod com campo `.default()` faz o tipo de
+// entrada do Resolver divergir do tipo de saída usado no `useForm`.
 const accountsPayableFormSchema = createAccountsPayableSchema.extend({
   dueDate: z.string().min(1, "Informe o vencimento"),
+  paymentOrigin: z.enum(["BANCO", "COFRE"]),
 });
 export type AccountsPayableFormValues = z.infer<
   typeof accountsPayableFormSchema
@@ -51,6 +55,7 @@ const emptyFormValues: AccountsPayableFormValues = {
   pixKey: "",
   qrCodeUrl: "",
   boletoPdfUrl: "",
+  paymentOrigin: "BANCO",
 };
 
 type Periodicity = RecurrenceInput["periodicity"];
@@ -284,6 +289,30 @@ export function AccountsPayableForm({
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="space-y-2 rounded-lg border p-2">
+            <Label>Origem do Pagamento</Label>
+            <Controller
+              control={control}
+              name="paymentOrigin"
+              render={({ field }) => (
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-1"
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="BANCO" />
+                    Banco
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <RadioGroupItem value="COFRE" />
+                    Cofre (Dinheiro)
+                  </label>
+                </RadioGroup>
+              )}
+            />
           </div>
 
           <div className="space-y-2">

@@ -14,6 +14,7 @@ import {
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
 import { Textarea } from "@/shared/ui/textarea";
 import { SupplierCombobox } from "@/shared/components/supplier-combobox";
 import { CategoryCombobox } from "@/shared/components/category-combobox";
@@ -32,6 +33,9 @@ interface EditFormValues {
   categoryId: string;
   dueDate: string;
   description: string;
+  paymentOrigin: "BANCO" | "COFRE";
+  barcode: string;
+  pixKey: string;
 }
 
 function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
@@ -40,6 +44,9 @@ function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
     categoryId: payable.categoryId,
     dueDate: new Date(payable.dueDate).toISOString().slice(0, 10),
     description: payable.description,
+    paymentOrigin: payable.paymentOrigin,
+    barcode: payable.barcode ?? "",
+    pixKey: payable.pixKey ?? "",
   };
 }
 
@@ -77,6 +84,9 @@ export function AccountsPayableEditDialog({
       categoryId: "",
       dueDate: "",
       description: "",
+      paymentOrigin: "BANCO",
+      barcode: "",
+      pixKey: "",
     },
   });
 
@@ -189,6 +199,45 @@ export function AccountsPayableEditDialog({
                   rows={2}
                   {...register("description")}
                 />
+              </div>
+
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label>Origem do Pagamento</Label>
+                <Controller
+                  control={control}
+                  name="paymentOrigin"
+                  render={({ field }) => (
+                    <RadioGroup
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="flex flex-wrap items-center gap-x-4 gap-y-1"
+                    >
+                      <label className="flex items-center gap-2 text-sm">
+                        <RadioGroupItem value="BANCO" />
+                        Banco
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <RadioGroupItem value="COFRE" />
+                        Cofre (Dinheiro)
+                      </label>
+                    </RadioGroup>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-barcode">Código de Barras</Label>
+                  <Input
+                    id="edit-barcode"
+                    inputMode="numeric"
+                    {...register("barcode")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-pixKey">Chave PIX</Label>
+                  <Input id="edit-pixKey" {...register("pixKey")} />
+                </div>
               </div>
 
               <DialogFooter>

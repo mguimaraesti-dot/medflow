@@ -1,7 +1,11 @@
 import { Prisma } from "@prisma/client";
 
 export type SafeMovementType =
-  "FUNDING" | "SANGRIA" | "CASH_REGISTER_HANDOFF" | "MANUAL_ADJUSTMENT";
+  | "FUNDING"
+  | "SANGRIA"
+  | "CASH_REGISTER_HANDOFF"
+  | "MANUAL_ADJUSTMENT"
+  | "ACCOUNTS_PAYABLE_PAYMENT";
 
 /**
  * Ledger do Cofre — nunca tem update/delete no repositório, só create e
