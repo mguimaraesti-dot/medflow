@@ -1,20 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Settings2 } from "lucide-react";
+import { ArrowUpCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useManualAdjustment } from "./use-manual-adjustment";
 import { ApiError } from "@/shared/lib/api-client";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -24,21 +18,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/ui/dialog";
-import { toast } from "sonner";
-
-type Direction = "ADD" | "REMOVE";
 
 /**
- * Ajuste manual do Cofre — só Admin. `amount` no backend carrega o
- * próprio sinal (único tipo de `SafeMovement` sem direção implícita
- * pelo `type`); aqui a UI coleta a magnitude (sempre positiva, via
- * `CurrencyInput`) + uma direção, e monta o valor com sinal antes de
- * enviar — evita criar um input monetário novo que aceite negativos.
+ * "Retirada" — entrada simplificada pro mesmo use case de Ajuste
+ * Manual, só que com a direção travada em "remover" (sem seletor).
+ * Pensada pra saídas de dinheiro do Cofre pra pagamentos (fornecedor,
+ * despesa emergencial etc.), sem o operador precisar entender o
+ * conceito de "ajuste com sinal" (Refinamento UX/UI Tesouraria).
  */
-export function ManualAdjustmentDialog() {
+export function WithdrawalDialog() {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number>(0);
-  const [direction, setDirection] = useState<Direction>("ADD");
   const [reason, setReason] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
   const manualAdjustment = useManualAdjustment();
@@ -48,7 +38,6 @@ export function ManualAdjustmentDialog() {
 
   function reset() {
     setAmount(0);
-    setDirection("ADD");
     setReason("");
   }
 
@@ -56,17 +45,17 @@ export function ManualAdjustmentDialog() {
     setServerError(null);
     try {
       await manualAdjustment.mutateAsync({
-        amount: direction === "REMOVE" ? -amount : amount,
+        amount: -amount,
         reason: reason.trim(),
       });
       setOpen(false);
       reset();
-      toast.success("Ajuste registrado.");
+      toast.success("Retirada registrada.");
     } catch (error) {
       setServerError(
         error instanceof ApiError
           ? error.message
-          : "Não foi possível registrar o ajuste.",
+          : "Não foi possível registrar a retirada.",
       );
     }
   }
@@ -83,59 +72,42 @@ export function ManualAdjustmentDialog() {
         <Button
           type="button"
           variant="outline"
-          className="h-10 flex-1 border-blue-600/40 text-blue-600 hover:bg-blue-600/10 hover:text-blue-600 sm:flex-none dark:text-blue-500"
+          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive h-10 flex-1 sm:flex-none"
         >
-          <Settings2 className="h-4 w-4" />
-          Ajuste Manual
+          <ArrowUpCircle className="h-4 w-4" />
+          Retirada
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ajuste manual do Cofre</DialogTitle>
+          <DialogTitle>Retirada do Cofre</DialogTitle>
           <DialogDescription>
-            Uso administrativo, fora do fluxo normal de caixa. Registrado em
-            auditoria.
+            Registra uma saída de dinheiro do Cofre, como pagamento a fornecedor
+            ou despesa emergencial.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
-            <div className="space-y-2">
-              <Label htmlFor="adjustment-amount">Valor</Label>
-              <CurrencyInput
-                id="adjustment-amount"
-                value={amount}
-                onChange={setAmount}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="adjustment-direction">Direção</Label>
-              <Select
-                value={direction}
-                onValueChange={(value) => setDirection(value as Direction)}
-              >
-                <SelectTrigger id="adjustment-direction" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ADD">Adicionar ao Cofre</SelectItem>
-                  <SelectItem value="REMOVE">Remover do Cofre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="withdrawal-amount">Valor</Label>
+            <CurrencyInput
+              id="withdrawal-amount"
+              value={amount}
+              onChange={setAmount}
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adjustment-reason">Justificativa</Label>
+            <Label htmlFor="withdrawal-reason">Descrição</Label>
             <Textarea
-              id="adjustment-reason"
+              id="withdrawal-reason"
               rows={3}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
             {reasonTooShort && (
               <p className="text-destructive text-sm">
-                A justificativa precisa ter pelo menos 10 caracteres.
+                A descrição precisa ter pelo menos 10 caracteres.
               </p>
             )}
           </div>
@@ -153,7 +125,7 @@ export function ManualAdjustmentDialog() {
             disabled={!canSubmit || manualAdjustment.isPending}
             onClick={onSubmit}
           >
-            {manualAdjustment.isPending ? "Registrando..." : "Confirmar ajuste"}
+            {manualAdjustment.isPending ? "Registrando..." : "Confirmar"}
           </Button>
         </DialogFooter>
       </DialogContent>

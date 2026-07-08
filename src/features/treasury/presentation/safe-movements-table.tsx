@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Landmark } from "lucide-react";
 import { useSafeMovements } from "./use-safe-movements";
+import { SafeMovementDetailDrawer } from "./safe-movement-detail-drawer";
+import { describeMovement, isMovementIn } from "./safe-movement-display";
 import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
 import { EmptyState } from "@/shared/components/empty-state";
-import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -16,48 +18,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui/table";
-import type { SafeMovement } from "../domain/safe-movement.entity";
 import type { SafeMovementResponseDTO } from "../application/dtos/safe-movement.response-dto";
 
-export type SafeMovementTypeFilter = "ALL" | SafeMovement["type"];
-
-const TYPE_BADGE: Record<
-  SafeMovement["type"],
-  {
-    label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
-  }
-> = {
-  FUNDING: { label: "Aporte", variant: "outline" },
-  SANGRIA: { label: "Sangria", variant: "secondary" },
-  CASH_REGISTER_HANDOFF: { label: "Recolhimento", variant: "default" },
-  MANUAL_ADJUSTMENT: { label: "Ajuste manual", variant: "outline" },
-};
-
-/**
- * `amount` no banco é sempre positivo, exceto em `MANUAL_ADJUSTMENT`
- * (carrega seu próprio sinal) — aqui convertemos pro sinal real de
- * efeito no saldo do Cofre, só para exibição (Coding Standards 18.1: o
- * dado persistido não muda, isso é só uma projeção visual).
- */
-function signedAmount(movement: SafeMovementResponseDTO): number {
-  if (movement.type === "FUNDING") return -Number(movement.amount);
-  return Number(movement.amount);
+function firstName(fullName: string): string {
+  return fullName.split(" ")[0];
 }
 
 export function SafeMovementsTable({
-  type,
   createdAtFrom,
   createdAtTo,
 }: {
-  type: SafeMovementTypeFilter;
   createdAtFrom?: Date;
   createdAtTo?: Date;
 }) {
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<SafeMovementResponseDTO | null>(
+    null,
+  );
 
   const { data, isLoading } = useSafeMovements({
-    type: type === "ALL" ? undefined : type,
     createdAtFrom,
     createdAtTo,
     page,
@@ -86,36 +65,59 @@ export function SafeMovementsTable({
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Descrição</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Motivo</TableHead>
+                  <TableHead>Responsável</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.items.map((movement) => {
-                  const badge = TYPE_BADGE[movement.type];
-                  const amount = signedAmount(movement);
+                  const isIn = isMovementIn(movement);
 
                   return (
-                    <TableRow key={movement.id}>
+                    <TableRow
+                      key={movement.id}
+                      className="hover:bg-muted/50 cursor-pointer transition-shadow hover:shadow-[inset_3px_0_0_0_var(--primary)]"
+                      onClick={() => setSelected(movement)}
+                    >
                       <TableCell className="text-muted-foreground">
                         {formatDateTimeBR(movement.createdAt)}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={badge.variant}>{badge.label}</Badge>
+                      <TableCell
+                        className={
+                          isIn
+                            ? "text-success font-medium"
+                            : "text-destructive font-medium"
+                        }
+                      >
+                        {isIn ? "Entrada" : "Saída"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {describeMovement(movement)}
                       </TableCell>
                       <TableCell
                         className={
-                          "text-right font-medium " +
-                          (amount < 0 ? "text-destructive" : "text-success")
+                          "text-right font-medium tabular-nums " +
+                          (isIn ? "text-success" : "text-destructive")
                         }
                       >
-                        {formatCurrencyBRL(amount)}
+                        {isIn ? "+" : "-"}
+                        {formatCurrencyBRL(movement.amount.replace("-", ""))}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {movement.reason || "—"}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">
+                              {firstName(movement.performedByUserName)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {movement.performedByUserName}
+                          </TooltipContent>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   );
@@ -152,6 +154,12 @@ export function SafeMovementsTable({
           </div>
         </>
       )}
+
+      <SafeMovementDetailDrawer
+        movement={selected}
+        open={selected !== null}
+        onOpenChange={(open) => !open && setSelected(null)}
+      />
     </>
   );
 }

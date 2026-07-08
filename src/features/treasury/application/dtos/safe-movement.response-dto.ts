@@ -9,6 +9,7 @@ export interface SafeMovementResponseDTO {
   amount: string;
   relatedCashRegisterDayId: string | null;
   performedByUserId: string;
+  performedByUserName: string;
   reason: string | null;
   createdAt: Date;
 }
@@ -24,6 +25,7 @@ export function toSafeMovementResponseDTO(
     amount: toMoneyString(movement.amount) as string,
     relatedCashRegisterDayId: movement.relatedCashRegisterDayId,
     performedByUserId: movement.performedByUserId,
+    performedByUserName: movement.performedByUserName,
     reason: movement.reason,
     createdAt: movement.createdAt,
   };

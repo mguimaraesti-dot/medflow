@@ -12,9 +12,22 @@ import type {
   SafeMovementType,
 } from "../domain/safe-movement.entity";
 
+const PERFORMED_BY_INCLUDE = {
+  performedBy: { select: { name: true } },
+} satisfies Prisma.SafeMovementInclude;
+
+type RawSafeMovement = Prisma.SafeMovementGetPayload<{
+  include: typeof PERFORMED_BY_INCLUDE;
+}>;
+
+function toDomainMovement(row: RawSafeMovement): SafeMovement {
+  const { performedBy, ...movement } = row;
+  return { ...movement, performedByUserName: performedBy.name };
+}
+
 export class PrismaSafeMovementRepository implements SafeMovementRepository {
   async create(data: CreateSafeMovementInput): Promise<SafeMovement> {
-    return prisma.safeMovement.create({
+    const row = await prisma.safeMovement.create({
       data: {
         organizationId: data.organizationId,
         safeId: data.safeId,
@@ -24,7 +37,9 @@ export class PrismaSafeMovementRepository implements SafeMovementRepository {
         performedByUserId: data.performedByUserId,
         reason: data.reason,
       },
+      include: PERFORMED_BY_INCLUDE,
     });
+    return toDomainMovement(row);
   }
 
   async list(
@@ -48,6 +63,7 @@ export class PrismaSafeMovementRepository implements SafeMovementRepository {
     const [items, total] = await Promise.all([
       prisma.safeMovement.findMany({
         where,
+        include: PERFORMED_BY_INCLUDE,
         orderBy: { createdAt: "desc" },
         skip: (pagination.page - 1) * pagination.pageSize,
         take: pagination.pageSize,
@@ -55,7 +71,7 @@ export class PrismaSafeMovementRepository implements SafeMovementRepository {
       prisma.safeMovement.count({ where }),
     ]);
 
-    return buildPaginatedResult(items, total, pagination);
+    return buildPaginatedResult(items.map(toDomainMovement), total, pagination);
   }
 
   async sumByCashRegisterDayAndType(

@@ -18,6 +18,8 @@ export interface SafeMovement {
   amount: Prisma.Decimal;
   relatedCashRegisterDayId: string | null;
   performedByUserId: string;
+  /** Denormalizado só pra exibição (coluna "Responsável" da Tesouraria) — via join na infraestrutura. */
+  performedByUserName: string;
   reason: string | null;
   createdAt: Date;
 }

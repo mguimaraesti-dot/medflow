@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowDownCircle } from "lucide-react";
 import {
   requestSangriaSchema,
   type RequestSangriaInput,
@@ -24,7 +25,12 @@ import {
 } from "@/shared/ui/dialog";
 import { toast } from "sonner";
 
-/** Sangria — remove dinheiro do caixa aberto e credita o Cofre (ADR 2.8). */
+/**
+ * "Receber do Caixa" — por baixo dos panos ainda é a Sangria (remove
+ * dinheiro do caixa aberto e credita o Cofre), só que sem expor o termo
+ * técnico na interface (Refinamento UX/UI Tesouraria). Continua exigindo
+ * um caixa aberto no momento.
+ */
 export function SangriaDialog() {
   const [open, setOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -46,7 +52,7 @@ export function SangriaDialog() {
       await requestSangria.mutateAsync(values);
       setOpen(false);
       reset();
-      toast.success("Sangria registrada.");
+      toast.success("Recebimento registrado.");
     } catch (error) {
       setServerError(
         error instanceof ApiError
@@ -65,17 +71,22 @@ export function SangriaDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" variant="outline">
-          Solicitar sangria
+        <Button
+          type="button"
+          variant="outline"
+          className="h-10 flex-1 border-green-600/40 text-green-600 hover:bg-green-600/10 hover:text-green-600 sm:flex-none dark:text-green-500"
+        >
+          <ArrowDownCircle className="h-4 w-4" />
+          Receber do Caixa
         </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <DialogHeader>
-            <DialogTitle>Solicitar sangria</DialogTitle>
+            <DialogTitle>Receber do Caixa</DialogTitle>
             <DialogDescription>
-              Remove dinheiro do caixa aberto e credita o Cofre. Exige um caixa
-              aberto no momento.
+              Registra o dinheiro recebido da Caixa Recepção e credita o Cofre.
+              Exige um caixa aberto no momento.
             </DialogDescription>
           </DialogHeader>
 
@@ -101,7 +112,7 @@ export function SangriaDialog() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sangria-reason">Motivo (opcional)</Label>
+              <Label htmlFor="sangria-reason">Descrição (opcional)</Label>
               <Textarea id="sangria-reason" rows={2} {...register("reason")} />
               {errors.reason && (
                 <p className="text-destructive text-sm">
@@ -119,9 +130,7 @@ export function SangriaDialog() {
 
           <DialogFooter>
             <Button type="submit" disabled={requestSangria.isPending}>
-              {requestSangria.isPending
-                ? "Registrando..."
-                : "Registrar sangria"}
+              {requestSangria.isPending ? "Registrando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </form>
