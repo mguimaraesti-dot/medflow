@@ -23,11 +23,11 @@ import {
 } from "@/shared/ui/dialog";
 
 /**
- * Reabre o caixa fechado de hoje (sempre com justificativa obrigatória
- * — regra inalterada). O texto visível diz "Abrir Caixa" em vez de
- * "Reabrir Caixa" (Refinamento UX): pro operador, é só o próximo passo
- * natural do dia, não a correção de um erro. O mecanismo por baixo
- * (permissão, auditoria, justificativa) continua exatamente o mesmo.
+ * Fluxo excepcional: reabre um caixa que já foi fechado hoje, sempre
+ * com justificativa obrigatória e registro em auditoria. Distinto de
+ * `OpenRegisterDialog` (abertura normal do dia, sem justificativa) —
+ * os dois fluxos não devem ser confundidos nem reaproveitar o texto um
+ * do outro (Refinamento UX).
  */
 export function ReopenRegisterDialog({
   cashRegisterDayId,
@@ -57,7 +57,7 @@ export function ReopenRegisterDialog({
       setServerError(
         error instanceof ApiError
           ? error.message
-          : "Não foi possível abrir o caixa.",
+          : "Não foi possível reabrir o caixa.",
       );
     }
   }
@@ -71,12 +71,14 @@ export function ReopenRegisterDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button">Abrir Caixa</Button>
+        <Button type="button" variant="outline">
+          Reabrir Caixa
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <DialogHeader>
-            <DialogTitle>Abrir Caixa</DialogTitle>
+            <DialogTitle>Reabrir Caixa</DialogTitle>
             <DialogDescription>
               Informe o motivo da reabertura. Esta ação é registrada em
               auditoria.
@@ -101,7 +103,9 @@ export function ReopenRegisterDialog({
 
           <DialogFooter>
             <Button type="submit" disabled={reopenCashRegister.isPending}>
-              {reopenCashRegister.isPending ? "Abrindo..." : "Abrir Caixa"}
+              {reopenCashRegister.isPending
+                ? "Reabrindo..."
+                : "Confirmar Reabertura"}
             </Button>
           </DialogFooter>
         </form>

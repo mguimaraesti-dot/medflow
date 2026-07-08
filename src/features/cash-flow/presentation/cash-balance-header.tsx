@@ -1,18 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
-import {
-  openCashRegisterSchema,
-  type OpenCashRegisterInput,
-} from "@/features/cash-register/application/dtos/open-cash-register.dto";
 import { useCashRegisterToday } from "@/features/cash-register/presentation/use-cash-register-today";
-import { useOpenCashRegister } from "@/features/cash-register/presentation/use-open-cash-register";
+import { OpenRegisterDialog } from "@/features/cash-register/presentation/open-register-dialog";
 import { CloseRegisterDialog } from "@/features/cash-register/presentation/close-register-dialog";
 import { ReopenRegisterDialog } from "@/features/cash-register/presentation/reopen-register-dialog";
-import { ApiError } from "@/shared/lib/api-client";
 import {
   formatCurrencyBRL,
   formatDateOnlyLocalBR,
@@ -20,16 +12,16 @@ import {
 } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Card, CardContent } from "@/shared/ui/card";
 
 /**
  * Cabeçalho da Caixa Recepção: Saldo Atual em destaque + Status do Caixa
- * bem evidente (Refinamento UX/UI). Substitui o uso de
- * `CashRegisterStatusCard` (compartilhado com o Dashboard) só nesta
- * tela — reaproveita os mesmos hooks/dialogs, sem duplicar mutações.
+ * bem evidente (Refinamento UX/UI). Três estados possíveis, nunca
+ * misturados: nunca aberto hoje (`OpenRegisterDialog`, sem
+ * justificativa), aberto (`CloseRegisterDialog`), fechado hoje
+ * (`ReopenRegisterDialog`, com justificativa — fluxo excepcional,
+ * distinto da abertura normal).
  */
 export function CashBalanceHeader({
   canOpen,
@@ -46,83 +38,20 @@ export function CashBalanceHeader({
   onSelectType: (type: "IN" | "OUT") => void;
 }) {
   const { data: today, isLoading } = useCashRegisterToday();
-  const [serverError, setServerError] = useState<string | null>(null);
-  const openCashRegister = useOpenCashRegister();
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<OpenCashRegisterInput>({
-    resolver: zodResolver(openCashRegisterSchema),
-  });
-
-  async function onOpen(values: OpenCashRegisterInput) {
-    setServerError(null);
-    try {
-      await openCashRegister.mutateAsync(values);
-    } catch (error) {
-      setServerError(
-        error instanceof ApiError
-          ? error.message
-          : "Não foi possível abrir o caixa.",
-      );
-    }
-  }
 
   if (isLoading) {
     return <Skeleton className="h-24 w-full" />;
   }
 
-  if (!today) {
-    return (
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-3 p-6">
-          <form
-            onSubmit={handleSubmit(onOpen)}
-            className="flex flex-wrap items-end gap-3"
-            noValidate
-          >
-            <div className="space-y-2">
-              <Label htmlFor="openingBalance">Saldo inicial</Label>
-              <Input
-                id="openingBalance"
-                type="number"
-                step="0.01"
-                min={0}
-                {...register("openingBalance", {
-                  setValueAs: (v) => (v === "" ? undefined : Number(v)),
-                })}
-              />
-              {errors.openingBalance && (
-                <p className="text-destructive text-sm">
-                  {errors.openingBalance.message}
-                </p>
-              )}
-            </div>
-            <Button
-              type="submit"
-              disabled={!canOpen || openCashRegister.isPending}
-            >
-              {openCashRegister.isPending ? "Abrindo..." : "Abrir caixa"}
-            </Button>
-          </form>
-          {serverError && (
-            <p className="text-destructive text-sm" role="alert">
-              {serverError}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
+  const isOpen = today?.status === "OPEN";
+  const closedToday = today?.status === "CLOSED";
 
   const resultToday = (
-    Number(today.totalIn ?? "0") - Number(today.totalOut ?? "0")
+    Number(today?.totalIn ?? "0") - Number(today?.totalOut ?? "0")
   ).toFixed(2);
-  const isOpen = today.status === "OPEN";
-  // Fechado, a tela "zera" (PDV) — o saldo real de fechamento continua
-  // disponível no Histórico e no card do Dashboard, só não repete aqui.
+  // Fechado (ou nunca aberto hoje), a tela "zera" (PDV) — o saldo real
+  // de fechamento continua disponível no Histórico e no card do
+  // Dashboard, só não repete aqui.
   const currentBalance = isOpen
     ? (Number(today.openingBalance) + Number(resultToday)).toFixed(2)
     : "0";
@@ -148,23 +77,27 @@ export function CashBalanceHeader({
               />
               {isOpen ? "Caixa Aberto" : "Caixa Fechado"}
             </span>
-            {isOpen ? (
+            {isOpen && today && (
               <p className="text-muted-foreground mt-1 text-sm">
                 Aberto hoje às {formatTimeBR(today.openedAt)}
                 <br />
                 por {today.openedByUserName}
               </p>
-            ) : (
-              today.closedAt && (
-                <p className="text-muted-foreground mt-1 text-sm">
-                  Último fechamento
-                  <br />
-                  {formatDateOnlyLocalBR(today.closedAt)} •{" "}
-                  {formatTimeBR(today.closedAt)}
-                  <br />
-                  por {today.closedByUserName}
-                </p>
-              )
+            )}
+            {closedToday && today?.closedAt && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                Último fechamento
+                <br />
+                {formatDateOnlyLocalBR(today.closedAt)} •{" "}
+                {formatTimeBR(today.closedAt)}
+                <br />
+                por {today.closedByUserName}
+              </p>
+            )}
+            {!today && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                Nenhum caixa aberto hoje.
+              </p>
             )}
           </div>
 
@@ -189,20 +122,15 @@ export function CashBalanceHeader({
                 <ArrowUpCircle className="h-4 w-4" />
                 Registrar Saída
               </Button>
+              <CloseRegisterDialog disabled={!canClose} />
             </>
           )}
-          {isOpen && <CloseRegisterDialog disabled={!canClose} />}
-          {today.status === "CLOSED" && canReopen && (
+          {!today && <OpenRegisterDialog disabled={!canOpen} />}
+          {closedToday && canReopen && (
             <ReopenRegisterDialog cashRegisterDayId={today.id} />
           )}
         </div>
       </CardContent>
-
-      {serverError && (
-        <p className="text-destructive px-6 pb-4 text-sm" role="alert">
-          {serverError}
-        </p>
-      )}
     </Card>
   );
 }
