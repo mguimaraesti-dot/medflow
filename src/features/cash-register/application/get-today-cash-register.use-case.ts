@@ -1,13 +1,19 @@
 import { Prisma } from "@prisma/client";
+import { getBusinessDay } from "@/shared/lib/business-day";
 import type { CashRegisterDayRepository } from "../domain/cash-register-day.repository";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
+import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
 import type { CashRegisterDay } from "../domain/cash-register-day.entity";
+
+/** Mesmo default do schema (`OrganizationSettings.timezone`) — usado só se a organização não tiver configurações salvas. */
+const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 interface Deps {
   cashRegisterDayRepository: CashRegisterDayRepository;
   cashFlowEntryRepository: CashFlowEntryRepository;
   safeMovementRepository: SafeMovementRepository;
+  organizationSettingsRepository: OrganizationSettingsRepository;
   /** Injetado só para permitir teste determinístico — em produção é sempre `new Date()`. */
   referenceDate?: Date;
 }
@@ -26,8 +32,14 @@ export async function getTodayCashRegisterUseCase(
   organizationId: string,
   deps: Deps,
 ): Promise<CashRegisterDay | null> {
-  const today = new Date(deps.referenceDate ?? new Date());
-  today.setUTCHours(0, 0, 0, 0);
+  const settings =
+    await deps.organizationSettingsRepository.findByOrganization(
+      organizationId,
+    );
+  const today = getBusinessDay(
+    settings?.timezone ?? DEFAULT_TIMEZONE,
+    deps.referenceDate ?? new Date(),
+  );
 
   const day = await deps.cashRegisterDayRepository.findByOrganizationAndDate(
     organizationId,

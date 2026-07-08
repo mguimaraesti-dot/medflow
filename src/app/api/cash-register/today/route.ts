@@ -9,10 +9,13 @@ import { toCashRegisterDayResponseDTO } from "@/features/cash-register/applicati
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
 import { PrismaSafeMovementRepository } from "@/features/treasury/infrastructure/prisma-safe-movement.repository";
+import { PrismaOrganizationSettingsRepository } from "@/features/organization-settings/infrastructure/prisma-organization-settings.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
 const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
 const safeMovementRepository = new PrismaSafeMovementRepository();
+const organizationSettingsRepository =
+  new PrismaOrganizationSettingsRepository();
 
 export async function GET() {
   const requestId = generateRequestId();
@@ -29,6 +32,7 @@ export async function GET() {
         cashRegisterDayRepository,
         cashFlowEntryRepository,
         safeMovementRepository,
+        organizationSettingsRepository,
       },
     );
 

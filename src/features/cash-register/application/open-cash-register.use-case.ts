@@ -5,21 +5,21 @@ import {
   CashRegisterAlreadyOpenError,
   InsufficientSafeBalanceError,
 } from "@/core/errors/domain-error";
+import { getBusinessDay } from "@/shared/lib/business-day";
 import type { CashRegisterDayRepository } from "../domain/cash-register-day.repository";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
 import type { CashRegisterDay } from "../domain/cash-register-day.entity";
 import type { OpenCashRegisterInput } from "./dtos/open-cash-register.dto";
 
 interface Deps {
   cashRegisterDayRepository: CashRegisterDayRepository;
   safeRepository: SafeRepository;
+  organizationSettingsRepository: OrganizationSettingsRepository;
 }
 
-function startOfDayUTC(date: Date): Date {
-  const d = new Date(date);
-  d.setUTCHours(0, 0, 0, 0);
-  return d;
-}
+/** Mesmo default do schema (`OrganizationSettings.timezone`) — usado só se a organização não tiver configurações salvas. */
+const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 /**
  * US02/US03 — Abertura de caixa.
@@ -36,7 +36,11 @@ export async function openCashRegisterUseCase(
   organizationId: string,
   deps: Deps,
 ): Promise<CashRegisterDay> {
-  const today = startOfDayUTC(new Date());
+  const settings =
+    await deps.organizationSettingsRepository.findByOrganization(
+      organizationId,
+    );
+  const today = getBusinessDay(settings?.timezone ?? DEFAULT_TIMEZONE);
 
   const existing =
     await deps.cashRegisterDayRepository.findByOrganizationAndDate(

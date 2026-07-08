@@ -3,6 +3,11 @@ import { getTodayCashRegisterUseCase } from "@/features/cash-register/applicatio
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
+import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
+
+const organizationSettingsRepository: OrganizationSettingsRepository = {
+  findByOrganization: vi.fn().mockResolvedValue(null),
+};
 
 describe("getTodayCashRegisterUseCase", () => {
   it("retorna null quando não há caixa hoje", async () => {
@@ -16,6 +21,7 @@ describe("getTodayCashRegisterUseCase", () => {
       cashRegisterDayRepository,
       cashFlowEntryRepository,
       safeMovementRepository,
+      organizationSettingsRepository,
     });
 
     expect(result).toBeNull();
@@ -49,6 +55,7 @@ describe("getTodayCashRegisterUseCase", () => {
       cashRegisterDayRepository,
       cashFlowEntryRepository,
       safeMovementRepository,
+      organizationSettingsRepository,
     });
 
     // Contábil (todas as formas): 200 entradas - 50 saídas.
@@ -88,6 +95,7 @@ describe("getTodayCashRegisterUseCase", () => {
       cashRegisterDayRepository,
       cashFlowEntryRepository,
       safeMovementRepository,
+      organizationSettingsRepository,
     });
 
     expect(sumByCashRegisterDay).not.toHaveBeenCalled();

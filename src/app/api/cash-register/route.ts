@@ -11,9 +11,12 @@ import { listCashRegisterDaysUseCase } from "@/features/cash-register/applicatio
 import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
+import { PrismaOrganizationSettingsRepository } from "@/features/organization-settings/infrastructure/prisma-organization-settings.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
 const safeRepository = new PrismaSafeRepository();
+const organizationSettingsRepository =
+  new PrismaOrganizationSettingsRepository();
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
@@ -62,7 +65,11 @@ export async function POST(request: NextRequest) {
       input,
       user.id,
       user.organizationId,
-      { cashRegisterDayRepository, safeRepository },
+      {
+        cashRegisterDayRepository,
+        safeRepository,
+        organizationSettingsRepository,
+      },
     );
 
     return NextResponse.json(

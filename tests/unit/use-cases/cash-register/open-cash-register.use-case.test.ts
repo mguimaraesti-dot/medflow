@@ -7,6 +7,7 @@ import {
 } from "@/core/errors/domain-error";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: { auditLog: { create: vi.fn() } },
@@ -35,6 +36,10 @@ function makeSafeRepo(balance: string): SafeRepository {
   };
 }
 
+const organizationSettingsRepository: OrganizationSettingsRepository = {
+  findByOrganization: vi.fn().mockResolvedValue(null),
+};
+
 describe("openCashRegisterUseCase", () => {
   // Motor de Tesouraria (ADR 2.6/2.8): substitui o antigo cenário de
   // "primeiro uso exige saldo inicial" — agora é sempre uma retirada do Cofre.
@@ -46,6 +51,7 @@ describe("openCashRegisterUseCase", () => {
       openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
         cashRegisterDayRepository: repo,
         safeRepository,
+        organizationSettingsRepository,
       }),
     ).rejects.toThrow(InsufficientSafeBalanceError);
   });
@@ -58,6 +64,7 @@ describe("openCashRegisterUseCase", () => {
     await openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
       cashRegisterDayRepository: repo,
       safeRepository,
+      organizationSettingsRepository,
     });
 
     expect(create).toHaveBeenCalledWith(
@@ -74,6 +81,7 @@ describe("openCashRegisterUseCase", () => {
       openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
         cashRegisterDayRepository: repo,
         safeRepository,
+        organizationSettingsRepository,
       }),
     ).resolves.not.toThrow();
   });
@@ -88,6 +96,7 @@ describe("openCashRegisterUseCase", () => {
       openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
         cashRegisterDayRepository: repo,
         safeRepository,
+        organizationSettingsRepository,
       }),
     ).rejects.toThrow(CashRegisterAlreadyOpenError);
   });

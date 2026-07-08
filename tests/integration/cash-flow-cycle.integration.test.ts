@@ -120,6 +120,8 @@ describe.skipIf(!hasTestDb)(
         await import("@/features/treasury/infrastructure/prisma-safe.repository");
       const { PrismaSafeMovementRepository } =
         await import("@/features/treasury/infrastructure/prisma-safe-movement.repository");
+      const { PrismaOrganizationSettingsRepository } =
+        await import("@/features/organization-settings/infrastructure/prisma-organization-settings.repository");
       const { openCashRegisterUseCase } =
         await import("@/features/cash-register/application/open-cash-register.use-case");
       const { createCashFlowEntryUseCase } =
@@ -133,12 +135,18 @@ describe.skipIf(!hasTestDb)(
       const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
       const safeRepository = new PrismaSafeRepository();
       const safeMovementRepository = new PrismaSafeMovementRepository();
+      const organizationSettingsRepository =
+        new PrismaOrganizationSettingsRepository();
 
       const day = await openCashRegisterUseCase(
         { openingBalance: 100 },
         userId,
         organizationId,
-        { cashRegisterDayRepository, safeRepository },
+        {
+          cashRegisterDayRepository,
+          safeRepository,
+          organizationSettingsRepository,
+        },
       );
       expect(day.status).toBe("OPEN");
 
