@@ -10,6 +10,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Separator } from "@/shared/ui/separator";
 import { useCashRegisterDayDetail } from "./use-cash-register-day-detail";
 import { useCategories } from "@/features/categories/presentation/use-categories";
+import { Field } from "@/shared/components/detail-field";
 import {
   formatCurrencyBRL,
   formatDateOnlyBR,
@@ -27,15 +28,6 @@ const SAFE_MOVEMENT_TYPE_LABEL: Record<
   CASH_REGISTER_HANDOFF: "Recolhimento",
   MANUAL_ADJUSTMENT: "Ajuste manual",
 };
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="text-sm">{value}</div>
-    </div>
-  );
-}
 
 export function CashRegisterDayDetailDrawer({
   day,

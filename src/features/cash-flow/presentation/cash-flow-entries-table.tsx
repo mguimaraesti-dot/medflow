@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, MoreHorizontal, Receipt, Search } from "lucide-react";
+import { CalendarDays, Receipt, Search } from "lucide-react";
 import { useCashFlowEntries } from "./use-cash-flow-entries";
-import { ReverseEntryDialog } from "./reverse-entry-dialog";
-import { useCategories } from "@/features/categories/presentation/use-categories";
+import { CashFlowEntryDetailDrawer } from "./cash-flow-entry-detail-drawer";
 import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
-import { formatCurrencyBRL, formatDateTimeBR } from "@/shared/lib/format";
+import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
 import { getPaymentMethodIcon } from "@/shared/lib/lucide-icon-map";
 import { cn } from "@/shared/lib/utils";
 import { EmptyState } from "@/shared/components/empty-state";
@@ -14,12 +13,6 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Skeleton } from "@/shared/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -29,6 +22,7 @@ import {
   TableRow,
 } from "@/shared/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import type { CashFlowEntryResponseDTO } from "../application/dtos/cash-flow-entry.response-dto";
 
 type QuickFilter = "IN" | "OUT" | "CASH" | "PIX" | "REVERSED";
 
@@ -40,14 +34,25 @@ const QUICK_FILTERS: { value: QuickFilter; label: string }[] = [
   { value: "REVERSED", label: "Estornados" },
 ];
 
+/** Coluna "Descrição" única — reaproveita o que já existia como colunas separadas (Categoria/Paciente-Justificativa), só consolidado (Refinamento PDV). */
+function describeEntry(entry: CashFlowEntryResponseDTO): string {
+  if (entry.type === "IN") {
+    return entry.description || entry.patientName || "—";
+  }
+  return entry.withdrawalReason || "—";
+}
+
 export function CashFlowEntriesTable({
   cashRegisterDayId,
+  isClosedToday,
   canReverse,
 }: {
   cashRegisterDayId: string | undefined;
+  isClosedToday: boolean;
   canReverse: boolean;
 }) {
-  const [reversingEntryId, setReversingEntryId] = useState<string | null>(null);
+  const [selectedEntry, setSelectedEntry] =
+    useState<CashFlowEntryResponseDTO | null>(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(null);
 
@@ -58,18 +63,13 @@ export function CashFlowEntriesTable({
     { cashRegisterDayId, pageSize: 100 },
     { enabled: Boolean(cashRegisterDayId) },
   );
-  const { data: categories } = useCategories();
   const { data: paymentMethods } = usePaymentMethods();
-  const categoryById = useMemo(
-    () => new Map(categories?.map((category) => [category.id, category])),
-    [categories],
-  );
   const paymentMethodById = useMemo(
     () => new Map(paymentMethods?.map((method) => [method.id, method])),
     [paymentMethods],
   );
 
-  const isTodayEmpty = !cashRegisterDayId && !isLoading;
+  const isNeverOpenedToday = !cashRegisterDayId && !isClosedToday && !isLoading;
 
   const filteredItems = useMemo(() => {
     const items = data?.items ?? [];
@@ -90,7 +90,6 @@ export function CashFlowEntriesTable({
       if (!searchLower) return true;
       const haystack = [
         entry.description,
-        categoryById.get(entry.categoryId)?.name,
         entry.patientName,
         entry.withdrawalReason,
       ]
@@ -99,7 +98,7 @@ export function CashFlowEntriesTable({
         .toLowerCase();
       return haystack.includes(searchLower);
     });
-  }, [data?.items, search, activeFilter, categoryById, paymentMethodById]);
+  }, [data?.items, search, activeFilter, paymentMethodById]);
 
   return (
     <Card className="rounded-2xl shadow-sm">
@@ -109,7 +108,7 @@ export function CashFlowEntriesTable({
           <div className="relative w-full sm:w-[280px]">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
-              placeholder="Pesquisar paciente, categoria ou lançamento..."
+              placeholder="Pesquisar lançamentos..."
               className="h-10 rounded-xl pl-9"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -152,35 +151,39 @@ export function CashFlowEntriesTable({
           </div>
         )}
 
-        {!isLoading && (isTodayEmpty || filteredItems.length === 0) && (
-          <EmptyState
-            icon={Receipt}
-            title={
-              isTodayEmpty
-                ? "Nenhum caixa aberto hoje."
-                : "Nenhuma movimentação encontrada."
-            }
-            description={
-              isTodayEmpty
-                ? "Abra o caixa para começar a lançar."
-                : "Ajuste a busca ou os filtros aplicados."
-            }
-          />
-        )}
+        {!isLoading &&
+          (isNeverOpenedToday ||
+            isClosedToday ||
+            filteredItems.length === 0) && (
+            <EmptyState
+              icon={Receipt}
+              title={
+                isNeverOpenedToday
+                  ? "Nenhum caixa aberto hoje."
+                  : isClosedToday
+                    ? "Nenhum lançamento hoje."
+                    : "Nenhuma movimentação encontrada."
+              }
+              description={
+                isNeverOpenedToday
+                  ? "Abra o caixa para começar a lançar."
+                  : isClosedToday
+                    ? "O caixa de hoje já foi fechado."
+                    : "Ajuste a busca ou os filtros aplicados."
+              }
+            />
+          )}
 
-        {!isLoading && filteredItems.length > 0 && (
+        {!isLoading && !isClosedToday && filteredItems.length > 0 && (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Hora</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Paciente / Justificativa</TableHead>
+                  <TableHead>Descrição</TableHead>
                   <TableHead>Forma</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -194,10 +197,11 @@ export function CashFlowEntriesTable({
                   return (
                     <TableRow
                       key={entry.id}
-                      className="hover:bg-muted/50 h-16 transition-colors duration-200"
+                      className="hover:bg-muted/50 h-16 cursor-pointer transition-shadow hover:shadow-[inset_3px_0_0_0_var(--primary)]"
+                      onClick={() => setSelectedEntry(entry)}
                     >
                       <TableCell className="text-muted-foreground">
-                        {formatDateTimeBR(entry.occurredAt)}
+                        {formatTimeBR(entry.occurredAt)}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-1">
@@ -217,22 +221,7 @@ export function CashFlowEntriesTable({
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor:
-                                categoryById.get(entry.categoryId)?.color ??
-                                "#64748B",
-                            }}
-                          />
-                          {categoryById.get(entry.categoryId)?.name ?? "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {entry.type === "IN"
-                          ? (entry.patientName ?? "—")
-                          : (entry.withdrawalReason ?? "—")}
+                        {describeEntry(entry)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
@@ -242,38 +231,14 @@ export function CashFlowEntriesTable({
                       </TableCell>
                       <TableCell
                         className={
-                          entry.type === "IN"
-                            ? "text-base font-semibold text-green-600 dark:text-green-500"
-                            : "text-destructive text-base font-semibold"
+                          "text-right text-base font-semibold " +
+                          (entry.type === "IN"
+                            ? "text-green-600 dark:text-green-500"
+                            : "text-destructive")
                         }
                       >
                         {entry.type === "IN" ? "+" : "-"}
                         {formatCurrencyBRL(entry.amount)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {entry.createdByUserName}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {canReverse &&
-                          !entry.isReversed &&
-                          !entry.reversalOfEntryId && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Ações</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  onClick={() => setReversingEntryId(entry.id)}
-                                >
-                                  Estornar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
                       </TableCell>
                     </TableRow>
                   );
@@ -284,10 +249,11 @@ export function CashFlowEntriesTable({
         )}
       </CardContent>
 
-      <ReverseEntryDialog
-        entryId={reversingEntryId}
-        open={reversingEntryId !== null}
-        onOpenChange={(open) => !open && setReversingEntryId(null)}
+      <CashFlowEntryDetailDrawer
+        entry={selectedEntry}
+        open={selectedEntry !== null}
+        onOpenChange={(open) => !open && setSelectedEntry(null)}
+        canReverse={canReverse}
       />
     </Card>
   );

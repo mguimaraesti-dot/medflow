@@ -55,6 +55,7 @@ export async function getTodayCashRegisterUseCase(
       totalIn: new Prisma.Decimal(sums.totalIn),
       totalOut: new Prisma.Decimal(sums.totalOut),
       expectedCashAmount,
+      cashIn: new Prisma.Decimal(cashSums.totalIn),
     };
   }
 

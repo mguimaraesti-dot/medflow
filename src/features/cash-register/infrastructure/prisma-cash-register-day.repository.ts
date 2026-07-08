@@ -30,6 +30,9 @@ function toDomainDay(row: RowWithOpenedBy): CashRegisterDay {
     ...day,
     status: day.status as CashRegisterDay["status"],
     openedByUserName: openedBy.name,
+    // Não existe coluna pra isso — só o use case de "hoje" populado ao
+    // vivo enquanto OPEN (ver comentário no domínio).
+    cashIn: null,
   };
 }
 

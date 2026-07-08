@@ -7,6 +7,7 @@ import {
   SheetTitle,
 } from "@/shared/ui/sheet";
 import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
+import { Field } from "@/shared/components/detail-field";
 import type { SafeMovementResponseDTO } from "../application/dtos/safe-movement.response-dto";
 import { describeMovement, isMovementIn } from "./safe-movement-display";
 
@@ -18,15 +19,6 @@ function formatLocalDate(value: string | Date): string {
     month: "2-digit",
     year: "numeric",
   }).format(date);
-}
-
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="text-sm">{value}</div>
-    </div>
-  );
 }
 
 export function SafeMovementDetailDrawer({

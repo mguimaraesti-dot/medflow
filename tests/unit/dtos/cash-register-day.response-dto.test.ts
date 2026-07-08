@@ -13,6 +13,7 @@ function buildDay(overrides: Partial<CashRegisterDay> = {}): CashRegisterDay {
     totalIn: null,
     totalOut: null,
     closingBalance: null,
+    cashIn: null,
     openedByUserId: "user-1",
     openedByUserName: "Maria Guimarães",
     openedAt: new Date("2026-07-03T08:00:00Z"),
@@ -49,6 +50,14 @@ describe("toCashRegisterDayResponseDTO", () => {
     expect(dto.totalIn).toBeNull();
     expect(dto.totalOut).toBeNull();
     expect(dto.closingBalance).toBeNull();
+  });
+
+  it("serializa cashIn quando populado ao vivo (caixa OPEN)", () => {
+    const dto = toCashRegisterDayResponseDTO(
+      buildDay({ cashIn: new Prisma.Decimal("80") }),
+    );
+
+    expect(dto.cashIn).toBe("80.00");
   });
 
   it("serializa totais quando o caixa está fechado", () => {

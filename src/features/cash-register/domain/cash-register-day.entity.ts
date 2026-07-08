@@ -25,6 +25,14 @@ export interface CashRegisterDay {
   totalIn: Prisma.Decimal | null;
   totalOut: Prisma.Decimal | null;
   closingBalance: Prisma.Decimal | null;
+  /**
+   * Entradas só em dinheiro — transiente, sem coluna no banco. Só é
+   * populado ao vivo enquanto `status === "OPEN"` (mesmo tratamento já
+   * dado a `expectedCashAmount`), pro modal de fechamento poder mostrar
+   * "Entradas em Dinheiro" x "Entradas PIX" antes de fechar. Sempre
+   * `null` fora desse caso.
+   */
+  cashIn: Prisma.Decimal | null;
 
   openedByUserId: string;
   /** Denormalizado só pra exibição (card "Saldo Atual") — via join na infraestrutura. */

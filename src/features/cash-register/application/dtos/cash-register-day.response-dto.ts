@@ -15,6 +15,8 @@ export interface CashRegisterDayResponseDTO {
   totalIn: string | null;
   totalOut: string | null;
   closingBalance: string | null;
+  /** Só populado ao vivo enquanto o caixa está `OPEN` (ver `CashRegisterDay["cashIn"]`). */
+  cashIn: string | null;
   openedByUserId: string;
   openedByUserName: string;
   openedAt: Date;
@@ -47,6 +49,7 @@ export function toCashRegisterDayResponseDTO(
     totalIn: toMoneyString(day.totalIn),
     totalOut: toMoneyString(day.totalOut),
     closingBalance: toMoneyString(day.closingBalance),
+    cashIn: toMoneyString(day.cashIn),
     openedByUserId: day.openedByUserId,
     openedByUserName: day.openedByUserName,
     openedAt: day.openedAt,

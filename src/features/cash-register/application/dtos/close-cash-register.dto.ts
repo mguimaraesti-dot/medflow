@@ -2,8 +2,8 @@ import { z } from "zod";
 import { shortTextSchema } from "@/shared/lib/validators";
 
 /**
- * Motor de Tesouraria (ADR 2.8): fechar o caixa não fecha mais direto —
- * a secretária presta contas do dinheiro contado; `expectedCashAmount`/
+ * Fechar o caixa é imediato (`CLOSED`, sem estado intermediário) — a
+ * secretária presta contas do dinheiro contado; `expectedCashAmount`/
  * `difference` são sempre calculados no backend, nunca aceitos do
  * cliente.
  */

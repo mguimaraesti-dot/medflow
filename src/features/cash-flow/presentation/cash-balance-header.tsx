@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import {
   openCashRegisterSchema,
   type OpenCashRegisterInput,
@@ -30,10 +31,15 @@ export function CashBalanceHeader({
   canOpen,
   canClose,
   canReopen,
+  canCreateEntry,
+  onSelectType,
 }: {
   canOpen: boolean;
   canClose: boolean;
   canReopen: boolean;
+  canCreateEntry: boolean;
+  /** Atalho pro formulário (sempre visível, mais abaixo) — não abre um modal novo, só rola e foca (Refinamento PDV). */
+  onSelectType: (type: "IN" | "OUT") => void;
 }) {
   const { data: today, isLoading } = useCashRegisterToday();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -110,12 +116,12 @@ export function CashBalanceHeader({
   const resultToday = (
     Number(today.totalIn ?? "0") - Number(today.totalOut ?? "0")
   ).toFixed(2);
-  const currentBalance =
-    today.status === "OPEN"
-      ? (Number(today.openingBalance) + Number(resultToday)).toFixed(2)
-      : (today.closingBalance ?? today.openingBalance);
-
   const isOpen = today.status === "OPEN";
+  // Fechado, a tela "zera" (PDV) — o saldo real de fechamento continua
+  // disponível no Histórico e no card do Dashboard, só não repete aqui.
+  const currentBalance = isOpen
+    ? (Number(today.openingBalance) + Number(resultToday)).toFixed(2)
+    : "0";
 
   return (
     <Card className="rounded-2xl shadow-sm">
@@ -145,6 +151,29 @@ export function CashBalanceHeader({
             </p>
           </div>
 
+          {isOpen && (
+            <>
+              <Button
+                type="button"
+                disabled={!canCreateEntry}
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => onSelectType("IN")}
+              >
+                <ArrowDownCircle className="h-4 w-4" />
+                Registrar Entrada
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!canCreateEntry}
+                className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onSelectType("OUT")}
+              >
+                <ArrowUpCircle className="h-4 w-4" />
+                Registrar Saída
+              </Button>
+            </>
+          )}
           {isOpen && <CloseRegisterDialog disabled={!canClose} />}
           {today.status === "CLOSED" && canReopen && (
             <ReopenRegisterDialog cashRegisterDayId={today.id} />

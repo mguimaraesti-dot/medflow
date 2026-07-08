@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowDownCircle, ArrowUpCircle, Loader2 } from "lucide-react";
@@ -51,10 +57,19 @@ const emptyFormValues: CashFlowEntryFormValues = {
   withdrawalReason: "",
 };
 
-export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
+/** Exposto pro card do topo (`CashBalanceHeader`) poder direcionar pro tipo certo sem abrir um modal separado — mantém o fluxo de digitação rápida (Enter pra salvar, campo Valor limpa e refoca sozinho). */
+export interface CashFlowEntryFormHandle {
+  selectType: (type: "IN" | "OUT") => void;
+}
+
+export const CashFlowEntryForm = forwardRef<
+  CashFlowEntryFormHandle,
+  { disabled: boolean }
+>(function CashFlowEntryForm({ disabled }, ref) {
   const [serverError, setServerError] = useState<string | null>(null);
   const createCashFlowEntry = useCreateCashFlowEntry();
   const amountInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -104,6 +119,22 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setValue]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      selectType(nextType) {
+        setValue("type", nextType);
+        setValue("paymentMethodId", "");
+        containerRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        amountInputRef.current?.focus();
+      },
+    }),
+    [setValue],
+  );
+
   async function onSubmit(values: CashFlowEntryFormValues) {
     setServerError(null);
     try {
@@ -126,7 +157,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <Card className="rounded-2xl shadow-sm">
+    <Card ref={containerRef} className="rounded-2xl shadow-sm">
       <CardHeader>
         <CardTitle>Novo Lançamento</CardTitle>
       </CardHeader>
@@ -332,4 +363,4 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
       </CardContent>
     </Card>
   );
-}
+});

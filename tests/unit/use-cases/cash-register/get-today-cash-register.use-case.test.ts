@@ -56,6 +56,9 @@ describe("getTodayCashRegisterUseCase", () => {
     expect(result?.totalOut?.toFixed(2)).toBe("50.00");
     // Só espécie: 100 (abertura) + 80 - 20 - 10 (sangria) = 150.
     expect(result?.expectedCashAmount?.toFixed(2)).toBe("150.00");
+    // Entradas só em dinheiro, pro resumo do fechamento (Entradas em
+    // Dinheiro x Entradas PIX).
+    expect(result?.cashIn?.toFixed(2)).toBe("80.00");
   });
 
   it("caixa CLOSED: retorna sem chamar soma ao vivo", async () => {
