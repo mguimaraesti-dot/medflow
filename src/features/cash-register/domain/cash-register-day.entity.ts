@@ -40,6 +40,8 @@ export interface CashRegisterDay {
   openedAt: Date;
 
   closedByUserId: string | null;
+  /** Denormalizado só pra exibição ("Último fechamento" no card, quando o caixa está fechado) — via join na infraestrutura. */
+  closedByUserName: string | null;
   closedAt: Date | null;
 
   reopenedByUserId: string | null;

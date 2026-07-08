@@ -48,6 +48,16 @@ export function formatDateOnlyBR(value: string | Date): string {
   }).format(date);
 }
 
+/** Diferente de `formatDateOnlyBR`: aqui a entrada é um timestamp de verdade (ex: `closedAt`), não uma data "pura" — formata no fuso local, sem forçar UTC. */
+export function formatDateOnlyLocalBR(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
 /**
  * Data "inteligente" para a coluna Vencimento (UX spec Contas a Pagar):
  * "Hoje"/"Amanhã" perto, "Há N dias" no passado, "20 Jul" caso contrário

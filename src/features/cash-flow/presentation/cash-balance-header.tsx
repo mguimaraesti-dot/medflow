@@ -13,7 +13,11 @@ import { useOpenCashRegister } from "@/features/cash-register/presentation/use-o
 import { CloseRegisterDialog } from "@/features/cash-register/presentation/close-register-dialog";
 import { ReopenRegisterDialog } from "@/features/cash-register/presentation/reopen-register-dialog";
 import { ApiError } from "@/shared/lib/api-client";
-import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyLocalBR,
+  formatTimeBR,
+} from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -144,11 +148,24 @@ export function CashBalanceHeader({
               />
               {isOpen ? "Caixa Aberto" : "Caixa Fechado"}
             </span>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Aberto hoje às {formatTimeBR(today.openedAt)}
-              <br />
-              por {today.openedByUserName}
-            </p>
+            {isOpen ? (
+              <p className="text-muted-foreground mt-1 text-sm">
+                Aberto hoje às {formatTimeBR(today.openedAt)}
+                <br />
+                por {today.openedByUserName}
+              </p>
+            ) : (
+              today.closedAt && (
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Último fechamento
+                  <br />
+                  {formatDateOnlyLocalBR(today.closedAt)} •{" "}
+                  {formatTimeBR(today.closedAt)}
+                  <br />
+                  por {today.closedByUserName}
+                </p>
+              )
+            )}
           </div>
 
           {isOpen && (

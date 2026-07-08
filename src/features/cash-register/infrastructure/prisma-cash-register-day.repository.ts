@@ -11,25 +11,30 @@ import type {
 } from "../domain/cash-register-day.repository";
 import type { CashRegisterDay } from "../domain/cash-register-day.entity";
 
-const OPENED_BY_INCLUDE = { openedBy: { select: { name: true } } } as const;
+const OPENED_BY_INCLUDE = {
+  openedBy: { select: { name: true } },
+  closedBy: { select: { name: true } },
+} as const;
 
 type RowWithOpenedBy = Prisma.CashRegisterDayGetPayload<{
   include: typeof OPENED_BY_INCLUDE;
 }>;
 
 /**
- * Achata `row.openedBy.name` no campo denormalizado do domínio — nunca
- * expõe o tipo do Prisma. O cast de `status` é seguro: nenhum código
- * novo escreve mais `PENDING_CONFERENCE` (dupla conferência removida);
- * o enum do Postgres mantém o valor só por compatibilidade com
- * registros históricos, já migrados para `CLOSED`.
+ * Achata `row.openedBy.name`/`row.closedBy.name` nos campos
+ * denormalizados do domínio — nunca expõe o tipo do Prisma. O cast de
+ * `status` é seguro: nenhum código novo escreve mais
+ * `PENDING_CONFERENCE` (dupla conferência removida); o enum do Postgres
+ * mantém o valor só por compatibilidade com registros históricos, já
+ * migrados para `CLOSED`.
  */
 function toDomainDay(row: RowWithOpenedBy): CashRegisterDay {
-  const { openedBy, ...day } = row;
+  const { openedBy, closedBy, ...day } = row;
   return {
     ...day,
     status: day.status as CashRegisterDay["status"],
     openedByUserName: openedBy.name,
+    closedByUserName: closedBy?.name ?? null,
     // Não existe coluna pra isso — só o use case de "hoje" populado ao
     // vivo enquanto OPEN (ver comentário no domínio).
     cashIn: null,

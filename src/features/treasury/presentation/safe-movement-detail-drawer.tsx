@@ -6,20 +6,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/shared/ui/sheet";
-import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyLocalBR,
+  formatTimeBR,
+} from "@/shared/lib/format";
 import { Field } from "@/shared/components/detail-field";
 import type { SafeMovementResponseDTO } from "../application/dtos/safe-movement.response-dto";
 import { describeMovement, isMovementIn } from "./safe-movement-display";
-
-/** Data no fuso local (diferente de `formatDateOnlyBR`, que força UTC — pensado pra campos de "só data", não timestamps). */
-function formatLocalDate(value: string | Date): string {
-  const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
 
 export function SafeMovementDetailDrawer({
   movement,
@@ -42,7 +36,10 @@ export function SafeMovementDetailDrawer({
         {movement && (
           <div className="space-y-6 px-4 pb-4">
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Data" value={formatLocalDate(movement.createdAt)} />
+              <Field
+                label="Data"
+                value={formatDateOnlyLocalBR(movement.createdAt)}
+              />
               <Field label="Hora" value={formatTimeBR(movement.createdAt)} />
               <Field label="Usuário" value={movement.performedByUserName} />
               <Field

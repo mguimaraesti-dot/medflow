@@ -18,6 +18,7 @@ function buildDay(overrides: Partial<CashRegisterDay> = {}): CashRegisterDay {
     openedByUserName: "Maria Guimarães",
     openedAt: new Date("2026-07-03T08:00:00Z"),
     closedByUserId: null,
+    closedByUserName: null,
     closedAt: null,
     reopenedByUserId: null,
     reopenedAt: null,
@@ -68,6 +69,7 @@ describe("toCashRegisterDayResponseDTO", () => {
         totalOut: new Prisma.Decimal("50"),
         closingBalance: new Prisma.Decimal("250"),
         closedByUserId: "user-1",
+        closedByUserName: "Marcelo Guimarães",
         closedAt: new Date("2026-07-03T20:00:00Z"),
       }),
     );
@@ -75,6 +77,7 @@ describe("toCashRegisterDayResponseDTO", () => {
     expect(dto.totalIn).toBe("200.00");
     expect(dto.totalOut).toBe("50.00");
     expect(dto.closingBalance).toBe("250.00");
+    expect(dto.closedByUserName).toBe("Marcelo Guimarães");
   });
 
   it("serializa expectedCashAmount/countedAmount/difference/closureNote quando CLOSED", () => {

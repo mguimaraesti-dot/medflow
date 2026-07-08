@@ -22,6 +22,13 @@ import {
   DialogTrigger,
 } from "@/shared/ui/dialog";
 
+/**
+ * Reabre o caixa fechado de hoje (sempre com justificativa obrigatória
+ * — regra inalterada). O texto visível diz "Abrir Caixa" em vez de
+ * "Reabrir Caixa" (Refinamento UX): pro operador, é só o próximo passo
+ * natural do dia, não a correção de um erro. O mecanismo por baixo
+ * (permissão, auditoria, justificativa) continua exatamente o mesmo.
+ */
 export function ReopenRegisterDialog({
   cashRegisterDayId,
 }: {
@@ -50,7 +57,7 @@ export function ReopenRegisterDialog({
       setServerError(
         error instanceof ApiError
           ? error.message
-          : "Não foi possível reabrir o caixa.",
+          : "Não foi possível abrir o caixa.",
       );
     }
   }
@@ -64,14 +71,12 @@ export function ReopenRegisterDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" variant="outline">
-          Reabrir caixa
-        </Button>
+        <Button type="button">Abrir Caixa</Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <DialogHeader>
-            <DialogTitle>Reabrir caixa</DialogTitle>
+            <DialogTitle>Abrir Caixa</DialogTitle>
             <DialogDescription>
               Informe o motivo da reabertura. Esta ação é registrada em
               auditoria.
@@ -96,9 +101,7 @@ export function ReopenRegisterDialog({
 
           <DialogFooter>
             <Button type="submit" disabled={reopenCashRegister.isPending}>
-              {reopenCashRegister.isPending
-                ? "Reabrindo..."
-                : "Confirmar reabertura"}
+              {reopenCashRegister.isPending ? "Abrindo..." : "Abrir Caixa"}
             </Button>
           </DialogFooter>
         </form>

@@ -21,6 +21,7 @@ export interface CashRegisterDayResponseDTO {
   openedByUserName: string;
   openedAt: Date;
   closedByUserId: string | null;
+  closedByUserName: string | null;
   closedAt: Date | null;
   reopenedByUserId: string | null;
   reopenedAt: Date | null;
@@ -54,6 +55,7 @@ export function toCashRegisterDayResponseDTO(
     openedByUserName: day.openedByUserName,
     openedAt: day.openedAt,
     closedByUserId: day.closedByUserId,
+    closedByUserName: day.closedByUserName,
     closedAt: day.closedAt,
     reopenedByUserId: day.reopenedByUserId,
     reopenedAt: day.reopenedAt,
