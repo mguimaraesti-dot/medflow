@@ -153,6 +153,18 @@ export class SupplierHasLinkedRecordsError extends DomainError {
   }
 }
 
+export class CategoryHasLinkedRecordsError extends DomainError {
+  readonly code = "CATEGORY_HAS_LINKED_RECORDS";
+  readonly httpStatus = 409;
+
+  constructor(categoryId: string, linkedRecordsCount: number) {
+    super(
+      "Esta categoria não pode ser excluída porque existem contas vinculadas.",
+      { categoryId, linkedRecordsCount },
+    );
+  }
+}
+
 // ---------------------------------------------------------------
 // Motor de Tesouraria (docs/decisions/adr-tesouraria.md)
 // ---------------------------------------------------------------

@@ -1,19 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { Tags } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search, Tags } from "lucide-react";
 import { toast } from "sonner";
 import { useCategories } from "./use-categories";
 import { useCreateCategory } from "./use-create-category";
-import { getCategoryIcon } from "@/shared/lib/lucide-icon-map";
+import { useDeleteCategory } from "./use-delete-category";
+import { useCategoryFormState } from "./use-category-form-state";
+import { CategoryColorPicker } from "./category-color-picker";
+import { CategoriesTable } from "./categories-table";
+import { CategoryEditDialog } from "./category-edit-dialog";
+import { CategoryDeleteBlockedDialog } from "./category-delete-blocked-dialog";
 import { ApiError } from "@/shared/lib/api-client";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { EmptyState } from "@/shared/components/empty-state";
-import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Card, CardContent } from "@/shared/ui/card";
 import {
   Select,
   SelectContent,
@@ -21,40 +26,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/shared/ui/table";
 import type { CategoryType } from "../domain/category.entity";
-
-const COLOR_PRESETS = [
-  "#16A34A",
-  "#0EA5E9",
-  "#6366F1",
-  "#DC2626",
-  "#F59E0B",
-  "#7C3AED",
-  "#DB2777",
-  "#64748B",
-];
+import type { CategoryResponseDTO } from "../application/dtos/category.response-dto";
 
 export function CategoriesScreen({ canCreate }: { canCreate: boolean }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<CategoryType>("OUT");
-  const [color, setColor] = useState(COLOR_PRESETS[0]);
   const { data: categories, isLoading } = useCategories();
   const createCategory = useCreateCategory();
+  const deleteCategory = useDeleteCategory();
+  const createForm = useCategoryFormState();
+
+  const [search, setSearch] = useState("");
+  const [editingTarget, setEditingTarget] =
+    useState<CategoryResponseDTO | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CategoryResponseDTO | null>(
+    null,
+  );
+  const [blockedTarget, setBlockedTarget] =
+    useState<CategoryResponseDTO | null>(null);
+
+  const filteredCategories = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return categories ?? [];
+    return (categories ?? []).filter((category) => {
+      const typeLabel = category.type === "IN" ? "entrada" : "saída";
+      return (
+        category.name.toLowerCase().includes(term) || typeLabel.includes(term)
+      );
+    });
+  }, [categories, search]);
 
   async function handleCreate() {
     try {
-      await createCategory.mutateAsync({ name, type, color });
-      setName("");
-      setColor(COLOR_PRESETS[0]);
-      toast.success("Categoria cadastrada.");
+      await createCategory.mutateAsync({
+        name: createForm.name.trim(),
+        type: createForm.type,
+        color: createForm.color,
+      });
+      createForm.reset();
+      toast.success("Categoria cadastrada com sucesso.");
     } catch (error) {
       toast.error(
         error instanceof ApiError
@@ -64,28 +73,62 @@ export function CategoriesScreen({ canCreate }: { canCreate: boolean }) {
     }
   }
 
+  function handleDeleteRequest(category: CategoryResponseDTO) {
+    if (category.linkedRecordsCount > 0) {
+      setBlockedTarget(category);
+      return;
+    }
+    setDeleteTarget(category);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await deleteCategory.mutateAsync(deleteTarget.id);
+      toast.success("Categoria excluída com sucesso.");
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Não foi possível excluir a categoria.",
+      );
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {canCreate && (
         <Card>
-          <CardHeader>
-            <CardTitle>Nova categoria</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-[1fr_140px_auto] sm:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="new-category-name">Nome</Label>
+          <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="w-full space-y-2 sm:max-w-xs">
+                <Label htmlFor="new-category-name">
+                  Nome da categoria
+                  <span className="text-destructive" aria-hidden>
+                    {" "}
+                    *
+                  </span>
+                </Label>
                 <Input
                   id="new-category-name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  value={createForm.name}
+                  onChange={(event) => createForm.setName(event.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-category-type">Tipo</Label>
+              <div className="w-full space-y-2 sm:w-[160px]">
+                <Label htmlFor="new-category-type">
+                  Tipo
+                  <span className="text-destructive" aria-hidden>
+                    {" "}
+                    *
+                  </span>
+                </Label>
                 <Select
-                  value={type}
-                  onValueChange={(value) => setType(value as CategoryType)}
+                  value={createForm.type}
+                  onValueChange={(value) =>
+                    createForm.setType(value as CategoryType)
+                  }
                 >
                   <SelectTrigger id="new-category-type" className="w-full">
                     <SelectValue />
@@ -96,40 +139,44 @@ export function CategoriesScreen({ canCreate }: { canCreate: boolean }) {
                   </SelectContent>
                 </Select>
               </div>
-              <Button
-                type="button"
-                disabled={!name.trim() || createCategory.isPending}
-                onClick={handleCreate}
-              >
-                {createCategory.isPending ? "Salvando..." : "Cadastrar"}
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <Label>Cor</Label>
-              <div className="flex flex-wrap gap-2">
-                {COLOR_PRESETS.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    aria-label={`Cor ${preset}`}
-                    onClick={() => setColor(preset)}
-                    className={
-                      "h-7 w-7 rounded-full transition-shadow " +
-                      (color === preset ? "ring-ring ring-2 ring-offset-2" : "")
-                    }
-                    style={{ backgroundColor: preset }}
-                  />
-                ))}
+              <div className="space-y-2">
+                <Label>
+                  Cor
+                  <span className="text-destructive" aria-hidden>
+                    {" "}
+                    *
+                  </span>
+                </Label>
+                <CategoryColorPicker
+                  value={createForm.color}
+                  onChange={createForm.setColor}
+                  idPrefix="new-category"
+                />
               </div>
             </div>
+            <Button
+              type="button"
+              disabled={!createForm.isValid || createCategory.isPending}
+              onClick={handleCreate}
+              className="shrink-0"
+            >
+              {createCategory.isPending ? "Salvando..." : "Cadastrar"}
+            </Button>
           </CardContent>
         </Card>
       )}
 
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Input
+          placeholder="Buscar categoria..."
+          className="pl-9"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle>Categorias</CardTitle>
-        </CardHeader>
         <CardContent>
           {isLoading && (
             <div className="space-y-2">
@@ -138,53 +185,55 @@ export function CategoriesScreen({ canCreate }: { canCreate: boolean }) {
             </div>
           )}
 
-          {!isLoading && categories && categories.length === 0 && (
+          {!isLoading && filteredCategories.length === 0 && (
             <EmptyState
               icon={Tags}
-              title="Nenhuma categoria cadastrada."
-              description="As categorias cadastradas aparecem aqui."
+              title={
+                search.trim()
+                  ? "Nenhuma categoria encontrada."
+                  : "Nenhuma categoria cadastrada."
+              }
+              description={
+                search.trim()
+                  ? "Tente buscar por outro nome ou tipo."
+                  : 'Clique em "Cadastrar" para criar sua primeira categoria.'
+              }
             />
           )}
 
-          {!isLoading && categories && categories.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => {
-                  const Icon = getCategoryIcon(category.icon);
-                  return (
-                    <TableRow key={category.id}>
-                      <TableCell>
-                        <span className="flex items-center gap-2">
-                          <Icon
-                            className="h-4 w-4"
-                            style={{ color: category.color }}
-                          />
-                          {category.name}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            category.type === "IN" ? "default" : "secondary"
-                          }
-                        >
-                          {category.type === "IN" ? "Entrada" : "Saída"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+          {!isLoading && filteredCategories.length > 0 && (
+            <CategoriesTable
+              categories={filteredCategories}
+              canEdit={canCreate}
+              onEdit={setEditingTarget}
+              onDeleteRequest={handleDeleteRequest}
+            />
           )}
         </CardContent>
       </Card>
+
+      <CategoryEditDialog
+        category={editingTarget}
+        open={editingTarget !== null}
+        onOpenChange={(open) => !open && setEditingTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Excluir Categoria"
+        description="Deseja realmente excluir esta categoria?"
+        confirmLabel="Excluir Categoria"
+        pendingLabel="Excluindo..."
+        isPending={deleteCategory.isPending}
+        onConfirm={handleConfirmDelete}
+      />
+
+      <CategoryDeleteBlockedDialog
+        open={blockedTarget !== null}
+        onOpenChange={(open) => !open && setBlockedTarget(null)}
+        linkedRecordsCount={blockedTarget?.linkedRecordsCount ?? 0}
+      />
     </div>
   );
 }

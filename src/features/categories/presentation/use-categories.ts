@@ -2,13 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api-client";
-import type { Category, CategoryType } from "../domain/category.entity";
+import type { CategoryType } from "../domain/category.entity";
+import type { CategoryResponseDTO } from "../application/dtos/category.response-dto";
 
 export function useCategories(type?: CategoryType) {
   return useQuery({
     queryKey: ["categories", type ?? "all"],
     queryFn: () =>
-      apiFetch<Category[]>(
+      apiFetch<CategoryResponseDTO[]>(
         type ? `/api/categories?type=${type}` : "/api/categories",
       ),
   });

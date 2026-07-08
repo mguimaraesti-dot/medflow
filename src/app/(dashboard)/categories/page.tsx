@@ -8,10 +8,5 @@ export default async function CategoriesPage() {
     PERMISSIONS.PAYABLE_CREATE,
   );
 
-  return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Categorias</h1>
-      <CategoriesScreen canCreate={canCreate} />
-    </div>
-  );
+  return <CategoriesScreen canCreate={canCreate} />;
 }
