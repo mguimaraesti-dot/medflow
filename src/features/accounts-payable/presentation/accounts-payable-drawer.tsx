@@ -263,21 +263,22 @@ export function AccountsPayableDrawer({
                         label="Confirmado por"
                         value={paymentConfirmation?.userName ?? "—"}
                       />
+                      <Field
+                        label="Origem do Pagamento"
+                        value={
+                          payable.paymentOrigin === "COFRE"
+                            ? "🟢 Cofre"
+                            : "🏦 Banco"
+                        }
+                      />
                     </div>
 
                     {paymentConfirmation && (
                       <div className="space-y-2 rounded-lg border p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="flex items-center gap-1.5 text-sm font-medium">
-                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
-                            Confirmado por {paymentConfirmation.userName}
-                          </p>
-                          <Badge variant="outline">
-                            {payable.paymentOrigin === "COFRE"
-                              ? "🟢 Cofre"
-                              : "🏦 Banco"}
-                          </Badge>
-                        </div>
+                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                          Confirmado por {paymentConfirmation.userName}
+                        </p>
                         <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
                           <span>Origem: {paymentConfirmation.source}</span>
                           <span>

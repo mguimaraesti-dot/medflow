@@ -57,6 +57,26 @@ describe("toAccountsPayableResponseDTO", () => {
     expect(dto.displayStatus).toBe("PENDING");
   });
 
+  it("permanece PENDING no próprio dia do vencimento, mesmo mais tarde no dia (nunca compara horário)", () => {
+    const referenceDate = new Date("2026-07-05T23:59:00.000Z");
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({ dueDate: new Date("2026-07-05T00:00:00.000Z") }),
+      referenceDate,
+    );
+
+    expect(dto.displayStatus).toBe("PENDING");
+  });
+
+  it("vira OVERDUE só a partir do dia seguinte ao vencimento", () => {
+    const referenceDate = new Date("2026-07-06T00:00:01.000Z");
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({ dueDate: new Date("2026-07-05T00:00:00.000Z") }),
+      referenceDate,
+    );
+
+    expect(dto.displayStatus).toBe("OVERDUE");
+  });
+
   it("PAID nunca vira OVERDUE, mesmo com vencimento no passado", () => {
     const referenceDate = new Date("2026-07-10T00:00:00.000Z");
     const dto = toAccountsPayableResponseDTO(

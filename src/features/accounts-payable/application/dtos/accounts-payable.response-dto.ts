@@ -43,8 +43,14 @@ export function toAccountsPayableResponseDTO(
   payable: AccountsPayable,
   referenceDate: Date = new Date(),
 ): AccountsPayableResponseDTO {
+  // Compara só a data (UTC), nunca o horário — senão uma conta com
+  // vencimento hoje vira "Vencida" assim que passa da meia-noite UTC
+  // (bem antes do fim do dia no horário de Brasília). "Vencida" só a
+  // partir do dia seguinte ao vencimento.
+  const referenceDay = new Date(referenceDate);
+  referenceDay.setUTCHours(0, 0, 0, 0);
   const displayStatus: PayableStatus =
-    payable.status === "PENDING" && payable.dueDate < referenceDate
+    payable.status === "PENDING" && payable.dueDate < referenceDay
       ? "OVERDUE"
       : payable.status;
 
