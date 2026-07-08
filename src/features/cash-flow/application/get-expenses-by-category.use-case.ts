@@ -21,9 +21,8 @@ interface Deps {
 
 /**
  * Despesas por categoria, filtrável por período — Relatório de Sprint 3
- * (Product Vision). Mesmo estilo de agregação em código do
- * `getCashFlowInsightsUseCase` (Coding Standards item 15), mas
- * `type: "OUT"` (despesa) e período arbitrário em vez de fixo em "hoje".
+ * (Product Vision). Agregação em código (Coding Standards item 15) sobre
+ * `type: "OUT"` (despesa), período arbitrário.
  */
 export async function getExpensesByCategoryUseCase(
   input: GetExpensesByCategoryInput,

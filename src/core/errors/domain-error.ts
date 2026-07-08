@@ -33,11 +33,6 @@ export class NotFoundError extends DomainError {
   }
 }
 
-export class ValidationError extends DomainError {
-  readonly code = "VALIDATION_ERROR";
-  readonly httpStatus = 400;
-}
-
 export class ForbiddenError extends DomainError {
   readonly code = "FORBIDDEN";
   readonly httpStatus = 403;
@@ -45,11 +40,6 @@ export class ForbiddenError extends DomainError {
   constructor(action: string) {
     super(`Você não tem permissão para: ${action}`, { action });
   }
-}
-
-export class ConflictError extends DomainError {
-  readonly code = "CONFLICT";
-  readonly httpStatus = 409;
 }
 
 // ---------------------------------------------------------------
@@ -98,15 +88,6 @@ export class DuplicateReversalError extends DomainError {
     super("Este lançamento já foi estornado anteriormente.", {
       cashFlowEntryId,
     });
-  }
-}
-
-export class CashRegisterReopenReasonRequiredError extends DomainError {
-  readonly code = "REOPEN_REASON_REQUIRED";
-  readonly httpStatus = 400;
-
-  constructor() {
-    super("É obrigatório informar o motivo da reabertura do caixa.");
   }
 }
 
