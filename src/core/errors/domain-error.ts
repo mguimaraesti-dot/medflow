@@ -160,6 +160,18 @@ export class RecurringBillAlreadyEndedError extends DomainError {
   }
 }
 
+export class SupplierHasLinkedRecordsError extends DomainError {
+  readonly code = "SUPPLIER_HAS_LINKED_RECORDS";
+  readonly httpStatus = 409;
+
+  constructor(supplierId: string) {
+    super(
+      "Este beneficiário possui contas vinculadas e não pode ser excluído.",
+      { supplierId },
+    );
+  }
+}
+
 // ---------------------------------------------------------------
 // Motor de Tesouraria (docs/decisions/adr-tesouraria.md)
 // ---------------------------------------------------------------

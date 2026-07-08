@@ -47,7 +47,11 @@ export function SupplierCombobox({
   const { data: suppliers } = useSuppliers();
   const createSupplier = useCreateSupplier();
 
+  // Um beneficiário já vinculado a um registro antigo (ex: conta paga)
+  // pode ter sido inativado depois — ainda precisa aparecer pelo nome
+  // aqui se já for o selecionado, só não deve poder ser escolhido de novo.
   const selected = suppliers?.find((supplier) => supplier.id === value);
+  const selectableSuppliers = suppliers?.filter((supplier) => supplier.active);
 
   async function handleCreate() {
     setError(null);
@@ -102,7 +106,7 @@ export function SupplierCombobox({
             <CommandList>
               <CommandEmpty>Nenhum beneficiário encontrado.</CommandEmpty>
               <CommandGroup>
-                {suppliers?.map((supplier) => (
+                {selectableSuppliers?.map((supplier) => (
                   <CommandItem
                     key={supplier.id}
                     value={supplier.name}

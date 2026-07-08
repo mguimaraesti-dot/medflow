@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { Separator } from "@/shared/ui/separator";
 import { Textarea } from "@/shared/ui/textarea";
 import {
   Select,
@@ -12,6 +13,16 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import type { SupplierPersonType } from "@/features/suppliers/domain/supplier.entity";
+
+/** Marca visual de campo obrigatório — não espera o erro de validação aparecer pra avisar (mesmo padrão de `cash-flow-entry-form.tsx`). */
+function RequiredMark() {
+  return (
+    <span className="text-destructive" aria-hidden>
+      {" "}
+      *
+    </span>
+  );
+}
 
 function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");
@@ -45,6 +56,16 @@ function formatPhone(rawValue: string): string {
     .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
 }
 
+/** Usado tanto pra popular o formulário na 1ª renderização (`useSupplierFormState(initial)`) quanto pra repopular via `reset(values)` — ex: Drawer trocando de "Novo" pra "Editar"/"Duplicar" sem desmontar. */
+export interface SupplierFormValues {
+  name?: string;
+  personType?: SupplierPersonType;
+  document?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+}
+
 export interface SupplierFormState {
   name: string;
   setName: (value: string) => void;
@@ -59,26 +80,32 @@ export interface SupplierFormState {
   notes: string;
   setNotes: (value: string) => void;
   isValid: boolean;
-  reset: () => void;
+  reset: (values?: SupplierFormValues) => void;
 }
 
-export function useSupplierFormState(): SupplierFormState {
-  const [name, setName] = useState("");
-  const [personType, setPersonType] =
-    useState<SupplierPersonType>("PESSOA_JURIDICA");
-  const [document, setDocument] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [notes, setNotes] = useState("");
+export function useSupplierFormState(
+  initial?: SupplierFormValues,
+): SupplierFormState {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [personType, setPersonType] = useState<SupplierPersonType>(
+    initial?.personType ?? "PESSOA_JURIDICA",
+  );
+  const [document, setDocument] = useState(initial?.document ?? "");
+  const [phone, setPhone] = useState(initial?.phone ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
-  function reset() {
-    setName("");
-    setPersonType("PESSOA_JURIDICA");
-    setDocument("");
-    setPhone("");
-    setEmail("");
-    setNotes("");
-  }
+  // Identidade estável (sem depender de nada que mude a cada render) —
+  // permite usar `reset` na dependency array de um `useEffect` sem loop
+  // infinito (ex: SupplierDrawer repopulando ao trocar de beneficiário).
+  const reset = useCallback((values?: SupplierFormValues) => {
+    setName(values?.name ?? "");
+    setPersonType(values?.personType ?? "PESSOA_JURIDICA");
+    setDocument(values?.document ?? "");
+    setPhone(values?.phone ?? "");
+    setEmail(values?.email ?? "");
+    setNotes(values?.notes ?? "");
+  }, []);
 
   return {
     name,
@@ -107,73 +134,96 @@ export function SupplierFormFields({
   idPrefix?: string;
 }) {
   return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-name`}>Nome/Razão Social</Label>
-        <Input
-          id={`${idPrefix}-name`}
-          value={state.name}
-          onChange={(event) => state.setName(event.target.value)}
-        />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+    <div className="space-y-5">
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-semibold">Dados Principais</p>
+          <Separator className="mt-2" />
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-person-type`}>
-            Tipo do Beneficiário
+          <Label htmlFor={`${idPrefix}-name`}>
+            Nome/Razão Social
+            <RequiredMark />
           </Label>
-          <Select
-            value={state.personType}
-            onValueChange={(value) =>
-              state.setPersonType(value as SupplierPersonType)
-            }
-          >
-            <SelectTrigger id={`${idPrefix}-person-type`} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PESSOA_JURIDICA">Pessoa Jurídica</SelectItem>
-              <SelectItem value="PESSOA_FISICA">Pessoa Física</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-document`}>CPF/CNPJ (opcional)</Label>
           <Input
-            id={`${idPrefix}-document`}
-            inputMode="numeric"
-            placeholder="000.000.000-00"
-            value={state.document}
-            onChange={(event) =>
-              state.setDocument(formatDocument(event.target.value))
-            }
+            id={`${idPrefix}-name`}
+            value={state.name}
+            onChange={(event) => state.setName(event.target.value)}
           />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-person-type`}>
+              Tipo
+              <RequiredMark />
+            </Label>
+            <Select
+              value={state.personType}
+              onValueChange={(value) =>
+                state.setPersonType(value as SupplierPersonType)
+              }
+            >
+              <SelectTrigger id={`${idPrefix}-person-type`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PESSOA_JURIDICA">Pessoa Jurídica</SelectItem>
+                <SelectItem value="PESSOA_FISICA">Pessoa Física</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-document`}>CPF/CNPJ</Label>
+            <Input
+              id={`${idPrefix}-document`}
+              inputMode="numeric"
+              placeholder="000.000.000-00"
+              value={state.document}
+              onChange={(event) =>
+                state.setDocument(formatDocument(event.target.value))
+              }
+            />
+          </div>
         </div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-phone`}>Telefone</Label>
-          <Input
-            id={`${idPrefix}-phone`}
-            inputMode="numeric"
-            placeholder="(17) 99999-9999"
-            value={state.phone}
-            onChange={(event) =>
-              state.setPhone(formatPhone(event.target.value))
-            }
-          />
+
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-semibold">Contato</p>
+          <Separator className="mt-2" />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-email`}>E-mail (opcional)</Label>
-          <Input
-            id={`${idPrefix}-email`}
-            type="email"
-            value={state.email}
-            onChange={(event) => state.setEmail(event.target.value)}
-          />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-phone`}>
+              Telefone
+              <RequiredMark />
+            </Label>
+            <Input
+              id={`${idPrefix}-phone`}
+              inputMode="numeric"
+              placeholder="(17) 99999-9999"
+              value={state.phone}
+              onChange={(event) =>
+                state.setPhone(formatPhone(event.target.value))
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-email`}>E-mail</Label>
+            <Input
+              id={`${idPrefix}-email`}
+              type="email"
+              value={state.email}
+              onChange={(event) => state.setEmail(event.target.value)}
+            />
+          </div>
         </div>
       </div>
+
       <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-notes`}>Observações (opcional)</Label>
+        <Label htmlFor={`${idPrefix}-notes`}>Observações</Label>
         <Textarea
           id={`${idPrefix}-notes`}
           rows={2}
