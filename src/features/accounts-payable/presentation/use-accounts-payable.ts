@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api-client";
 import type { PaginatedResult } from "@/shared/lib/pagination";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
@@ -45,5 +45,6 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
       apiFetch<PaginatedResult<AccountsPayableResponseDTO>>(
         `/api/accounts-payable?${params.toString()}`,
       ),
+    placeholderData: keepPreviousData,
   });
 }

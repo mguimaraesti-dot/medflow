@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import {
   AlertTriangle,
   ArrowDown,
@@ -133,6 +134,8 @@ export function AccountsPayableScreen({
     setViewingTab(tab);
     setViewing(payable);
   }
+
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data: categories } = useCategories("OUT");
   const { data: suppliers } = useSuppliers();
@@ -585,7 +588,7 @@ export function AccountsPayableScreen({
           categoryId={categoryId}
           supplierId={supplierId}
           recurringOnly={recurringOnly}
-          search={search.trim() || undefined}
+          search={debouncedSearch.trim() || undefined}
           dueDateFrom={range.from}
           dueDateTo={range.to}
           visibleColumns={visibleColumns}

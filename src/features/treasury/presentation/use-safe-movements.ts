@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api-client";
 import type { PaginatedResult } from "@/shared/lib/pagination";
 import type { SafeMovementResponseDTO } from "../application/dtos/safe-movement.response-dto";
@@ -30,5 +30,6 @@ export function useSafeMovements(filter: SafeMovementsFilter) {
       apiFetch<PaginatedResult<SafeMovementResponseDTO>>(
         `/api/treasury/movements?${params.toString()}`,
       ),
+    placeholderData: keepPreviousData,
   });
 }

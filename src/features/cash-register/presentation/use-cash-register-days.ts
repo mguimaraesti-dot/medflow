@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api-client";
 import type { PaginatedResult } from "@/shared/lib/pagination";
 import type { CashRegisterDayResponseDTO } from "../application/dtos/cash-register-day.response-dto";
@@ -25,5 +25,6 @@ export function useCashRegisterDays(filter: CashRegisterDaysFilter) {
       apiFetch<PaginatedResult<CashRegisterDayResponseDTO>>(
         `/api/cash-register?${params.toString()}`,
       ),
+    placeholderData: keepPreviousData,
   });
 }
