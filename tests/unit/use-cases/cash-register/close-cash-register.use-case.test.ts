@@ -26,12 +26,12 @@ describe("closeCashRegisterUseCase", () => {
     ).rejects.toThrow(CashRegisterNotOpenError);
   });
 
-  it("fecha sem nenhuma movimentação, indo para PENDING_CONFERENCE com expectedCashAmount = abertura", async () => {
+  it("fecha direto para CLOSED sem nenhuma movimentação, com expectedCashAmount = abertura", async () => {
     const openRegister = { id: "day-1", openingBalance: "100.00" };
     const close = vi.fn().mockImplementation((id, data) => ({
       id,
       ...data,
-      status: "PENDING_CONFERENCE",
+      status: "CLOSED",
     }));
 
     const cashRegisterDayRepository = {
@@ -41,6 +41,9 @@ describe("closeCashRegisterUseCase", () => {
 
     const cashFlowEntryRepository = {
       sumCashOnlyByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
+      sumByCashRegisterDay: vi
         .fn()
         .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
     } as unknown as CashFlowEntryRepository;
@@ -66,9 +69,12 @@ describe("closeCashRegisterUseCase", () => {
         expectedCashAmount: "100.00",
         countedAmount: "100.00",
         difference: "0.00",
+        totalIn: "0.00",
+        totalOut: "0.00",
+        closingBalance: "100.00",
       }),
     );
-    expect(result.status).toBe("PENDING_CONFERENCE");
+    expect(result.status).toBe("CLOSED");
   });
 
   it("calcula expectedCashAmount = abertura + entradas em dinheiro - saídas em dinheiro - sangrias", async () => {
@@ -82,6 +88,9 @@ describe("closeCashRegisterUseCase", () => {
 
     const cashFlowEntryRepository = {
       sumCashOnlyByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "500.00", totalOut: "120.50" }),
+      sumByCashRegisterDay: vi
         .fn()
         .mockResolvedValue({ totalIn: "500.00", totalOut: "120.50" }),
     } as unknown as CashFlowEntryRepository;
@@ -122,6 +131,9 @@ describe("closeCashRegisterUseCase", () => {
 
     const cashFlowEntryRepository = {
       sumCashOnlyByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
+      sumByCashRegisterDay: vi
         .fn()
         .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
     } as unknown as CashFlowEntryRepository;

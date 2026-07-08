@@ -24,8 +24,6 @@ export const PERMISSIONS = {
   /** Excluir (soft delete) e restaurar contas — exclusivo de Administrador. */
   PAYABLE_DELETE: "payable:delete",
 
-  TREASURY_CONFIRM_HANDOFF: "treasury:confirm-handoff",
-  TREASURY_REJECT_CONFERENCE: "treasury:reject-conference",
   TREASURY_SANGRIA: "treasury:sangria",
   TREASURY_MANUAL_ADJUSTMENT: "treasury:manual-adjustment",
 
@@ -38,12 +36,15 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 /**
  * Mapeamento Role -> Permissions, conforme decidido em
- * docs/sprints/MedFlow-Sprint1-Revisada.md (US03 a US08):
- * - Secretária lança e cadastra, mas não confirma pagamento nem
- *   fecha/estorna caixa.
+ * docs/sprints/MedFlow-Sprint1-Revisada.md (US03 a US08), com o ajuste
+ * de autonomia da Secretária no ciclo do caixa (decisão explícita do
+ * usuário — dupla conferência do Motor de Tesouraria removida):
+ * - Secretária lança, cadastra, e agora também abre/fecha/reabre o
+ *   caixa sozinha (reabertura sempre com justificativa obrigatória) —
+ *   não confirma pagamento nem estorna lançamentos.
  * - Financeiro/Proprietário lançam, estornam, fecham caixa e confirmam
  *   pagamento.
- * - Admin reabre caixa e gerencia usuários.
+ * - Admin gerencia usuários e também pode reabrir o caixa.
  * - Contador só lê (relatórios, Sprint 3).
  */
 export const ROLE_PERMISSIONS: Record<
@@ -62,8 +63,6 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.PAYABLE_PAY,
     PERMISSIONS.PAYABLE_READ,
     PERMISSIONS.PAYABLE_DELETE,
-    PERMISSIONS.TREASURY_CONFIRM_HANDOFF,
-    PERMISSIONS.TREASURY_REJECT_CONFERENCE,
     PERMISSIONS.TREASURY_SANGRIA,
     PERMISSIONS.TREASURY_MANUAL_ADJUSTMENT,
     PERMISSIONS.USERS_MANAGE,
@@ -79,8 +78,6 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.PAYABLE_CREATE,
     PERMISSIONS.PAYABLE_PAY,
     PERMISSIONS.PAYABLE_READ,
-    PERMISSIONS.TREASURY_CONFIRM_HANDOFF,
-    PERMISSIONS.TREASURY_REJECT_CONFERENCE,
     PERMISSIONS.TREASURY_SANGRIA,
     PERMISSIONS.DASHBOARD_READ,
   ],
@@ -94,8 +91,6 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.PAYABLE_CREATE,
     PERMISSIONS.PAYABLE_PAY,
     PERMISSIONS.PAYABLE_READ,
-    PERMISSIONS.TREASURY_CONFIRM_HANDOFF,
-    PERMISSIONS.TREASURY_REJECT_CONFERENCE,
     PERMISSIONS.TREASURY_SANGRIA,
     PERMISSIONS.DASHBOARD_READ,
   ],
@@ -103,6 +98,8 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.CASH_FLOW_CREATE,
     PERMISSIONS.CASH_FLOW_READ,
     PERMISSIONS.CASH_REGISTER_OPEN,
+    PERMISSIONS.CASH_REGISTER_CLOSE,
+    PERMISSIONS.CASH_REGISTER_REOPEN,
     PERMISSIONS.CASH_REGISTER_READ,
     PERMISSIONS.PAYABLE_CREATE,
     PERMISSIONS.PAYABLE_READ,

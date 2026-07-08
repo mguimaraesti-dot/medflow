@@ -7,8 +7,6 @@ import type {
   ListCashRegisterDaysFilter,
   CreateCashRegisterDayInput,
   CloseCashRegisterDayInput,
-  ConfirmHandoffInput,
-  RejectConferenceInput,
   ReopenCashRegisterDayInput,
 } from "../domain/cash-register-day.repository";
 import type { CashRegisterDay } from "../domain/cash-register-day.entity";
@@ -19,10 +17,20 @@ type RowWithOpenedBy = Prisma.CashRegisterDayGetPayload<{
   include: typeof OPENED_BY_INCLUDE;
 }>;
 
-/** Achata `row.openedBy.name` no campo denormalizado do domínio — nunca expõe o tipo do Prisma. */
+/**
+ * Achata `row.openedBy.name` no campo denormalizado do domínio — nunca
+ * expõe o tipo do Prisma. O cast de `status` é seguro: nenhum código
+ * novo escreve mais `PENDING_CONFERENCE` (dupla conferência removida);
+ * o enum do Postgres mantém o valor só por compatibilidade com
+ * registros históricos, já migrados para `CLOSED`.
+ */
 function toDomainDay(row: RowWithOpenedBy): CashRegisterDay {
   const { openedBy, ...day } = row;
-  return { ...day, openedByUserName: openedBy.name };
+  return {
+    ...day,
+    status: day.status as CashRegisterDay["status"],
+    openedByUserName: openedBy.name,
+  };
 }
 
 export class PrismaCashRegisterDayRepository implements CashRegisterDayRepository {
@@ -61,17 +69,6 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
   ): Promise<CashRegisterDay | null> {
     const row = await prisma.cashRegisterDay.findFirst({
       where: { organizationId, status: "OPEN" },
-      orderBy: { date: "desc" },
-      include: OPENED_BY_INCLUDE,
-    });
-    return row ? toDomainDay(row) : null;
-  }
-
-  async findPendingConferenceByOrganization(
-    organizationId: string,
-  ): Promise<CashRegisterDay | null> {
-    const row = await prisma.cashRegisterDay.findFirst({
-      where: { organizationId, status: "PENDING_CONFERENCE" },
       orderBy: { date: "desc" },
       include: OPENED_BY_INCLUDE,
     });
@@ -176,6 +173,7 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
     });
   }
 
+  /** Fecha direto pra `CLOSED` — dupla conferência removida, não mexe no Cofre. */
   async close(
     id: string,
     data: CloseCashRegisterDayInput,
@@ -183,84 +181,16 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
     const row = await prisma.cashRegisterDay.update({
       where: { id },
       data: {
-        status: "PENDING_CONFERENCE",
+        status: "CLOSED",
         expectedCashAmount: data.expectedCashAmount,
         countedAmount: data.countedAmount,
         difference: data.difference,
+        totalIn: data.totalIn,
+        totalOut: data.totalOut,
+        closingBalance: data.closingBalance,
         closureNote: data.closureNote,
         closedByUserId: data.closedByUserId,
         closedAt: new Date(),
-      },
-      include: OPENED_BY_INCLUDE,
-    });
-    return toDomainDay(row);
-  }
-
-  /**
-   * Confirma o handoff: muda o status para `CLOSED` e credita o Cofre
-   * (`SafeMovement` tipo `CASH_REGISTER_HANDOFF`) na mesma transação —
-   * mesmo padrão de `create()` acima.
-   */
-  async confirmHandoff(
-    id: string,
-    data: ConfirmHandoffInput,
-  ): Promise<CashRegisterDay> {
-    return prisma.$transaction(async (tx) => {
-      const current = await tx.cashRegisterDay.findUniqueOrThrow({
-        where: { id },
-      });
-
-      // Rede de segurança contra corrida entre duas confirmações quase
-      // simultâneas — a checagem "de verdade" já rodou no use case.
-      if (current.status !== "PENDING_CONFERENCE") {
-        throw new Error(
-          `CashRegisterDay ${id} não está mais aguardando conferência.`,
-        );
-      }
-
-      const safe = await tx.safe.findUniqueOrThrow({
-        where: { organizationId: current.organizationId },
-      });
-
-      await tx.safeMovement.create({
-        data: {
-          organizationId: current.organizationId,
-          safeId: safe.id,
-          type: "CASH_REGISTER_HANDOFF",
-          amount: data.receivedAmount,
-          relatedCashRegisterDayId: id,
-          performedByUserId: data.handoffConfirmedByUserId,
-        },
-      });
-
-      const updated = await tx.cashRegisterDay.update({
-        where: { id },
-        data: {
-          status: "CLOSED",
-          receivedAmount: data.receivedAmount,
-          confirmedDifference: data.confirmedDifference,
-          handoffConfirmedByUserId: data.handoffConfirmedByUserId,
-          handoffConfirmedAt: new Date(),
-          totalIn: data.totalIn,
-          totalOut: data.totalOut,
-          closingBalance: data.closingBalance,
-        },
-        include: OPENED_BY_INCLUDE,
-      });
-      return toDomainDay(updated);
-    });
-  }
-
-  async rejectConference(
-    id: string,
-    data: RejectConferenceInput,
-  ): Promise<CashRegisterDay> {
-    const row = await prisma.cashRegisterDay.update({
-      where: { id },
-      data: {
-        status: "OPEN",
-        rejectedAt: new Date(),
-        rejectionReason: data.reason,
       },
       include: OPENED_BY_INCLUDE,
     });

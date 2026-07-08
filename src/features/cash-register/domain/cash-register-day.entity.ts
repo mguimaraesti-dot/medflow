@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 
-export type CashRegisterDayStatus = "OPEN" | "PENDING_CONFERENCE" | "CLOSED";
+export type CashRegisterDayStatus = "OPEN" | "CLOSED";
 
 /**
  * Entidade de domínio do "dia de caixa". Deliberadamente parecida com o
@@ -9,9 +9,11 @@ export type CashRegisterDayStatus = "OPEN" | "PENDING_CONFERENCE" | "CLOSED";
  * (que é apenas o tipo de valor, não uma dependência de runtime do
  * Prisma Client em si).
  *
- * Motor de Tesouraria (docs/decisions/adr-tesouraria.md): o fechamento
- * não vai mais direto para `CLOSED` — passa por `PENDING_CONFERENCE`
- * até a gerência confirmar o handoff (ou rejeitar, voltando pra `OPEN`).
+ * Fechamento vai direto `OPEN` -> `CLOSED` (dupla conferência do Motor
+ * de Tesouraria removida por decisão explícita — a secretária tem
+ * autonomia de fechar e reabrir sozinha, sempre com justificativa).
+ * Os campos de handoff/rejeição continuam no schema só por
+ * compatibilidade com registros antigos; nenhum código novo os escreve.
  */
 export interface CashRegisterDay {
   id: string;

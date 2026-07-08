@@ -23,7 +23,6 @@ const STATUS_BADGE: Record<
   { label: string; variant: "default" | "secondary" | "outline" }
 > = {
   OPEN: { label: "Aberto", variant: "default" },
-  PENDING_CONFERENCE: { label: "Aguardando conferência", variant: "outline" },
   CLOSED: { label: "Fechado", variant: "secondary" },
 };
 

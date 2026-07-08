@@ -128,8 +128,6 @@ describe.skipIf(!hasTestDb)(
         await import("@/features/cash-flow/application/reverse-cash-flow-entry.use-case");
       const { closeCashRegisterUseCase } =
         await import("@/features/cash-register/application/close-cash-register.use-case");
-      const { confirmCashRegisterHandoffUseCase } =
-        await import("@/features/cash-register/application/confirm-cash-register-handoff.use-case");
 
       const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
       const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
@@ -169,7 +167,8 @@ describe.skipIf(!hasTestDb)(
       // Saldo contábil esperado: 100 (abertura) + 200 (entrada) - 50 (saída)
       // + 50 (estorno da saída) = 300. "PIX Teste" não é isCash, então o
       // Dinheiro Esperado (conferência física) fica só no valor de abertura.
-      const pendingConference = await closeCashRegisterUseCase(
+      // Fecha direto pra CLOSED (dupla conferência removida).
+      const closed = await closeCashRegisterUseCase(
         { countedAmount: 100 },
         userId,
         organizationId,
@@ -179,16 +178,8 @@ describe.skipIf(!hasTestDb)(
           safeMovementRepository,
         },
       );
-      expect(pendingConference.status).toBe("PENDING_CONFERENCE");
-      expect(pendingConference.expectedCashAmount?.toString()).toBe("100.00");
-
-      const closed = await confirmCashRegisterHandoffUseCase(
-        { receivedAmount: 100 },
-        userId,
-        organizationId,
-        { cashRegisterDayRepository, cashFlowEntryRepository },
-      );
       expect(closed.status).toBe("CLOSED");
+      expect(closed.expectedCashAmount?.toString()).toBe("100.00");
       expect(closed.closingBalance?.toString()).toBe("300.00");
 
       await expect(

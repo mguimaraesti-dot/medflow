@@ -20,12 +20,9 @@ function makeRepo(
     findByOrganizationAndDate: vi.fn().mockResolvedValue(null),
     findLastClosed: vi.fn().mockResolvedValue(null),
     findOpenByOrganization: vi.fn(),
-    findPendingConferenceByOrganization: vi.fn(),
     list: vi.fn(),
     create: vi.fn(),
     close: vi.fn(),
-    confirmHandoff: vi.fn(),
-    rejectConference: vi.fn(),
     reopen: vi.fn(),
     ...overrides,
   };

@@ -115,9 +115,6 @@ export function CashBalanceHeader({
       ? (Number(today.openingBalance) + Number(resultToday)).toFixed(2)
       : (today.closingBalance ?? today.openingBalance);
 
-  // Do ponto de vista do operador, PENDING_CONFERENCE já é "Caixa
-  // Fechado" (a dupla conferência de gestão acontece sem bloquear esta
-  // tela — decisão validada no Refinamento UX/UI Caixa Recepção).
   const isOpen = today.status === "OPEN";
 
   return (

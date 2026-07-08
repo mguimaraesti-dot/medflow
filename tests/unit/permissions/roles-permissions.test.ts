@@ -5,27 +5,30 @@ import {
 } from "@/core/permissions/roles-permissions";
 
 describe("ROLE_PERMISSIONS", () => {
-  // Cenário da matriz: "Reabertura -> Apenas Admin com justificativa" (parte do "apenas Admin")
-  it("só ADMIN tem permissão para reabrir o caixa", () => {
+  // Dupla conferência do Motor de Tesouraria removida — Secretária ganhou
+  // autonomia pra reabrir o caixa sozinha (sempre com justificativa).
+  it("ADMIN e SECRETARY têm permissão para reabrir o caixa", () => {
     const rolesWithReopen = Object.entries(ROLE_PERMISSIONS)
       .filter(([, perms]) => perms.includes(PERMISSIONS.CASH_REGISTER_REOPEN))
       .map(([role]) => role);
 
-    expect(rolesWithReopen).toEqual(["ADMIN"]);
+    expect(rolesWithReopen.sort()).toEqual(["ADMIN", "SECRETARY"]);
   });
 
-  it("Secretária não pode confirmar pagamento, nem fechar ou estornar caixa", () => {
+  it("Secretária não pode confirmar pagamento nem estornar lançamentos, mas pode fechar caixa", () => {
     const secretaryPerms = ROLE_PERMISSIONS.SECRETARY;
 
     expect(secretaryPerms).not.toContain(PERMISSIONS.CASH_FLOW_REVERSE);
-    expect(secretaryPerms).not.toContain(PERMISSIONS.CASH_REGISTER_CLOSE);
     expect(secretaryPerms).not.toContain(PERMISSIONS.PAYABLE_PAY);
+    expect(secretaryPerms).toContain(PERMISSIONS.CASH_REGISTER_CLOSE);
   });
 
-  it("Secretária pode abrir caixa e lançar movimentações", () => {
+  it("Secretária pode abrir, fechar e reabrir caixa e lançar movimentações", () => {
     const secretaryPerms = ROLE_PERMISSIONS.SECRETARY;
 
     expect(secretaryPerms).toContain(PERMISSIONS.CASH_REGISTER_OPEN);
+    expect(secretaryPerms).toContain(PERMISSIONS.CASH_REGISTER_CLOSE);
+    expect(secretaryPerms).toContain(PERMISSIONS.CASH_REGISTER_REOPEN);
     expect(secretaryPerms).toContain(PERMISSIONS.CASH_FLOW_CREATE);
   });
 
@@ -47,17 +50,6 @@ describe("ROLE_PERMISSIONS", () => {
     expect(rolesWithManualAdjustment).toEqual(["ADMIN"]);
   });
 
-  it("ADMIN, OWNER e FINANCE podem confirmar handoff e rejeitar conferência", () => {
-    for (const role of ["ADMIN", "OWNER", "FINANCE"] as const) {
-      expect(ROLE_PERMISSIONS[role]).toContain(
-        PERMISSIONS.TREASURY_CONFIRM_HANDOFF,
-      );
-      expect(ROLE_PERMISSIONS[role]).toContain(
-        PERMISSIONS.TREASURY_REJECT_CONFERENCE,
-      );
-    }
-  });
-
   it("ADMIN, OWNER e FINANCE podem solicitar sangria, mas não Secretária nem Contador", () => {
     for (const role of ["ADMIN", "OWNER", "FINANCE"] as const) {
       expect(ROLE_PERMISSIONS[role]).toContain(PERMISSIONS.TREASURY_SANGRIA);
@@ -71,8 +63,6 @@ describe("ROLE_PERMISSIONS", () => {
 
   it("Secretária e Contador não têm nenhuma permissão de tesouraria", () => {
     const treasuryPermissions = [
-      PERMISSIONS.TREASURY_CONFIRM_HANDOFF,
-      PERMISSIONS.TREASURY_REJECT_CONFERENCE,
       PERMISSIONS.TREASURY_SANGRIA,
       PERMISSIONS.TREASURY_MANUAL_ADJUSTMENT,
     ];

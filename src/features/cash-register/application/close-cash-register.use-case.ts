@@ -17,14 +17,18 @@ interface Deps {
 /**
  * US07 — Fechamento de caixa (secretária presta contas).
  *
- * Motor de Tesouraria (ADR 2.7/2.8): não fecha mais direto — vai para
- * `PENDING_CONFERENCE` até a gerência confirmar o handoff (ou rejeitar).
+ * Fecha direto para `CLOSED` — dupla conferência do Motor de
+ * Tesouraria removida por decisão explícita (a secretária tem
+ * autonomia de fechar e reabrir sozinha, sempre com justificativa; o
+ * Cofre deixou de ser movimentado automaticamente por este fluxo).
  * `expectedCashAmount`/`difference` são SEMPRE calculados aqui a partir
  * dos lançamentos reais — nunca aceitos do cliente. `countedAmount` é a
  * única entrada do usuário.
  *
  * Dinheiro Esperado = Saldo Inicial + Entradas em dinheiro
  *                      − Saídas em dinheiro − Sangrias do dia.
+ * `totalIn`/`totalOut`/`closingBalance` são o saldo contábil (todas as
+ * formas de pagamento, não só dinheiro físico).
  */
 export async function closeCashRegisterUseCase(
   input: CloseCashRegisterInput,
@@ -38,12 +42,13 @@ export async function closeCashRegisterUseCase(
     throw new CashRegisterNotOpenError(organizationId);
   }
 
-  const [cashSums, sangriaTotal] = await Promise.all([
+  const [cashSums, sangriaTotal, allSums] = await Promise.all([
     deps.cashFlowEntryRepository.sumCashOnlyByCashRegisterDay(openRegister.id),
     deps.safeMovementRepository.sumByCashRegisterDayAndType(
       openRegister.id,
       "SANGRIA",
     ),
+    deps.cashFlowEntryRepository.sumByCashRegisterDay(openRegister.id),
   ]);
 
   const openingBalance = new Prisma.Decimal(openRegister.openingBalance);
@@ -58,10 +63,17 @@ export async function closeCashRegisterUseCase(
   const countedAmount = new Prisma.Decimal(input.countedAmount.toFixed(2));
   const difference = countedAmount.minus(expectedCashAmount);
 
+  const totalIn = new Prisma.Decimal(allSums.totalIn);
+  const totalOut = new Prisma.Decimal(allSums.totalOut);
+  const closingBalance = openingBalance.plus(totalIn).minus(totalOut);
+
   const closed = await deps.cashRegisterDayRepository.close(openRegister.id, {
     expectedCashAmount: expectedCashAmount.toFixed(2),
     countedAmount: countedAmount.toFixed(2),
     difference: difference.toFixed(2),
+    totalIn: totalIn.toFixed(2),
+    totalOut: totalOut.toFixed(2),
+    closingBalance: closingBalance.toFixed(2),
     closureNote: input.closureNote,
     closedByUserId,
   });
@@ -71,7 +83,7 @@ export async function closeCashRegisterUseCase(
       userId: closedByUserId,
       entity: "CashRegisterDay",
       entityId: closed.id,
-      action: "CASH_REGISTER_CONFERENCE_REQUESTED",
+      action: "CASH_REGISTER_CLOSED",
       after: {
         expectedCashAmount: expectedCashAmount.toFixed(2),
         countedAmount: countedAmount.toFixed(2),
@@ -80,7 +92,7 @@ export async function closeCashRegisterUseCase(
     },
   });
 
-  logger.info("Conferência de caixa solicitada", {
+  logger.info("Caixa fechado", {
     organizationId,
     cashRegisterDayId: closed.id,
     expectedCashAmount: expectedCashAmount.toFixed(2),

@@ -68,10 +68,10 @@ describe("toCashRegisterDayResponseDTO", () => {
     expect(dto.closingBalance).toBe("250.00");
   });
 
-  it("serializa os campos do Motor de Tesouraria quando PENDING_CONFERENCE", () => {
+  it("serializa expectedCashAmount/countedAmount/difference/closureNote quando CLOSED", () => {
     const dto = toCashRegisterDayResponseDTO(
       buildDay({
-        status: "PENDING_CONFERENCE",
+        status: "CLOSED",
         expectedCashAmount: new Prisma.Decimal("300"),
         countedAmount: new Prisma.Decimal("290"),
         difference: new Prisma.Decimal("-10"),
@@ -81,7 +81,7 @@ describe("toCashRegisterDayResponseDTO", () => {
       }),
     );
 
-    expect(dto.status).toBe("PENDING_CONFERENCE");
+    expect(dto.status).toBe("CLOSED");
     expect(dto.expectedCashAmount).toBe("300.00");
     expect(dto.countedAmount).toBe("290.00");
     expect(dto.difference).toBe("-10.00");

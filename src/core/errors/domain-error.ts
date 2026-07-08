@@ -181,15 +181,6 @@ export class InsufficientSafeBalanceError extends DomainError {
   }
 }
 
-export class CashRegisterNotPendingConferenceError extends DomainError {
-  readonly code = "CASH_REGISTER_NOT_PENDING_CONFERENCE";
-  readonly httpStatus = 409;
-
-  constructor(organizationId: string) {
-    super("Não há caixa aguardando conferência.", { organizationId });
-  }
-}
-
 // ---------------------------------------------------------------
 // Autenticação
 // ---------------------------------------------------------------

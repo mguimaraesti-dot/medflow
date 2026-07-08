@@ -15,36 +15,21 @@ export interface CreateCashRegisterDayInput {
 }
 
 /**
- * Deixa o registro em `PENDING_CONFERENCE`, não mais `CLOSED` direto
- * (Motor de Tesouraria) — a secretária presta contas, a gerência
- * confirma ou rejeita depois.
+ * Fecha o registro direto para `CLOSED` (dupla conferência removida).
+ * `totalIn`/`totalOut`/`closingBalance` são o saldo "contábil" (todas
+ * as formas de pagamento, não só dinheiro físico) — antes só calculado
+ * na confirmação do handoff; agora é aqui mesmo, já que o fechamento é
+ * definitivo.
  */
 export interface CloseCashRegisterDayInput {
   expectedCashAmount: string;
   countedAmount: string;
   difference: string;
-  closureNote?: string;
-  closedByUserId: string;
-}
-
-export interface ConfirmHandoffInput {
-  receivedAmount: string;
-  confirmedDifference: string;
-  handoffConfirmedByUserId: string;
-  /**
-   * `totalIn`/`totalOut`/`closingBalance` são o saldo "contábil" (todas
-   * as formas de pagamento, não só dinheiro físico) — mesmo cálculo que
-   * antes acontecia em `close()`. Movido para cá porque é só no handoff
-   * que o registro realmente vira `CLOSED`; usado hoje só pelo fallback
-   * de saldo do Dashboard (`findLastClosed`).
-   */
   totalIn: string;
   totalOut: string;
   closingBalance: string;
-}
-
-export interface RejectConferenceInput {
-  reason: string;
+  closureNote?: string;
+  closedByUserId: string;
 }
 
 export interface ReopenCashRegisterDayInput {
@@ -53,10 +38,12 @@ export interface ReopenCashRegisterDayInput {
 }
 
 /**
- * Contrato do repositório de CashRegisterDay. `create()` e
- * `confirmHandoff()` também escrevem no Cofre (`SafeMovement`) na mesma
+ * Contrato do repositório de CashRegisterDay. `create()` também escreve
+ * no Cofre (`SafeMovement` tipo `FUNDING`, na abertura) na mesma
  * transação — mesmo princípio de atomicidade já usado em
  * `AccountsPayableRepository.markAsPaid` (Coding Standards, item 18.2).
+ * Fechamento/reabertura não mexem mais no Cofre (dupla conferência
+ * removida por decisão explícita).
  */
 export interface CashRegisterDayRepository {
   findById(id: string): Promise<CashRegisterDay | null>;
@@ -79,10 +66,6 @@ export interface CashRegisterDayRepository {
     organizationId: string,
   ): Promise<CashRegisterDay | null>;
 
-  findPendingConferenceByOrganization(
-    organizationId: string,
-  ): Promise<CashRegisterDay | null>;
-
   /**
    * Cria o dia de caixa e, na mesma transação, retira `openingBalance`
    * do Cofre da organização (`SafeMovement` tipo `FUNDING`) — re-checa
@@ -92,22 +75,6 @@ export interface CashRegisterDayRepository {
   create(data: CreateCashRegisterDayInput): Promise<CashRegisterDay>;
 
   close(id: string, data: CloseCashRegisterDayInput): Promise<CashRegisterDay>;
-
-  /**
-   * Confirma o handoff: muda o status para `CLOSED` e credita o Cofre
-   * (`SafeMovement` tipo `CASH_REGISTER_HANDOFF`) na mesma transação —
-   * re-checa `status === "PENDING_CONFERENCE"` dentro da transação.
-   */
-  confirmHandoff(
-    id: string,
-    data: ConfirmHandoffInput,
-  ): Promise<CashRegisterDay>;
-
-  /** Volta o status para `OPEN` — não mexe no Cofre. */
-  rejectConference(
-    id: string,
-    data: RejectConferenceInput,
-  ): Promise<CashRegisterDay>;
 
   reopen(
     id: string,
