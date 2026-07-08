@@ -353,6 +353,7 @@ model CashFlowEntry {
 
   @@index([organizationId, cashRegisterDayId])
   @@index([categoryId])
+  @@index([organizationId, occurredAt])
   @@map("cash_flow_entries")
 }
 
@@ -439,6 +440,10 @@ model AccountsPayable {
   @@index([organizationId, status])
   @@index([dueDate])
   @@index([deletedAt])
+  @@index([organizationId, dueDate])
+  @@index([supplierId])
+  @@index([categoryId])
+  @@index([recurringBillId])
   @@map("accounts_payable")
 }
 
@@ -476,6 +481,8 @@ model RecurringBill {
 
   createdAt      DateTime     @default(now())
 
+  @@index([organizationId])
+  @@index([supplierId])
   @@map("recurring_bills")
 }
 
@@ -529,5 +536,7 @@ model SafeMovement {
   @@index([organizationId, type])
   @@index([relatedCashRegisterDayId])
   @@index([relatedAccountsPayableId])
+  @@index([safeId, type])
+  @@index([organizationId, createdAt])
   @@map("safe_movements")
 }

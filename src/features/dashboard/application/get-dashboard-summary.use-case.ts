@@ -50,49 +50,67 @@ export async function getDashboardSummaryUseCase(
   const endOfToday = new Date(today);
   endOfToday.setUTCHours(23, 59, 59, 999);
 
-  const todayRegister =
-    await deps.cashRegisterDayRepository.findByOrganizationAndDate(
+  // `entries` e `recent` não dependem do resultado do caixa de hoje —
+  // rodam em paralelo com essa cadeia em vez de depois dela em série
+  // (evita ficar esperando 2 idas ao banco a mais do que o necessário).
+  const [registerState, entries, recent] = await Promise.all([
+    (async () => {
+      const todayRegister =
+        await deps.cashRegisterDayRepository.findByOrganizationAndDate(
+          organizationId,
+          today,
+        );
+
+      if (todayRegister) {
+        const sums = await deps.cashFlowEntryRepository.sumByCashRegisterDay(
+          todayRegister.id,
+        );
+        const revenueToday = new Prisma.Decimal(sums.totalIn);
+        const expensesToday = new Prisma.Decimal(sums.totalOut);
+
+        const currentBalance =
+          todayRegister.status === "OPEN"
+            ? new Prisma.Decimal(todayRegister.openingBalance)
+                .plus(revenueToday)
+                .minus(expensesToday)
+            : new Prisma.Decimal(todayRegister.closingBalance ?? 0);
+
+        return {
+          currentBalance,
+          cashRegisterStatus: (todayRegister.status === "OPEN"
+            ? "OPEN"
+            : "CLOSED") as DashboardSummary["cashRegisterStatus"],
+          revenueToday,
+          expensesToday,
+        };
+      }
+
+      const lastClosed =
+        await deps.cashRegisterDayRepository.findLastClosed(organizationId);
+      return {
+        currentBalance: lastClosed
+          ? new Prisma.Decimal(lastClosed.closingBalance ?? 0)
+          : new Prisma.Decimal(0),
+        cashRegisterStatus:
+          "NOT_OPENED" as DashboardSummary["cashRegisterStatus"],
+        revenueToday: new Prisma.Decimal(0),
+        expensesToday: new Prisma.Decimal(0),
+      };
+    })(),
+    deps.cashFlowEntryRepository.listByDateRange(
       organizationId,
-      today,
-    );
+      rangeStart,
+      endOfToday,
+    ),
+    deps.cashFlowEntryRepository.list(
+      { organizationId },
+      { page: 1, pageSize: 5 },
+    ),
+  ]);
 
-  let currentBalance: Prisma.Decimal;
-  let cashRegisterStatus: DashboardSummary["cashRegisterStatus"];
-  let revenueToday = new Prisma.Decimal(0);
-  let expensesToday = new Prisma.Decimal(0);
-
-  if (todayRegister) {
-    const sums = await deps.cashFlowEntryRepository.sumByCashRegisterDay(
-      todayRegister.id,
-    );
-    revenueToday = new Prisma.Decimal(sums.totalIn);
-    expensesToday = new Prisma.Decimal(sums.totalOut);
-
-    if (todayRegister.status === "OPEN") {
-      currentBalance = new Prisma.Decimal(todayRegister.openingBalance)
-        .plus(revenueToday)
-        .minus(expensesToday);
-      cashRegisterStatus = "OPEN";
-    } else {
-      currentBalance = new Prisma.Decimal(todayRegister.closingBalance ?? 0);
-      cashRegisterStatus = "CLOSED";
-    }
-  } else {
-    const lastClosed =
-      await deps.cashRegisterDayRepository.findLastClosed(organizationId);
-    currentBalance = lastClosed
-      ? new Prisma.Decimal(lastClosed.closingBalance ?? 0)
-      : new Prisma.Decimal(0);
-    cashRegisterStatus = "NOT_OPENED";
-  }
-
+  const { currentBalance, cashRegisterStatus, revenueToday, expensesToday } =
+    registerState;
   const resultToday = revenueToday.minus(expensesToday);
-
-  const entries = await deps.cashFlowEntryRepository.listByDateRange(
-    organizationId,
-    rangeStart,
-    endOfToday,
-  );
 
   const totalsByDay = new Map<
     string,
@@ -136,11 +154,6 @@ export async function getDashboardSummaryUseCase(
       totalOut: bucket.totalOut,
     });
   }
-
-  const recent = await deps.cashFlowEntryRepository.list(
-    { organizationId },
-    { page: 1, pageSize: 5 },
-  );
 
   return {
     currentBalance,
