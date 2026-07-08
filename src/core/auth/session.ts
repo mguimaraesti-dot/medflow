@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createSupabaseServerClient } from "./supabase-server.client";
 import { prisma } from "@/core/database/prisma.client";
 
@@ -21,8 +22,15 @@ export interface SessionUser {
  * (resolver "quem é o usuário desta requisição"), usada por praticamente
  * toda rota — diferente do `UserRepository` em `features/auth/domain`,
  * que existe para a lógica de negócio do login ser testável com mock.
+ *
+ * Envolvida em `React.cache()`: todo layout.tsx chama isto e todo
+ * page.tsx chama de novo — sem isso, cada navegação fazia 2x a
+ * verificação do token contra o servidor do Supabase (auth.getUser(), um
+ * round-trip de rede de verdade, não uma leitura local) e 2x a mesma
+ * query com joins de role/permissões. `cache()` deduplica por request:
+ * a 2ª chamada dentro do mesmo render reaproveita a mesma Promise.
  */
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user: authUser },
@@ -45,4 +53,4 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     roleName: user.role.name,
     permissions: user.role.permissions.map((p) => p.key),
   };
-}
+});
