@@ -33,6 +33,7 @@
 
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
+  --input-background: oklch(0.98 0 0);
   --ring: #2563eb;
 
   /* cores de apoio para status financeiro (entrada/saída/alerta) */
@@ -75,7 +76,11 @@
   --destructive-foreground: oklch(0.985 0 0);
 
   --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 20%);
+  /* Superfície de campos editáveis (Input/Textarea/Select) — precisa se
+     destacar do card (#0B0B0B/#111113) pra parecer clicável, não só
+     mais uma camada de preto (Refinamento UX/Contraste). */
+  --input-background: #161b22;
   --ring: #2563eb;
 
   --success: oklch(0.65 0.15 145);
@@ -103,6 +108,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-input-background: var(--input-background);
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);

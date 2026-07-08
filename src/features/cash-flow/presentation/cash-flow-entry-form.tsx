@@ -26,9 +26,20 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
+import { Separator } from "@/shared/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 
 const fieldClassName = "h-11 rounded-xl";
+
+/** Marca visual de campo obrigatório — não espera o erro de validação aparecer pra avisar (Refinamento UX/Contraste). */
+function RequiredMark() {
+  return (
+    <span className="text-destructive" aria-hidden>
+      {" "}
+      *
+    </span>
+  );
+}
 
 // O formulário nunca coleta `occurredAt` (o use case usa o horário do
 // servidor por padrão) — omitido aqui para evitar o tipo `unknown` que
@@ -207,114 +218,139 @@ export const CashFlowEntryForm = forwardRef<
             )}
           />
 
-          <div className="grid gap-5 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Valor</Label>
-              <Controller
-                control={control}
-                name="amount"
-                render={({ field }) => (
-                  <CurrencyInput
-                    ref={amountInputRef}
-                    id="amount"
-                    disabled={disabled}
-                    value={field.value}
-                    onChange={field.onChange}
-                    className={fieldClassName}
-                  />
-                )}
-              />
-              {errors.amount && (
-                <p className="text-destructive text-sm">
-                  {errors.amount.message}
-                </p>
-              )}
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold">Movimentação</p>
+              <Separator className="mt-2" />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="categoryId">Categoria</Label>
-              <Controller
-                control={control}
-                name="categoryId"
-                render={({ field }) => (
-                  <CategoryCombobox
-                    id="categoryId"
-                    disabled={disabled}
-                    categories={categories}
-                    type={type}
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+            <div className="grid gap-5 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="amount">
+                  Valor
+                  <RequiredMark />
+                </Label>
+                <Controller
+                  control={control}
+                  name="amount"
+                  render={({ field }) => (
+                    <CurrencyInput
+                      ref={amountInputRef}
+                      id="amount"
+                      disabled={disabled}
+                      value={field.value}
+                      onChange={field.onChange}
+                      className={fieldClassName}
+                    />
+                  )}
+                />
+                {errors.amount && (
+                  <p className="text-destructive text-sm">
+                    {errors.amount.message}
+                  </p>
                 )}
-              />
-              {errors.categoryId && (
-                <p className="text-destructive text-sm">
-                  {errors.categoryId.message}
-                </p>
-              )}
-            </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Forma de pagamento</Label>
-              <Controller
-                control={control}
-                name="paymentMethodId"
-                render={({ field }) => (
-                  <PaymentMethodPicker
-                    disabled={disabled}
-                    paymentMethods={availablePaymentMethods}
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+              <div className="space-y-2">
+                <Label htmlFor="categoryId">
+                  Categoria
+                  <RequiredMark />
+                </Label>
+                <Controller
+                  control={control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <CategoryCombobox
+                      id="categoryId"
+                      disabled={disabled}
+                      categories={categories}
+                      type={type}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                {errors.categoryId && (
+                  <p className="text-destructive text-sm">
+                    {errors.categoryId.message}
+                  </p>
                 )}
-              />
-              {errors.paymentMethodId && (
-                <p className="text-destructive text-sm">
-                  {errors.paymentMethodId.message}
-                </p>
-              )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Forma de pagamento
+                  <RequiredMark />
+                </Label>
+                <Controller
+                  control={control}
+                  name="paymentMethodId"
+                  render={({ field }) => (
+                    <PaymentMethodPicker
+                      disabled={disabled}
+                      paymentMethods={availablePaymentMethods}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                {errors.paymentMethodId && (
+                  <p className="text-destructive text-sm">
+                    {errors.paymentMethodId.message}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
-          {isIn ? (
-            <div className="space-y-2">
-              <Label htmlFor="patientName">Nome do Paciente</Label>
-              <Input
-                id="patientName"
-                disabled={disabled}
-                className={cn(fieldClassName, "w-full")}
-                {...register("patientName")}
-              />
-              {errors.patientName && (
-                <p className="text-destructive text-sm">
-                  {errors.patientName.message}
-                </p>
-              )}
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold">Detalhes</p>
+              <Separator className="mt-2" />
             </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="withdrawalReason">
-                Justificativa da Retirada
-              </Label>
-              <Textarea
-                id="withdrawalReason"
-                rows={2}
-                disabled={disabled}
-                placeholder="Descreva o motivo da retirada (ex: pagamento de motoboy, compra de material de limpeza, troco para abertura do caixa...)"
-                className="rounded-xl"
-                {...register("withdrawalReason")}
-              />
-              {errors.withdrawalReason && (
-                <p className="text-destructive text-sm">
-                  {errors.withdrawalReason.message}
-                </p>
-              )}
-            </div>
-          )}
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            {isIn ? (
+              <div className="space-y-2">
+                <Label htmlFor="patientName">
+                  Nome do Paciente
+                  <RequiredMark />
+                </Label>
+                <Input
+                  id="patientName"
+                  disabled={disabled}
+                  className={cn(fieldClassName, "w-full")}
+                  {...register("patientName")}
+                />
+                {errors.patientName && (
+                  <p className="text-destructive text-sm">
+                    {errors.patientName.message}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="withdrawalReason">
+                  Justificativa da Retirada
+                  <RequiredMark />
+                </Label>
+                <Textarea
+                  id="withdrawalReason"
+                  rows={2}
+                  disabled={disabled}
+                  placeholder="Descreva o motivo da retirada (ex: pagamento de motoboy, compra de material de limpeza, troco para abertura do caixa...)"
+                  className="rounded-xl"
+                  {...register("withdrawalReason")}
+                />
+                {errors.withdrawalReason && (
+                  <p className="text-destructive text-sm">
+                    {errors.withdrawalReason.message}
+                  </p>
+                )}
+              </div>
+            )}
+
             {isIn && (
-              <div className="flex-1 space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="description">Descrição (opcional)</Label>
                 <Textarea
                   id="description"
@@ -325,33 +361,39 @@ export const CashFlowEntryForm = forwardRef<
                 />
               </div>
             )}
+          </div>
 
-            <div className={cn("space-y-1.5", !isIn && "flex-1")}>
-              <Button
-                type="submit"
-                disabled={disabled || createCashFlowEntry.isPending}
-                className={cn(
-                  "h-12 w-full rounded-xl text-base font-semibold shadow-sm transition-colors duration-200 lg:w-auto lg:min-w-56",
-                  isIn
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-destructive hover:bg-destructive/90",
-                )}
-              >
-                {createCashFlowEntry.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Registrando...
-                  </>
-                ) : isIn ? (
-                  "Registrar Entrada"
-                ) : (
-                  "Registrar Saída"
-                )}
-              </Button>
-              <p className="text-muted-foreground text-center text-xs">
-                Pressione Enter para salvar
-              </p>
-            </div>
+          <div className="flex flex-col items-center gap-1.5 pt-1">
+            <Button
+              type="submit"
+              disabled={disabled || createCashFlowEntry.isPending}
+              className={cn(
+                "h-12 w-full rounded-xl text-base font-semibold shadow-sm transition-colors duration-200 lg:w-auto lg:min-w-56",
+                isIn
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-destructive hover:bg-destructive/90",
+              )}
+            >
+              {createCashFlowEntry.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Registrando...
+                </>
+              ) : isIn ? (
+                <>
+                  <ArrowDownCircle className="h-4 w-4" />
+                  Registrar Entrada
+                </>
+              ) : (
+                <>
+                  <ArrowUpCircle className="h-4 w-4" />
+                  Registrar Saída
+                </>
+              )}
+            </Button>
+            <p className="text-muted-foreground text-center text-xs">
+              Pressione Enter para salvar
+            </p>
           </div>
 
           {serverError && (

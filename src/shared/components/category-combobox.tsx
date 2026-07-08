@@ -94,7 +94,7 @@ export function CategoryCombobox({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="w-full justify-between font-normal"
+            className="bg-input-background border-input hover:bg-accent w-full justify-between font-normal"
           >
             {selected ? (
               <span>{selected.name}</span>

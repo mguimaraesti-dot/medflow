@@ -31,7 +31,7 @@ export function PaymentMethodPicker({
               "focus-visible:ring-ring focus-visible:ring-offset-background flex h-11 flex-1 basis-24 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
               active
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-border text-muted-foreground hover:border-ring/50 hover:text-foreground",
+                : "border-input bg-input-background text-muted-foreground hover:border-ring/50 hover:text-foreground",
               disabled && "cursor-not-allowed opacity-50",
             )}
           >
