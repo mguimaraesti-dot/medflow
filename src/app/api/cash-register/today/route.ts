@@ -8,9 +8,11 @@ import { getTodayCashRegisterUseCase } from "@/features/cash-register/applicatio
 import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
+import { PrismaSafeMovementRepository } from "@/features/treasury/infrastructure/prisma-safe-movement.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
 const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
+const safeMovementRepository = new PrismaSafeMovementRepository();
 
 export async function GET() {
   const requestId = generateRequestId();
@@ -23,7 +25,11 @@ export async function GET() {
 
     const cashRegisterDay = await getTodayCashRegisterUseCase(
       user.organizationId,
-      { cashRegisterDayRepository, cashFlowEntryRepository },
+      {
+        cashRegisterDayRepository,
+        cashFlowEntryRepository,
+        safeMovementRepository,
+      },
     );
 
     return NextResponse.json({

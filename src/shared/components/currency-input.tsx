@@ -43,14 +43,17 @@ export const CurrencyInput = forwardRef<
   }
 >(function CurrencyInput({ value, onChange, disabled, id, className }, ref) {
   const [display, setDisplay] = useState(() => formatValue(value));
-  const [isFocused, setIsFocused] = useState(false);
   const lastEmitted = useRef(value);
 
+  // Roda mesmo com o campo focado: a única forma de `value` divergir do
+  // que a gente mesmo emitiu é um reset programático do formulário (ex:
+  // depois de salvar um lançamento) — precisa limpar o campo mesmo que
+  // o usuário não tenha desfocado (Enter pra salvar não tira o foco).
   useEffect(() => {
     if (value === lastEmitted.current) return;
     lastEmitted.current = value;
-    if (!isFocused) setDisplay(formatValue(value));
-  }, [value, isFocused]);
+    setDisplay(formatValue(value));
+  }, [value]);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     // "." é sempre ruído de formatação (nosso próprio agrupamento de
@@ -86,7 +89,6 @@ export const CurrencyInput = forwardRef<
   }
 
   function handleBlur() {
-    setIsFocused(false);
     setDisplay(formatValue(value));
   }
 
@@ -102,7 +104,6 @@ export const CurrencyInput = forwardRef<
         disabled={disabled}
         value={display}
         onChange={handleChange}
-        onFocus={() => setIsFocused(true)}
         onBlur={handleBlur}
         placeholder="0,00"
         className={cn("pl-10 text-lg font-semibold", className)}

@@ -20,25 +20,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-
-const WITHDRAWAL_REASON_OPTIONS = [
-  "Pagamento de fornecedor",
-  "Compra de material",
-  "Sangria",
-  "Troco",
-  "Despesa administrativa",
-  "Pagamento de funcionário",
-  "Outros",
-] as const;
-const WITHDRAWAL_REASON_OTHER = "Outros";
 
 const fieldClassName = "h-11 rounded-xl";
 
@@ -73,11 +55,6 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
   const [serverError, setServerError] = useState<string | null>(null);
   const createCashFlowEntry = useCreateCashFlowEntry();
   const amountInputRef = useRef<HTMLInputElement>(null);
-  // Vive fora do RHF de propósito: o valor final que vai pro campo
-  // `withdrawalReason` é a própria opção escolhida (ou o texto digitado
-  // quando a opção é "Outros") — esta seleção é só um meio de preencher
-  // aquele único campo, não um campo próprio do DTO.
-  const [withdrawalReasonOption, setWithdrawalReasonOption] = useState("");
 
   const {
     register,
@@ -117,12 +94,10 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
         event.preventDefault();
         setValue("type", "IN");
         setValue("paymentMethodId", "");
-        setWithdrawalReasonOption("");
       } else if (event.key === "F3") {
         event.preventDefault();
         setValue("type", "OUT");
         setValue("paymentMethodId", "");
-        setWithdrawalReasonOption("");
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -134,7 +109,6 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
     try {
       await createCashFlowEntry.mutateAsync(values);
       reset({ ...emptyFormValues, type });
-      setWithdrawalReasonOption("");
       amountInputRef.current?.focus();
       toast.success(
         values.type === "IN"
@@ -164,7 +138,6 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
             // com o Esc nativo do Radix fechando um Dialog aberto.
             if (event.key === "Escape") {
               reset({ ...emptyFormValues, type });
-              setWithdrawalReasonOption("");
               amountInputRef.current?.focus();
             }
           }}
@@ -183,7 +156,6 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                   // Forma de pagamento pode não estar mais disponível
                   // para o novo tipo (ex: PIX só existe em Entrada).
                   setValue("paymentMethodId", "");
-                  setWithdrawalReasonOption("");
                 }}
                 disabled={disabled}
                 options={[
@@ -204,7 +176,7 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
             )}
           />
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="amount">Valor</Label>
               <Controller
@@ -271,71 +243,42 @@ export function CashFlowEntryForm({ disabled }: { disabled: boolean }) {
                 </p>
               )}
             </div>
-
-            {isIn && (
-              <div className="space-y-2">
-                <Label htmlFor="patientName">Nome do Paciente</Label>
-                <Input
-                  id="patientName"
-                  disabled={disabled}
-                  className={fieldClassName}
-                  {...register("patientName")}
-                />
-                {errors.patientName && (
-                  <p className="text-destructive text-sm">
-                    {errors.patientName.message}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {!isIn && (
-              <div className="space-y-2">
-                <Label htmlFor="withdrawalReasonOption">
-                  Justificativa da Retirada
-                </Label>
-                <Select
-                  value={withdrawalReasonOption}
-                  onValueChange={(next) => {
-                    setWithdrawalReasonOption(next);
-                    setValue(
-                      "withdrawalReason",
-                      next === WITHDRAWAL_REASON_OTHER ? "" : next,
-                    );
-                  }}
-                  disabled={disabled}
-                >
-                  <SelectTrigger
-                    id="withdrawalReasonOption"
-                    className={cn(fieldClassName, "w-full")}
-                  >
-                    <SelectValue placeholder="Selecione a justificativa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WITHDRAWAL_REASON_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.withdrawalReason && (
-                  <p className="text-destructive text-sm">
-                    {errors.withdrawalReason.message}
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
-          {!isIn && withdrawalReasonOption === WITHDRAWAL_REASON_OTHER && (
-            <Input
-              aria-label="Justificativa da retirada (digitada)"
-              placeholder="Digite a justificativa"
-              disabled={disabled}
-              className={fieldClassName}
-              {...register("withdrawalReason")}
-            />
+          {isIn ? (
+            <div className="space-y-2">
+              <Label htmlFor="patientName">Nome do Paciente</Label>
+              <Input
+                id="patientName"
+                disabled={disabled}
+                className={cn(fieldClassName, "w-full")}
+                {...register("patientName")}
+              />
+              {errors.patientName && (
+                <p className="text-destructive text-sm">
+                  {errors.patientName.message}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="withdrawalReason">
+                Justificativa da Retirada
+              </Label>
+              <Textarea
+                id="withdrawalReason"
+                rows={2}
+                disabled={disabled}
+                placeholder="Descreva o motivo da retirada (ex: pagamento de motoboy, compra de material de limpeza, troco para abertura do caixa...)"
+                className="rounded-xl"
+                {...register("withdrawalReason")}
+              />
+              {errors.withdrawalReason && (
+                <p className="text-destructive text-sm">
+                  {errors.withdrawalReason.message}
+                </p>
+              )}
+            </div>
           )}
 
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end">

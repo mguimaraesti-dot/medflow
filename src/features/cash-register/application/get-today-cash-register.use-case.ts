@@ -1,21 +1,26 @@
 import { Prisma } from "@prisma/client";
 import type { CashRegisterDayRepository } from "../domain/cash-register-day.repository";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
+import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
 import type { CashRegisterDay } from "../domain/cash-register-day.entity";
 
 interface Deps {
   cashRegisterDayRepository: CashRegisterDayRepository;
   cashFlowEntryRepository: CashFlowEntryRepository;
+  safeMovementRepository: SafeMovementRepository;
   /** Injetado só para permitir teste determinístico — em produção é sempre `new Date()`. */
   referenceDate?: Date;
 }
 
 /**
- * Enquanto o caixa está OPEN, `totalIn`/`totalOut` ainda não existem no
- * banco (só são gravados no fechamento) — aqui completamos com a soma
- * ao vivo (mesmo `sumByCashRegisterDay` já usado pra fechar o caixa e
- * pelo Dashboard), pra a UI poder mostrar "Entradas"/"Saídas" do dia
- * mesmo com o caixa ainda aberto.
+ * Enquanto o caixa está OPEN, `totalIn`/`totalOut`/`expectedCashAmount`
+ * ainda não existem no banco (só são gravados no fechamento) — aqui
+ * completamos com a soma ao vivo, pra a UI poder mostrar o resumo do
+ * dia (inclusive o Saldo Esperado em Dinheiro, que só conta espécie)
+ * mesmo com o caixa ainda aberto. Mesma fórmula usada em
+ * `close-cash-register.use-case.ts`: Saldo Inicial + Entradas em
+ * dinheiro − Saídas em dinheiro − Sangrias — PIX/cartão nunca entram
+ * aqui, só no `totalIn`/`totalOut` contábil (todas as formas).
  */
 export async function getTodayCashRegisterUseCase(
   organizationId: string,
@@ -31,13 +36,25 @@ export async function getTodayCashRegisterUseCase(
   if (!day) return null;
 
   if (day.status === "OPEN") {
-    const sums = await deps.cashFlowEntryRepository.sumByCashRegisterDay(
-      day.id,
-    );
+    const [sums, cashSums, sangriaTotal] = await Promise.all([
+      deps.cashFlowEntryRepository.sumByCashRegisterDay(day.id),
+      deps.cashFlowEntryRepository.sumCashOnlyByCashRegisterDay(day.id),
+      deps.safeMovementRepository.sumByCashRegisterDayAndType(
+        day.id,
+        "SANGRIA",
+      ),
+    ]);
+
+    const expectedCashAmount = new Prisma.Decimal(day.openingBalance)
+      .plus(new Prisma.Decimal(cashSums.totalIn))
+      .minus(new Prisma.Decimal(cashSums.totalOut))
+      .minus(new Prisma.Decimal(sangriaTotal));
+
     return {
       ...day,
       totalIn: new Prisma.Decimal(sums.totalIn),
       totalOut: new Prisma.Decimal(sums.totalOut),
+      expectedCashAmount,
     };
   }
 

@@ -31,7 +31,13 @@ function SummaryStat({
   );
 }
 
-/** "Resumo Financeiro" — vai no rodapé da Caixa Recepção (Refinamento UX/UI). */
+/**
+ * "Resumo Financeiro" — vai no rodapé da Caixa Recepção (Refinamento
+ * UX/UI). "Entradas"/"Saídas" somam todas as formas de pagamento (PIX
+ * inclusive, pra refletir o movimento real do dia); "Saldo Esperado em
+ * Dinheiro" e "Diferença" só contam espécie — vêm prontos do backend
+ * (`expectedCashAmount`/`difference`), nunca recalculados aqui.
+ */
 export function DailySummaryCard() {
   const { data: today, isLoading } = useCashRegisterToday();
 
@@ -43,9 +49,6 @@ export function DailySummaryCard() {
     return null;
   }
 
-  const totalIn = Number(today.totalIn ?? "0");
-  const totalOut = Number(today.totalOut ?? "0");
-  const expectedBalance = Number(today.openingBalance) + totalIn - totalOut;
   const hasCounted = today.countedAmount !== null;
   const difference = today.difference !== null ? Number(today.difference) : 0;
 
@@ -67,8 +70,12 @@ export function DailySummaryCard() {
           tone="negative"
         />
         <SummaryStat
-          label="Saldo Esperado"
-          value={formatCurrencyBRL(expectedBalance.toFixed(2))}
+          label="Saldo Esperado em Dinheiro"
+          value={
+            today.expectedCashAmount !== null
+              ? formatCurrencyBRL(today.expectedCashAmount)
+              : "—"
+          }
         />
         <SummaryStat
           label="Saldo Contado"

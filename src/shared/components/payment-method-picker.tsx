@@ -16,7 +16,7 @@ export function PaymentMethodPicker({
   disabled?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+    <div className="flex flex-wrap gap-2">
       {paymentMethods?.map((method) => {
         const Icon = getPaymentMethodIcon(method.name);
         const active = method.id === value;
@@ -27,15 +27,15 @@ export function PaymentMethodPicker({
             disabled={disabled}
             onClick={() => onChange(method.id)}
             className={cn(
-              "flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs transition-colors",
+              "flex h-11 flex-1 basis-24 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-medium transition-colors",
               active
                 ? "border-primary bg-primary/10 text-primary"
                 : "text-muted-foreground hover:border-ring/50 hover:text-foreground",
               disabled && "cursor-not-allowed opacity-50",
             )}
           >
-            <Icon className="h-5 w-5" />
-            <span className="text-center leading-tight">{method.name}</span>
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{method.name}</span>
           </button>
         );
       })}
