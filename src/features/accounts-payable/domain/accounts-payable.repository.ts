@@ -49,7 +49,11 @@ export interface ListAccountsPayableFilter {
  * `paymentOrigin`/`amount`/`organizationId` vêm do próprio `payable` já
  * carregado no use case — repassados aqui pra o repositório decidir se
  * cria um `SafeMovement` (COFRE) e achar o Cofre certo, sem precisar
- * buscar a conta de novo.
+ * buscar a conta de novo. `safeBalance` (só usado quando `paymentOrigin`
+ * é "COFRE") é o saldo já calculado e validado no use case — reaproveitado
+ * aqui em vez de recalculado do zero dentro da transação (a proteção
+ * contra corrida entre pagamentos concorrentes passa a ser um `SELECT ...
+ * FOR UPDATE` na linha do Cofre, não um recálculo completo).
  */
 export interface MarkAsPaidInput {
   paidByUserId: string;
@@ -57,6 +61,7 @@ export interface MarkAsPaidInput {
   paymentOrigin: PaymentOrigin;
   amount: string;
   organizationId: string;
+  safeBalance?: string;
 }
 
 /**
@@ -83,6 +88,18 @@ export interface SoftDeleteAccountsPayableInput {
 }
 
 /**
+ * Campos propagados em lote para as próximas ocorrências PENDENTES de uma
+ * recorrência (`scope: "SERIES"`) — nunca inclui `dueDate` (cada ocorrência
+ * mantém seu próprio vencimento, só o valor de uma única linha varia).
+ */
+export interface UpdateManyForSeriesInput {
+  supplierId: string;
+  categoryId: string;
+  description: string;
+  paymentOrigin: PaymentOrigin;
+}
+
+/**
  * Contrato do repositório de AccountsPayable. `update()` é deliberadamente
  * restrito (ver `UpdateAccountsPayableInput`) — valor e status continuam só
  * mudando via pagar/cancelar, nunca editados diretamente.
@@ -97,10 +114,29 @@ export interface AccountsPayableRepository {
 
   create(data: CreateAccountsPayableInput): Promise<AccountsPayable>;
 
+  /**
+   * Insere todas as ocorrências de uma recorrência num único INSERT em lote
+   * (`createMany`, atômico) em vez de uma `create()` por ocorrência — evita
+   * até ~240 idas sequenciais ao banco na criação de uma série longa.
+   * Retorna as linhas criadas (já com joins), ordenadas por occurrenceNumber.
+   */
+  createMany(data: CreateAccountsPayableInput[]): Promise<AccountsPayable[]>;
+
   update(
     id: string,
     data: UpdateAccountsPayableInput,
   ): Promise<AccountsPayable>;
+
+  /**
+   * Propaga os mesmos campos (fornecedor/categoria/descrição/origem) para
+   * várias ocorrências de uma vez (`updateMany`) — usado ao editar uma
+   * recorrência com `scope: "SERIES"`. Retorna a quantidade de linhas
+   * afetadas.
+   */
+  updateManyForSeries(
+    ids: string[],
+    data: UpdateManyForSeriesInput,
+  ): Promise<number>;
 
   /** Todas as ocorrências de uma recorrência, ordenadas por occurrenceNumber — usado pro Drawer (X de Y) e pra propagar edição/cancelamento às próximas. */
   listByRecurringBill(recurringBillId: string): Promise<AccountsPayable[]>;
@@ -125,6 +161,13 @@ export interface AccountsPayableRepository {
   markAsPaid(id: string, data: MarkAsPaidInput): Promise<AccountsPayable>;
 
   cancel(id: string): Promise<AccountsPayable>;
+
+  /**
+   * Cancela várias ocorrências de uma vez (`updateMany`) — usado ao encerrar
+   * uma recorrência (`scope: "SERIES"`), substitui o loop de `cancel()` por
+   * ocorrência. Retorna a quantidade de linhas afetadas.
+   */
+  cancelMany(ids: string[]): Promise<number>;
 
   /** Soft delete — nunca remove a linha. Só chamado depois de validar (use-case) que a conta está PENDENTE e ainda não excluída. */
   softDelete(

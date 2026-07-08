@@ -84,28 +84,36 @@ export async function updateAccountsPayableUseCase(
         (sibling.occurrenceNumber ?? 0) > (payable.occurrenceNumber ?? 0),
     );
 
-    for (const sibling of futurePending) {
+    if (futurePending.length > 0) {
+      const siblingIds = futurePending.map((sibling) => sibling.id);
+      // Vencimento é sempre o da própria ocorrência — nunca sobrescrito em
+      // lote, por isso não entra em `UpdateManyForSeriesInput`.
       const siblingChanges = {
         supplierId: input.supplierId,
         categoryId: input.categoryId,
         description: input.description,
-        // Vencimento é sempre o da própria ocorrência — nunca sobrescrito em lote.
-        dueDate: sibling.dueDate,
         // Origem do pagamento é característica da série inteira, propaga
         // igual às demais — diferente de barcode/pixKey (documento próprio
         // de cada ocorrência, nunca sobrescrito em lote).
         paymentOrigin: input.paymentOrigin,
       };
-      await deps.accountsPayableRepository.update(sibling.id, siblingChanges);
-      await prisma.auditLog.create({
-        data: {
+
+      // Um único UPDATE em lote (updateMany) + um único INSERT em lote pro
+      // histórico, em vez de update()+auditLog.create() sequenciais por
+      // ocorrência — evita N idas ao banco pra propagar a mesma edição.
+      await deps.accountsPayableRepository.updateManyForSeries(
+        siblingIds,
+        siblingChanges,
+      );
+      await prisma.auditLog.createMany({
+        data: siblingIds.map((siblingId) => ({
           userId: updatedByUserId,
           entity: "AccountsPayable",
-          entityId: sibling.id,
-          action: "UPDATE",
+          entityId: siblingId,
+          action: "UPDATE" as const,
           reason: "Alteração aplicada para recorrência.",
           after: siblingChanges,
-        },
+        })),
       });
     }
   }

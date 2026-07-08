@@ -4,30 +4,32 @@ import type { AccountsPayableRepository } from "@/features/accounts-payable/doma
 import type { RecurringBillRepository } from "@/features/recurring-bills/domain/recurring-bill.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
-  prisma: { auditLog: { create: vi.fn() } },
+  prisma: { auditLog: { createMany: vi.fn() } },
 }));
 
 function buildDeps() {
-  const create = vi
+  const createMany = vi
     .fn()
-    .mockImplementation((data: Record<string, unknown>) => ({
-      id: `payable-${data.occurrenceNumber}`,
-      ...data,
-    }));
+    .mockImplementation((items: Record<string, unknown>[]) =>
+      items.map((data) => ({
+        id: `payable-${data.occurrenceNumber}`,
+        ...data,
+      })),
+    );
   const accountsPayableRepository = {
-    create,
+    createMany,
   } as unknown as AccountsPayableRepository;
 
   const recurringBillRepository = {
     create: vi.fn().mockResolvedValue({ id: "recurring-1" }),
   } as unknown as RecurringBillRepository;
 
-  return { accountsPayableRepository, recurringBillRepository, create };
+  return { accountsPayableRepository, recurringBillRepository, createMany };
 }
 
 describe("createRecurringAccountsPayableUseCase", () => {
-  it("gera exatamente N ocorrências quando maxOccurrences é informado", async () => {
-    const { accountsPayableRepository, recurringBillRepository, create } =
+  it("gera exatamente N ocorrências quando maxOccurrences é informado, num único createMany", async () => {
+    const { accountsPayableRepository, recurringBillRepository, createMany } =
       buildDeps();
 
     const result = await createRecurringAccountsPayableUseCase(
@@ -46,12 +48,13 @@ describe("createRecurringAccountsPayableUseCase", () => {
       { accountsPayableRepository, recurringBillRepository },
     );
 
-    expect(create).toHaveBeenCalledTimes(3);
+    expect(createMany).toHaveBeenCalledTimes(1);
+    expect(createMany.mock.calls[0][0]).toHaveLength(3);
     expect(result.payables).toHaveLength(3);
   });
 
   it("gera um lote fixo de 12 ocorrências quando é sem prazo", async () => {
-    const { accountsPayableRepository, recurringBillRepository, create } =
+    const { accountsPayableRepository, recurringBillRepository, createMany } =
       buildDeps();
 
     await createRecurringAccountsPayableUseCase(
@@ -69,11 +72,11 @@ describe("createRecurringAccountsPayableUseCase", () => {
       { accountsPayableRepository, recurringBillRepository },
     );
 
-    expect(create).toHaveBeenCalledTimes(12);
+    expect(createMany.mock.calls[0][0]).toHaveLength(12);
   });
 
   it("só a 1ª ocorrência recebe os dados do boleto — as próximas não copiam", async () => {
-    const { accountsPayableRepository, recurringBillRepository, create } =
+    const { accountsPayableRepository, recurringBillRepository, createMany } =
       buildDeps();
 
     await createRecurringAccountsPayableUseCase(
@@ -93,12 +96,13 @@ describe("createRecurringAccountsPayableUseCase", () => {
       { accountsPayableRepository, recurringBillRepository },
     );
 
-    expect(create.mock.calls[0][0]).toMatchObject({ barcode: "00000000000" });
-    expect(create.mock.calls[1][0]).toMatchObject({ barcode: undefined });
+    const items = createMany.mock.calls[0][0];
+    expect(items[0]).toMatchObject({ barcode: "00000000000" });
+    expect(items[1]).toMatchObject({ barcode: undefined });
   });
 
   it("calcula os vencimentos avançando por periodicidade (mensal)", async () => {
-    const { accountsPayableRepository, recurringBillRepository, create } =
+    const { accountsPayableRepository, recurringBillRepository, createMany } =
       buildDeps();
 
     await createRecurringAccountsPayableUseCase(
@@ -117,8 +121,8 @@ describe("createRecurringAccountsPayableUseCase", () => {
       { accountsPayableRepository, recurringBillRepository },
     );
 
-    const dueDates = create.mock.calls.map((call) =>
-      call[0].dueDate.toISOString(),
+    const dueDates = createMany.mock.calls[0][0].map(
+      (item: { dueDate: Date }) => item.dueDate.toISOString(),
     );
     expect(dueDates).toEqual([
       "2026-01-05T00:00:00.000Z",

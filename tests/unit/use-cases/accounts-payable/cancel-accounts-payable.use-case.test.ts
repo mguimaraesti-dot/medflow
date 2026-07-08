@@ -7,7 +7,7 @@ import {
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
-  prisma: { auditLog: { create: vi.fn() } },
+  prisma: { auditLog: { create: vi.fn(), createMany: vi.fn() } },
 }));
 
 describe("cancelAccountsPayableUseCase", () => {
@@ -151,11 +151,12 @@ describe("cancelAccountsPayableUseCase", () => {
     expect(deactivate).not.toHaveBeenCalled();
   });
 
-  it("scope SERIES encerra a recorrência e cancela as outras ocorrências PENDENTES, sem tocar nas pagas", async () => {
+  it("scope SERIES encerra a recorrência e cancela as outras ocorrências PENDENTES num único updateMany, sem tocar nas pagas", async () => {
     const cancel = vi.fn().mockResolvedValue({
       id: "payable-1",
       status: "CANCELLED",
     });
+    const cancelMany = vi.fn().mockResolvedValue(1);
     const siblings = [
       { id: "payable-1", status: "PENDING" },
       { id: "payable-2", status: "PENDING" },
@@ -169,6 +170,7 @@ describe("cancelAccountsPayableUseCase", () => {
         recurringBillId: "recurring-1",
       }),
       cancel,
+      cancelMany,
       listByRecurringBill: vi.fn().mockResolvedValue(siblings),
     } as unknown as AccountsPayableRepository;
     const deactivate = vi.fn().mockResolvedValue({ id: "recurring-1" });
@@ -186,8 +188,42 @@ describe("cancelAccountsPayableUseCase", () => {
 
     expect(deactivate).toHaveBeenCalledWith("recurring-1");
     expect(cancel).toHaveBeenCalledWith("payable-1");
-    expect(cancel).toHaveBeenCalledWith("payable-2");
-    expect(cancel).not.toHaveBeenCalledWith("payable-3");
-    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancelMany).toHaveBeenCalledWith(["payable-2"]);
+    expect(cancelMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("scope SERIES sem outras ocorrências PENDENTES não chama cancelMany", async () => {
+    const cancel = vi.fn().mockResolvedValue({
+      id: "payable-1",
+      status: "CANCELLED",
+    });
+    const cancelMany = vi.fn();
+    const accountsPayableRepository = {
+      findById: vi.fn().mockResolvedValue({
+        id: "payable-1",
+        organizationId: "org-1",
+        status: "PENDING",
+        recurringBillId: "recurring-1",
+      }),
+      cancel,
+      cancelMany,
+      listByRecurringBill: vi
+        .fn()
+        .mockResolvedValue([{ id: "payable-1", status: "PENDING" }]),
+    } as unknown as AccountsPayableRepository;
+    const recurringBillRepository = {
+      deactivate: vi.fn().mockResolvedValue({ id: "recurring-1" }),
+    } as unknown as import("@/features/recurring-bills/domain/recurring-bill.repository").RecurringBillRepository;
+
+    await cancelAccountsPayableUseCase(
+      "payable-1",
+      "user-1",
+      "org-1",
+      { accountsPayableRepository, recurringBillRepository },
+      { scope: "SERIES" },
+    );
+
+    expect(cancelMany).not.toHaveBeenCalled();
   });
 });

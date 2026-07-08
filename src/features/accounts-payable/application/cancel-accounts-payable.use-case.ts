@@ -83,18 +83,23 @@ export async function cancelAccountsPayableUseCase(
         sibling.id !== accountsPayableId && sibling.status === "PENDING",
     );
 
-    for (const sibling of otherPending) {
-      await deps.accountsPayableRepository.cancel(sibling.id);
-      await prisma.auditLog.create({
-        data: {
+    if (otherPending.length > 0) {
+      const siblingIds = otherPending.map((sibling) => sibling.id);
+
+      // Um único UPDATE em lote (updateMany) + um único INSERT em lote pro
+      // histórico, em vez de cancel()+auditLog.create() sequenciais por
+      // ocorrência — evita N idas ao banco ao encerrar uma série longa.
+      await deps.accountsPayableRepository.cancelMany(siblingIds);
+      await prisma.auditLog.createMany({
+        data: siblingIds.map((siblingId) => ({
           userId: cancelledByUserId,
           entity: "AccountsPayable",
-          entityId: sibling.id,
-          action: "UPDATE",
+          entityId: siblingId,
+          action: "UPDATE" as const,
           reason: "Cancelado ao encerrar a recorrência.",
           before: { status: "PENDING" },
           after: { status: "CANCELLED" },
-        },
+        })),
       });
     }
   }

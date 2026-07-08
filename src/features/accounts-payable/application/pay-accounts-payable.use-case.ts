@@ -40,8 +40,9 @@ export async function payAccountsPayableUseCase(
     throw new PayableAlreadyProcessedError(accountsPayableId);
   }
 
+  let safeBalance;
   if (payable.paymentOrigin === "COFRE") {
-    const safeBalance = await deps.safeRepository.getBalance(organizationId);
+    safeBalance = await deps.safeRepository.getBalance(organizationId);
     if (safeBalance.lessThan(payable.amount)) {
       throw new InsufficientSafeBalanceError(
         organizationId,
@@ -59,6 +60,9 @@ export async function payAccountsPayableUseCase(
       paymentOrigin: payable.paymentOrigin,
       amount: payable.amount.toFixed(2),
       organizationId,
+      // Reaproveitado dentro da transação em vez de recalculado do zero —
+      // a proteção contra corrida vira um lock de linha (ver repositório).
+      safeBalance: safeBalance?.toFixed(2),
     },
   );
 

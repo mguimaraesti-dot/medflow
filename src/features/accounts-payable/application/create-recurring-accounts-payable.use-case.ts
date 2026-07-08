@@ -84,19 +84,18 @@ export async function createRecurringAccountsPayableUseCase(
     firstDueDate: input.firstDueDate,
   });
 
-  const payables: AccountsPayable[] = [];
-  for (let i = 0; i < occurrenceCount; i++) {
-    const occurrenceNumber = i + 1;
+  // Um único INSERT em lote (createMany) para todas as ocorrências, em vez
+  // de uma create() sequencial por ocorrência — evita até ~240 idas ao
+  // banco numa recorrência longa (maxOccurrences alto).
+  const occurrencesData = Array.from({ length: occurrenceCount }, (_, i) => {
     const isFirst = i === 0;
-    const dueDate = addPeriod(input.firstDueDate, input.periodicity, i);
-
-    const payable = await deps.accountsPayableRepository.create({
+    return {
       organizationId,
       supplierId: input.supplierId,
       categoryId: input.categoryId,
       description: input.description,
       amount: input.amount.toFixed(2),
-      dueDate,
+      dueDate: addPeriod(input.firstDueDate, input.periodicity, i),
       // Cada ocorrência tem boleto/PIX próprios (nota fiscal e comprovante
       // diferentes) — só a 1ª conta (a que o usuário está cadastrando
       // agora) recebe os dados digitados no formulário.
@@ -110,28 +109,31 @@ export async function createRecurringAccountsPayableUseCase(
       // paga, então vale igual pra todas as ocorrências geradas.
       paymentOrigin: input.paymentOrigin,
       recurringBillId: recurringBill.id,
-      occurrenceNumber,
+      occurrenceNumber: i + 1,
       createdByUserId,
-    });
-    payables.push(payable);
+    };
+  });
 
-    await prisma.auditLog.create({
-      data: {
-        userId: createdByUserId,
-        entity: "AccountsPayable",
-        entityId: payable.id,
-        action: "CREATE",
-        reason: isFirst
-          ? undefined
-          : "Conta criada automaticamente por recorrência.",
-        after: {
-          description: payable.description,
-          amount: input.amount.toFixed(2),
-          occurrenceNumber,
-        },
+  const payables =
+    await deps.accountsPayableRepository.createMany(occurrencesData);
+
+  // Um único INSERT em lote pro histórico de todas as ocorrências, em vez
+  // de um auditLog.create() sequencial por ocorrência.
+  await prisma.auditLog.createMany({
+    data: payables.map((payable, i) => ({
+      userId: createdByUserId,
+      entity: "AccountsPayable",
+      entityId: payable.id,
+      action: "CREATE" as const,
+      reason:
+        i === 0 ? undefined : "Conta criada automaticamente por recorrência.",
+      after: {
+        description: payable.description,
+        amount: input.amount.toFixed(2),
+        occurrenceNumber: payable.occurrenceNumber,
       },
-    });
-  }
+    })),
+  });
 
   logger.info("Recorrência criada com ocorrências geradas", {
     organizationId,

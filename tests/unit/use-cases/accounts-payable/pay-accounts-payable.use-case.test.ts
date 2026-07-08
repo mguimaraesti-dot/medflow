@@ -121,6 +121,7 @@ describe("payAccountsPayableUseCase", () => {
       paymentOrigin: "COFRE",
       amount: "150.00",
       organizationId: "org-1",
+      safeBalance: "500.00",
     });
     expect(result.paidSafeMovementId).toBe("movement-1");
   });

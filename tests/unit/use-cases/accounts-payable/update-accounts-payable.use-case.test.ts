@@ -7,7 +7,7 @@ import {
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
-  prisma: { auditLog: { create: vi.fn() } },
+  prisma: { auditLog: { create: vi.fn(), createMany: vi.fn() } },
 }));
 
 function buildPayable(overrides: Record<string, unknown> = {}) {
@@ -66,10 +66,12 @@ describe("updateAccountsPayableUseCase", () => {
     });
     const update = vi.fn().mockResolvedValue({ ...payable, ...baseInput });
     const listByRecurringBill = vi.fn();
+    const updateManyForSeries = vi.fn();
     const accountsPayableRepository = {
       findById: vi.fn().mockResolvedValue(payable),
       update,
       listByRecurringBill,
+      updateManyForSeries,
     } as unknown as AccountsPayableRepository;
 
     await updateAccountsPayableUseCase(
@@ -82,21 +84,21 @@ describe("updateAccountsPayableUseCase", () => {
 
     expect(update).toHaveBeenCalledTimes(1);
     expect(listByRecurringBill).not.toHaveBeenCalled();
+    expect(updateManyForSeries).not.toHaveBeenCalled();
   });
 
-  it("scope SERIES propaga fornecedor/categoria/descrição às próximas PENDENTES, sem mexer no vencimento delas nem em ocorrências pagas/canceladas", async () => {
+  it("scope SERIES propaga fornecedor/categoria/descrição às próximas PENDENTES num único updateMany, sem mexer no vencimento delas nem em ocorrências pagas/canceladas", async () => {
     const payable = buildPayable({
       recurringBillId: "recurring-1",
       occurrenceNumber: 1,
     });
-    const siblingDueDate2 = new Date("2026-09-05T00:00:00.000Z");
     const siblings = [
       payable,
       {
         id: "payable-2",
         status: "PENDING",
         occurrenceNumber: 2,
-        dueDate: siblingDueDate2,
+        dueDate: new Date("2026-09-05T00:00:00.000Z"),
       },
       {
         id: "payable-3",
@@ -106,10 +108,12 @@ describe("updateAccountsPayableUseCase", () => {
       },
     ];
     const update = vi.fn().mockResolvedValue({ ...payable, ...baseInput });
+    const updateManyForSeries = vi.fn().mockResolvedValue(1);
     const accountsPayableRepository = {
       findById: vi.fn().mockResolvedValue(payable),
       update,
       listByRecurringBill: vi.fn().mockResolvedValue(siblings),
+      updateManyForSeries,
     } as unknown as AccountsPayableRepository;
 
     await updateAccountsPayableUseCase(
@@ -120,14 +124,39 @@ describe("updateAccountsPayableUseCase", () => {
       { accountsPayableRepository },
     );
 
-    // 1x pra esta ocorrência + 1x pra ocorrência 2 (PENDENTE) — nunca pra 3 (PAID)
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(update).toHaveBeenCalledWith("payable-2", {
+    // 1x pra esta ocorrência (update) + 1x em lote pra 2 (PENDENTE) — nunca pra 3 (PAID)
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(updateManyForSeries).toHaveBeenCalledTimes(1);
+    expect(updateManyForSeries).toHaveBeenCalledWith(["payable-2"], {
       supplierId: "supplier-new",
       categoryId: "cat-new",
       description: "Novo",
-      dueDate: siblingDueDate2,
       paymentOrigin: "BANCO",
     });
+  });
+
+  it("scope SERIES sem próximas PENDENTES não chama updateManyForSeries", async () => {
+    const payable = buildPayable({
+      recurringBillId: "recurring-1",
+      occurrenceNumber: 1,
+    });
+    const update = vi.fn().mockResolvedValue({ ...payable, ...baseInput });
+    const updateManyForSeries = vi.fn();
+    const accountsPayableRepository = {
+      findById: vi.fn().mockResolvedValue(payable),
+      update,
+      listByRecurringBill: vi.fn().mockResolvedValue([payable]),
+      updateManyForSeries,
+    } as unknown as AccountsPayableRepository;
+
+    await updateAccountsPayableUseCase(
+      "payable-1",
+      { ...baseInput, scope: "SERIES" },
+      "user-1",
+      "org-1",
+      { accountsPayableRepository },
+    );
+
+    expect(updateManyForSeries).not.toHaveBeenCalled();
   });
 });

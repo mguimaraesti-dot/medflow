@@ -9,6 +9,7 @@ import type {
   MarkAsPaidInput,
   SoftDeleteAccountsPayableInput,
   UpdateAccountsPayableInput,
+  UpdateManyForSeriesInput,
 } from "../domain/accounts-payable.repository";
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
 import type { AccountsPayableSummary } from "../domain/accounts-payable-summary.entity";
@@ -148,6 +149,46 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return toDomain(row);
   }
 
+  /**
+   * Um único INSERT em lote (atômico) em vez de N `create()` sequenciais —
+   * substitui o loop de criação de ocorrências de uma recorrência. O
+   * segundo `findMany` (por `recurringBillId`) é necessário porque
+   * `createMany` do Prisma não retorna as linhas inseridas.
+   */
+  async createMany(
+    data: CreateAccountsPayableInput[],
+  ): Promise<AccountsPayable[]> {
+    if (data.length === 0) return [];
+
+    await prisma.accountsPayable.createMany({
+      data: data.map((item) => ({
+        organizationId: item.organizationId,
+        supplierId: item.supplierId,
+        categoryId: item.categoryId,
+        description: item.description,
+        amount: item.amount,
+        dueDate: item.dueDate,
+        barcode: item.barcode,
+        digitableLine: item.digitableLine,
+        pixKey: item.pixKey,
+        qrCodeUrl: item.qrCodeUrl,
+        boletoPdfUrl: item.boletoPdfUrl,
+        paymentOrigin: item.paymentOrigin ?? "BANCO",
+        recurringBillId: item.recurringBillId,
+        occurrenceNumber: item.occurrenceNumber,
+        createdByUserId: item.createdByUserId,
+      })),
+    });
+
+    const recurringBillId = data[0].recurringBillId;
+    const rows = await prisma.accountsPayable.findMany({
+      where: { recurringBillId },
+      include: USER_NAMES_INCLUDE,
+      orderBy: { occurrenceNumber: "asc" },
+    });
+    return rows.map(toDomain);
+  }
+
   async update(
     id: string,
     data: UpdateAccountsPayableInput,
@@ -166,6 +207,29 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       include: USER_NAMES_INCLUDE,
     });
     return toDomain(row);
+  }
+
+  /**
+   * Um único UPDATE em lote (`updateMany`) em vez de N `update()`
+   * sequenciais — substitui o loop de propagação de edição pras próximas
+   * ocorrências PENDENTES de uma recorrência. `dueDate` nunca entra aqui de
+   * propósito (cada ocorrência mantém a sua).
+   */
+  async updateManyForSeries(
+    ids: string[],
+    data: UpdateManyForSeriesInput,
+  ): Promise<number> {
+    if (ids.length === 0) return 0;
+    const result = await prisma.accountsPayable.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        supplierId: data.supplierId,
+        categoryId: data.categoryId,
+        description: data.description,
+        paymentOrigin: data.paymentOrigin,
+      },
+    });
+    return result.count;
   }
 
   async listByRecurringBill(
@@ -199,11 +263,11 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
   /**
    * `paymentOrigin` BANCO: só marca o ciclo de vida, sem tocar o Cofre
    * (comportamento idêntico ao de antes desta feature). `paymentOrigin`
-   * COFRE: dentro da mesma transação, recalcula o saldo do Cofre (rede de
-   * segurança contra corrida — a checagem "de verdade" já rodou no use
-   * case), cria o `SafeMovement` vinculado e só então marca a conta como
-   * paga — mesmo padrão de `PrismaCashRegisterDayRepository.create()`
-   * (Coding Standards, item 18.2).
+   * COFRE: em vez de recalcular o saldo do zero (4 agregações) dentro da
+   * transação, reaproveita `data.safeBalance` (já calculado e validado no
+   * use case) e usa um `SELECT ... FOR UPDATE` na linha do Cofre só pra
+   * serializar pagamentos concorrentes — a checagem de saldo continua
+   * acontecendo, só não recomputa o valor do zero uma 2ª vez.
    */
   async markAsPaid(
     id: string,
@@ -228,39 +292,23 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         where: { id },
       });
 
-      const safe = await tx.safe.findUniqueOrThrow({
-        where: { organizationId: data.organizationId },
-      });
+      const [safe] = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "safes" WHERE "organizationId" = ${data.organizationId} FOR UPDATE
+      `;
+      if (!safe) {
+        throw new Error(
+          `Cofre não encontrado para a organização ${data.organizationId}.`,
+        );
+      }
 
-      const [funding, credits, manualAdjustment] = await Promise.all([
-        tx.safeMovement.aggregate({
-          where: {
-            safeId: safe.id,
-            type: { in: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
-          },
-          _sum: { amount: true },
-        }),
-        tx.safeMovement.aggregate({
-          where: {
-            safeId: safe.id,
-            type: { in: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
-          },
-          _sum: { amount: true },
-        }),
-        tx.safeMovement.aggregate({
-          where: { safeId: safe.id, type: "MANUAL_ADJUSTMENT" },
-          _sum: { amount: true },
-        }),
-      ]);
-
-      const safeBalance = (credits._sum.amount ?? new Prisma.Decimal(0))
-        .plus(manualAdjustment._sum.amount ?? new Prisma.Decimal(0))
-        .minus(funding._sum.amount ?? new Prisma.Decimal(0));
+      const safeBalance = new Prisma.Decimal(data.safeBalance ?? 0);
 
       // Rede de segurança contra corrida entre dois pagamentos via Cofre
       // quase simultâneos — a checagem "de verdade" (com
       // InsufficientSafeBalanceError) já rodou no use case antes de
-      // chamar este método.
+      // chamar este método; o lock acima garante que nenhum outro
+      // pagamento via Cofre da mesma organização commitou entre a leitura
+      // do saldo (no use case) e aqui.
       if (safeBalance.lessThan(data.amount)) {
         throw new Error(
           `Saldo do Cofre insuficiente para pagar a conta (organização ${data.organizationId}).`,
@@ -301,6 +349,20 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       include: USER_NAMES_INCLUDE,
     });
     return toDomain(row);
+  }
+
+  /**
+   * Um único UPDATE em lote (`updateMany`) em vez de N `cancel()`
+   * sequenciais — substitui o loop de cancelamento das demais ocorrências
+   * PENDENTES ao encerrar uma recorrência.
+   */
+  async cancelMany(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const result = await prisma.accountsPayable.updateMany({
+      where: { id: { in: ids } },
+      data: { status: "CANCELLED" },
+    });
+    return result.count;
   }
 
   async softDelete(
