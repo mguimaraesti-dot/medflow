@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   Activity,
   BarChart3,
@@ -12,11 +13,18 @@ import { CashRegisterStatusCard } from "@/features/cash-register/presentation/ca
 import { useDashboardSummary } from "./use-dashboard-summary";
 import { AlertsBanner } from "./alerts-banner";
 import { KpiCard } from "@/shared/components/kpi-card";
-import { CashFlowChart } from "./cash-flow-chart";
 import { RecentEntriesList } from "./recent-entries-list";
 import { useUpcomingPayables } from "./use-upcoming-payables";
 import { UpcomingDuesCard } from "@/shared/components/upcoming-dues-card";
 import { formatCurrencyBRL } from "@/shared/lib/format";
+import { Skeleton } from "@/shared/ui/skeleton";
+
+// recharts só entra no bundle quando o gráfico é de fato renderizado —
+// evita carregar a biblioteca inteira no bundle inicial do Dashboard.
+const CashFlowChart = dynamic(
+  () => import("./cash-flow-chart").then((mod) => mod.CashFlowChart),
+  { ssr: false, loading: () => <Skeleton className="h-[358px] w-full" /> },
+);
 
 export function DashboardScreen({ permissions }: { permissions: string[] }) {
   const { data: summary, isLoading } = useDashboardSummary();

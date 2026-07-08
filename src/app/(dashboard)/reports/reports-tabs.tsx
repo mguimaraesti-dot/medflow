@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { CashRegisterHistoryTable } from "@/features/cash-register/presentation/cash-register-history-table";
 import { CashRegisterDayDetailDrawer } from "@/features/cash-register/presentation/cash-register-day-detail-drawer";
-import { ExpensesByCategoryReport } from "@/features/cash-flow/presentation/expenses-by-category-report";
 import {
   PeriodSelector,
   computePeriodRange,
@@ -11,8 +11,19 @@ import {
   type PeriodRange,
 } from "@/shared/components/period-selector";
 import { Card, CardContent } from "@/shared/ui/card";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import type { CashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
+
+// recharts só entra no bundle quando a aba "Despesas por Categoria" é
+// aberta — evita carregar a biblioteca no bundle inicial de /reports.
+const ExpensesByCategoryReport = dynamic(
+  () =>
+    import("@/features/cash-flow/presentation/expenses-by-category-report").then(
+      (mod) => mod.ExpensesByCategoryReport,
+    ),
+  { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> },
+);
 
 /**
  * Composição de duas features (`cash-register` + `cash-flow`) em uma
