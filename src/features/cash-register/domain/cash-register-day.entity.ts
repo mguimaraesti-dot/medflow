@@ -45,6 +45,8 @@ export interface CashRegisterDay {
   closedAt: Date | null;
 
   reopenedByUserId: string | null;
+  /** Denormalizado só pra exibição ("Reaberto hoje às..." no card, quando o caixa foi reaberto) — via join na infraestrutura. */
+  reopenedByUserName: string | null;
   reopenedAt: Date | null;
   reopenCount: number;
 

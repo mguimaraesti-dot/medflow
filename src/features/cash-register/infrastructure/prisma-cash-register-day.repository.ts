@@ -14,6 +14,7 @@ import type { CashRegisterDay } from "../domain/cash-register-day.entity";
 const OPENED_BY_INCLUDE = {
   openedBy: { select: { name: true } },
   closedBy: { select: { name: true } },
+  reopenedBy: { select: { name: true } },
 } as const;
 
 type RowWithOpenedBy = Prisma.CashRegisterDayGetPayload<{
@@ -29,12 +30,13 @@ type RowWithOpenedBy = Prisma.CashRegisterDayGetPayload<{
  * migrados para `CLOSED`.
  */
 function toDomainDay(row: RowWithOpenedBy): CashRegisterDay {
-  const { openedBy, closedBy, ...day } = row;
+  const { openedBy, closedBy, reopenedBy, ...day } = row;
   return {
     ...day,
     status: day.status as CashRegisterDay["status"],
     openedByUserName: openedBy.name,
     closedByUserName: closedBy?.name ?? null,
+    reopenedByUserName: reopenedBy?.name ?? null,
     // Não existe coluna pra isso — só o use case de "hoje" populado ao
     // vivo enquanto OPEN (ver comentário no domínio).
     cashIn: null,

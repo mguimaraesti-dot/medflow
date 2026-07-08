@@ -11,7 +11,16 @@ export function formatCurrencyBRL(value: string | number): string {
   }).format(numeric);
 }
 
-/** Datas do backend chegam em ISO 8601 (UTC); exibição sempre dd/MM/yyyy HH:mm. */
+/**
+ * Timezone fixo da clínica (mesmo default de `OrganizationSettings.timezone`
+ * — MVP opera com uma única clínica, ver CLAUDE.md). Timestamps com hora
+ * são sempre exibidos aqui, nunca no timezone implícito do navegador —
+ * um dispositivo mal configurado não pode fazer "22:01" virar outro
+ * horário pro usuário.
+ */
+const DISPLAY_TIMEZONE = "America/Sao_Paulo";
+
+/** Datas do backend chegam em ISO 8601 (UTC); exibição sempre dd/MM/yyyy HH:mm no horário de Brasília. */
 export function formatDateTimeBR(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("pt-BR", {
@@ -20,15 +29,17 @@ export function formatDateTimeBR(value: string | Date): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: DISPLAY_TIMEZONE,
   }).format(date);
 }
 
-/** Só o horário (HH:mm) — usado na Timeline do dia, onde a data já é implícita. */
+/** Só o horário (HH:mm), no horário de Brasília — usado na Timeline do dia, onde a data já é implícita. */
 export function formatTimeBR(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: DISPLAY_TIMEZONE,
   }).format(date);
 }
 
@@ -48,13 +59,14 @@ export function formatDateOnlyBR(value: string | Date): string {
   }).format(date);
 }
 
-/** Diferente de `formatDateOnlyBR`: aqui a entrada é um timestamp de verdade (ex: `closedAt`), não uma data "pura" — formata no fuso local, sem forçar UTC. */
+/** Diferente de `formatDateOnlyBR`: aqui a entrada é um timestamp de verdade (ex: `closedAt`), não uma data "pura" — formata no horário de Brasília, nunca UTC. */
 export function formatDateOnlyLocalBR(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: DISPLAY_TIMEZONE,
   }).format(date);
 }
 

@@ -21,6 +21,7 @@ function buildDay(overrides: Partial<CashRegisterDay> = {}): CashRegisterDay {
     closedByUserName: null,
     closedAt: null,
     reopenedByUserId: null,
+    reopenedByUserName: null,
     reopenedAt: null,
     reopenCount: 0,
     expectedCashAmount: null,

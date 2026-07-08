@@ -77,7 +77,14 @@ export function CashBalanceHeader({
               />
               {isOpen ? "Caixa Aberto" : "Caixa Fechado"}
             </span>
-            {isOpen && today && (
+            {isOpen && today && today.reopenCount > 0 && today.reopenedAt && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                Reaberto hoje às {formatTimeBR(today.reopenedAt)}
+                <br />
+                por {today.reopenedByUserName}
+              </p>
+            )}
+            {isOpen && today && today.reopenCount === 0 && (
               <p className="text-muted-foreground mt-1 text-sm">
                 Aberto hoje às {formatTimeBR(today.openedAt)}
                 <br />
