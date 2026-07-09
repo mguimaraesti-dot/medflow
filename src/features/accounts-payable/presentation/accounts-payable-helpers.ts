@@ -28,28 +28,23 @@ import type {
 import type { AccountsPayableAuditLogEntry } from "./use-accounts-payable-audit-log";
 
 /**
- * Texto formatado pra colar manualmente num grupo do WhatsApp (a
+ * Cabeçalho formatado pra colar manualmente num grupo do WhatsApp (a
  * integração automática ainda não existe — ver `publicToken` na
- * entidade). Asteriscos são negrito no WhatsApp; nunca escapar. Código
- * de barras/PIX só entram quando existem.
+ * entidade). Asteriscos são negrito no WhatsApp; nunca escapar. Só os
+ * dados básicos — código de barras e chave PIX já têm seus próprios
+ * botões de cópia, não entram aqui.
  */
 export function buildWhatsAppMessage(input: {
   supplierName: string;
   amount: string;
   dueDate: string | Date;
-  barcode?: string | null;
-  pixKey?: string | null;
 }): string {
-  const lines = [
+  return [
     "🧾 *Conta a Pagar*",
-    "",
     `*Nome:* ${input.supplierName}`,
-    `*Valor:* ${formatCurrencyBRL(input.amount)}`,
     `*Vencimento:* ${formatDateOnlyBR(input.dueDate)}`,
-  ];
-  if (input.barcode) lines.push(`*Código de Barras:* ${input.barcode}`);
-  if (input.pixKey) lines.push(`*Chave PIX:* ${input.pixKey}`);
-  return lines.join("\n");
+    `*Valor:* ${formatCurrencyBRL(input.amount)}`,
+  ].join("\n");
 }
 
 export const STATUS_META: Record<

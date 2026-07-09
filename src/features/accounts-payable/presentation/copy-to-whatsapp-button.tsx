@@ -31,8 +31,6 @@ export function CopyToWhatsAppButton({
       supplierName,
       amount: payable.amount,
       dueDate: payable.dueDate,
-      barcode: payable.barcode,
-      pixKey: payable.pixKey,
     });
 
     try {
