@@ -110,26 +110,6 @@ export const CashFlowEntryForm = forwardRef<
     amountInputRef.current?.focus();
   }, []);
 
-  // F2/F3 trocam o tipo do lançamento de qualquer lugar da tela, exceto
-  // quando um diálogo (Fechar Caixa, Estornar, etc.) está aberto — nunca
-  // competem com atalhos do próprio diálogo.
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (document.querySelector('[role="dialog"]')) return;
-      if (event.key === "F2") {
-        event.preventDefault();
-        setValue("type", "IN");
-        setValue("paymentMethodId", "");
-      } else if (event.key === "F3") {
-        event.preventDefault();
-        setValue("type", "OUT");
-        setValue("paymentMethodId", "");
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setValue]);
-
   useImperativeHandle(
     ref,
     () => ({
@@ -391,9 +371,6 @@ export const CashFlowEntryForm = forwardRef<
                 </>
               )}
             </Button>
-            <p className="text-muted-foreground text-center text-xs">
-              Pressione Enter para salvar
-            </p>
           </div>
 
           {serverError && (

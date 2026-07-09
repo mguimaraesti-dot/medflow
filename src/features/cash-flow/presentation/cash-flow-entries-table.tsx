@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { CalendarDays, Receipt, Search } from "lucide-react";
 import { useCashFlowEntries } from "./use-cash-flow-entries";
 import { CashFlowEntryDetailDrawer } from "./cash-flow-entry-detail-drawer";
+import { ReverseEntryDialog } from "./reverse-entry-dialog";
 import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
+import { useCategories } from "@/features/categories/presentation/use-categories";
 import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
 import { getPaymentMethodIcon } from "@/shared/lib/lucide-icon-map";
 import { cn } from "@/shared/lib/utils";
@@ -34,12 +36,11 @@ const QUICK_FILTERS: { value: QuickFilter; label: string }[] = [
   { value: "REVERSED", label: "Estornados" },
 ];
 
-/** Coluna "Descrição" única — reaproveita o que já existia como colunas separadas (Categoria/Paciente-Justificativa), só consolidado (Refinamento PDV). */
-function describeEntry(entry: CashFlowEntryResponseDTO): string {
-  if (entry.type === "IN") {
-    return entry.description || entry.patientName || "—";
-  }
-  return entry.withdrawalReason || "—";
+/** Paciente (Entrada) ou Justificativa (Saída) — nunca os dois ao mesmo tempo. */
+function patientOrReason(entry: CashFlowEntryResponseDTO): string {
+  return entry.type === "IN"
+    ? entry.patientName || "—"
+    : entry.withdrawalReason || "—";
 }
 
 export function CashFlowEntriesTable({
@@ -53,6 +54,7 @@ export function CashFlowEntriesTable({
 }) {
   const [selectedEntry, setSelectedEntry] =
     useState<CashFlowEntryResponseDTO | null>(null);
+  const [reversingEntryId, setReversingEntryId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<QuickFilter | null>(null);
 
@@ -67,6 +69,11 @@ export function CashFlowEntriesTable({
   const paymentMethodById = useMemo(
     () => new Map(paymentMethods?.map((method) => [method.id, method])),
     [paymentMethods],
+  );
+  const { data: categories } = useCategories();
+  const categoryById = useMemo(
+    () => new Map(categories?.map((category) => [category.id, category])),
+    [categories],
   );
 
   const isNeverOpenedToday = !cashRegisterDayId && !isClosedToday && !isLoading;
@@ -92,13 +99,14 @@ export function CashFlowEntriesTable({
         entry.description,
         entry.patientName,
         entry.withdrawalReason,
+        categoryById.get(entry.categoryId)?.name,
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return haystack.includes(searchLower);
     });
-  }, [data?.items, search, activeFilter, paymentMethodById]);
+  }, [data?.items, search, activeFilter, paymentMethodById, categoryById]);
 
   return (
     <Card className="rounded-2xl shadow-sm">
@@ -181,9 +189,12 @@ export function CashFlowEntriesTable({
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Hora</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Descrição</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Paciente / Justificativa</TableHead>
                   <TableHead>Forma</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -194,6 +205,9 @@ export function CashFlowEntriesTable({
                   const PaymentMethodIcon = getPaymentMethodIcon(
                     paymentMethod?.name ?? "",
                   );
+                  const category = categoryById.get(entry.categoryId);
+                  const canReverseEntry =
+                    canReverse && !entry.isReversed && !entry.reversalOfEntryId;
                   return (
                     <TableRow
                       key={entry.id}
@@ -221,7 +235,18 @@ export function CashFlowEntriesTable({
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {describeEntry(entry)}
+                        <span className="inline-flex items-center gap-1.5">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor: category?.color ?? "#64748B",
+                            }}
+                          />
+                          {category?.name ?? "—"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {patientOrReason(entry)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
@@ -240,6 +265,25 @@ export function CashFlowEntriesTable({
                         {entry.type === "IN" ? "+" : "-"}
                         {formatCurrencyBRL(entry.amount)}
                       </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {entry.createdByUserName}
+                      </TableCell>
+                      <TableCell
+                        className="text-right"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {canReverseEntry && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setReversingEntryId(entry.id)}
+                          >
+                            Estornar
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -254,6 +298,11 @@ export function CashFlowEntriesTable({
         open={selectedEntry !== null}
         onOpenChange={(open) => !open && setSelectedEntry(null)}
         canReverse={canReverse}
+      />
+      <ReverseEntryDialog
+        entryId={reversingEntryId}
+        open={reversingEntryId !== null}
+        onOpenChange={(open) => !open && setReversingEntryId(null)}
       />
     </Card>
   );

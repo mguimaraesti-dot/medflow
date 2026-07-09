@@ -169,7 +169,7 @@ export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
               <Separator />
 
               <Field
-                label="Dinheiro Esperado no Caixa"
+                label="Saldo Esperado em Dinheiro"
                 value={
                   <span className="text-primary text-xl font-bold">
                     {formatCurrencyBRL(expectedCash)}

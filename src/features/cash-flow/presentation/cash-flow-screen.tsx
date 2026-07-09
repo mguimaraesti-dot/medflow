@@ -9,6 +9,7 @@ import {
   type CashFlowEntryFormHandle,
 } from "./cash-flow-entry-form";
 import { CashFlowEntriesTable } from "./cash-flow-entries-table";
+import { DailySummaryPanel } from "./daily-summary-panel";
 
 export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const { data: today } = useCashRegisterToday();
@@ -28,13 +29,28 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
         onSelectType={(type) => formRef.current?.selectType(type)}
       />
 
-      <CashFlowEntryForm ref={formRef} disabled={!canCreateEntry} />
-
-      <CashFlowEntriesTable
-        cashRegisterDayId={isRegisterOpen ? today?.id : undefined}
-        isClosedToday={today?.status === "CLOSED"}
-        canReverse={can(PERMISSIONS.CASH_FLOW_REVERSE)}
-      />
+      {isRegisterOpen && today ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <CashFlowEntryForm ref={formRef} disabled={!canCreateEntry} />
+            <CashFlowEntriesTable
+              cashRegisterDayId={today.id}
+              isClosedToday={false}
+              canReverse={can(PERMISSIONS.CASH_FLOW_REVERSE)}
+            />
+          </div>
+          <DailySummaryPanel today={today} />
+        </div>
+      ) : (
+        <>
+          <CashFlowEntryForm ref={formRef} disabled={!canCreateEntry} />
+          <CashFlowEntriesTable
+            cashRegisterDayId={undefined}
+            isClosedToday={today?.status === "CLOSED"}
+            canReverse={can(PERMISSIONS.CASH_FLOW_REVERSE)}
+          />
+        </>
+      )}
     </div>
   );
 }
