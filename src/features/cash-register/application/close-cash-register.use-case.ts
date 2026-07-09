@@ -17,13 +17,15 @@ interface Deps {
 /**
  * US07 — Fechamento de caixa (secretária presta contas).
  *
- * Fecha direto para `CLOSED` — dupla conferência do Motor de
- * Tesouraria removida por decisão explícita (a secretária tem
- * autonomia de fechar e reabrir sozinha, sempre com justificativa; o
- * Cofre deixou de ser movimentado automaticamente por este fluxo).
- * `expectedCashAmount`/`difference` são SEMPRE calculados aqui a partir
- * dos lançamentos reais — nunca aceitos do cliente. `countedAmount` é a
- * única entrada do usuário.
+ * Fecha direto para `CLOSED` — a secretária tem autonomia de fechar e
+ * reabrir sozinha, sempre com justificativa na reabertura; não há trava
+ * nem dupla conferência neste passo. O repositório (`close()`), na mesma
+ * transação, cria um `SafeMovement` `CASH_REGISTER_HANDOFF`/`PENDING`
+ * com o `countedAmount` — o dinheiro só passa a valer no saldo do Cofre
+ * depois que um Gerente confirma a conferência física
+ * (`confirm-safe-movement.use-case`). `expectedCashAmount`/`difference`
+ * são SEMPRE calculados aqui a partir dos lançamentos reais — nunca
+ * aceitos do cliente. `countedAmount` é a única entrada do usuário.
  *
  * Dinheiro Esperado = Saldo Inicial + Entradas em dinheiro
  *                      − Saídas em dinheiro − Sangrias do dia.

@@ -86,12 +86,12 @@ export function ManualAdjustmentDialog() {
           className="h-10 flex-1 border-blue-600/40 text-blue-600 hover:bg-blue-600/10 hover:text-blue-600 sm:flex-none dark:text-blue-500"
         >
           <Settings2 className="h-4 w-4" />
-          Ajuste Manual
+          Ajuste de Saldo
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ajuste manual do Cofre</DialogTitle>
+          <DialogTitle>Ajuste de Saldo do Cofre</DialogTitle>
           <DialogDescription>
             Uso administrativo, fora do fluxo normal de caixa. Registrado em
             auditoria.

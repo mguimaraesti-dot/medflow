@@ -20,7 +20,7 @@ import {
 } from "@/shared/ui/dialog";
 
 /**
- * "Retirada" — entrada simplificada pro mesmo use case de Ajuste
+ * "Nova Saída" — entrada simplificada pro mesmo use case de Ajuste
  * Manual, só que com a direção travada em "remover" (sem seletor).
  * Pensada pra saídas de dinheiro do Cofre pra pagamentos (fornecedor,
  * despesa emergencial etc.), sem o operador precisar entender o
@@ -50,12 +50,12 @@ export function WithdrawalDialog() {
       });
       setOpen(false);
       reset();
-      toast.success("Retirada registrada.");
+      toast.success("Saída registrada.");
     } catch (error) {
       setServerError(
         error instanceof ApiError
           ? error.message
-          : "Não foi possível registrar a retirada.",
+          : "Não foi possível registrar a saída.",
       );
     }
   }
@@ -75,12 +75,12 @@ export function WithdrawalDialog() {
           className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive h-10 flex-1 sm:flex-none"
         >
           <ArrowUpCircle className="h-4 w-4" />
-          Retirada
+          Nova Saída
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Retirada do Cofre</DialogTitle>
+          <DialogTitle>Nova Saída do Cofre</DialogTitle>
           <DialogDescription>
             Registra uma saída de dinheiro do Cofre, como pagamento a fornecedor
             ou despesa emergencial.

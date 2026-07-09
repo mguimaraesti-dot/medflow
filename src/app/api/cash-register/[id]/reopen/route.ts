@@ -7,8 +7,10 @@ import { reopenCashRegisterSchema } from "@/features/cash-register/application/d
 import { reopenCashRegisterUseCase } from "@/features/cash-register/application/reopen-cash-register.use-case";
 import { toCashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
+import { PrismaSafeMovementRepository } from "@/features/treasury/infrastructure/prisma-safe-movement.repository";
 
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
+const safeMovementRepository = new PrismaSafeMovementRepository();
 
 export async function POST(
   request: NextRequest,
@@ -25,6 +27,7 @@ export async function POST(
 
     const result = await reopenCashRegisterUseCase(id, input, user.id, {
       cashRegisterDayRepository,
+      safeMovementRepository,
     });
 
     return NextResponse.json({ data: toCashRegisterDayResponseDTO(result) });

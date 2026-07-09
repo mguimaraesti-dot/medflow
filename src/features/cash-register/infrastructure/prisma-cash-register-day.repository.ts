@@ -131,6 +131,7 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
         tx.safeMovement.aggregate({
           where: {
             safeId: safe.id,
+            status: "CONFIRMED",
             type: { in: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
           },
           _sum: { amount: true },
@@ -138,12 +139,17 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
         tx.safeMovement.aggregate({
           where: {
             safeId: safe.id,
+            status: "CONFIRMED",
             type: { in: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
           },
           _sum: { amount: true },
         }),
         tx.safeMovement.aggregate({
-          where: { safeId: safe.id, type: "MANUAL_ADJUSTMENT" },
+          where: {
+            safeId: safe.id,
+            status: "CONFIRMED",
+            type: "MANUAL_ADJUSTMENT",
+          },
           _sum: { amount: true },
         }),
       ]);
@@ -186,28 +192,59 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
     });
   }
 
-  /** Fecha direto pra `CLOSED` — dupla conferência removida, não mexe no Cofre. */
+  /**
+   * Fecha direto pra `CLOSED` (dupla conferência do próprio fechamento
+   * continua removida — a Secretária fecha sozinha, sem trava). Na mesma
+   * transação, cria um `SafeMovement` `CASH_REGISTER_HANDOFF`/`PENDING`
+   * com o dinheiro físico contado (`countedAmount`) — ele só passa a
+   * valer no saldo do Cofre quando um Gerente confirma
+   * (`confirm-safe-movement.use-case`), mesmo padrão de atomicidade já
+   * usado em `create()` (que já cria `FUNDING` na mesma transação).
+   */
   async close(
     id: string,
     data: CloseCashRegisterDayInput,
   ): Promise<CashRegisterDay> {
-    const row = await prisma.cashRegisterDay.update({
-      where: { id },
-      data: {
-        status: "CLOSED",
-        expectedCashAmount: data.expectedCashAmount,
-        countedAmount: data.countedAmount,
-        difference: data.difference,
-        totalIn: data.totalIn,
-        totalOut: data.totalOut,
-        closingBalance: data.closingBalance,
-        closureNote: data.closureNote,
-        closedByUserId: data.closedByUserId,
-        closedAt: new Date(),
-      },
-      include: OPENED_BY_INCLUDE,
+    return prisma.$transaction(async (tx) => {
+      const cashRegisterDay = await tx.cashRegisterDay.findUniqueOrThrow({
+        where: { id },
+      });
+
+      const safe = await tx.safe.findUniqueOrThrow({
+        where: { organizationId: cashRegisterDay.organizationId },
+      });
+
+      const row = await tx.cashRegisterDay.update({
+        where: { id },
+        data: {
+          status: "CLOSED",
+          expectedCashAmount: data.expectedCashAmount,
+          countedAmount: data.countedAmount,
+          difference: data.difference,
+          totalIn: data.totalIn,
+          totalOut: data.totalOut,
+          closingBalance: data.closingBalance,
+          closureNote: data.closureNote,
+          closedByUserId: data.closedByUserId,
+          closedAt: new Date(),
+        },
+        include: OPENED_BY_INCLUDE,
+      });
+
+      await tx.safeMovement.create({
+        data: {
+          organizationId: cashRegisterDay.organizationId,
+          safeId: safe.id,
+          type: "CASH_REGISTER_HANDOFF",
+          status: "PENDING",
+          amount: data.countedAmount,
+          relatedCashRegisterDayId: id,
+          performedByUserId: data.closedByUserId,
+        },
+      });
+
+      return toDomainDay(row);
     });
-    return toDomainDay(row);
   }
 
   async reopen(

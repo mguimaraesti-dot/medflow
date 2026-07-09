@@ -4,10 +4,15 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api-client";
 import type { PaginatedResult } from "@/shared/lib/pagination";
 import type { SafeMovementResponseDTO } from "../application/dtos/safe-movement.response-dto";
-import type { SafeMovementType } from "../domain/safe-movement.entity";
+import type {
+  SafeMovementType,
+  SafeMovementStatus,
+} from "../domain/safe-movement.entity";
 
 export interface SafeMovementsFilter {
-  type?: SafeMovementType;
+  types?: SafeMovementType[];
+  status?: SafeMovementStatus;
+  search?: string;
   createdAtFrom?: Date;
   createdAtTo?: Date;
   page?: number;
@@ -16,7 +21,10 @@ export interface SafeMovementsFilter {
 
 export function useSafeMovements(filter: SafeMovementsFilter) {
   const params = new URLSearchParams();
-  if (filter.type) params.set("type", filter.type);
+  if (filter.types && filter.types.length > 0)
+    params.set("types", filter.types.join(","));
+  if (filter.status) params.set("status", filter.status);
+  if (filter.search) params.set("search", filter.search);
   if (filter.createdAtFrom)
     params.set("createdAtFrom", filter.createdAtFrom.toISOString());
   if (filter.createdAtTo)

@@ -5,7 +5,7 @@ import type { PaginatedResult } from "@/shared/lib/pagination";
 import type { SafeMovement } from "@/features/treasury/domain/safe-movement.entity";
 
 describe("listSafeMovementsUseCase", () => {
-  it("repassa type e período de createdAt pro repositório", async () => {
+  it("repassa types, status, busca e período de createdAt pro repositório", async () => {
     const result: PaginatedResult<SafeMovement> = {
       items: [],
       page: 1,
@@ -22,7 +22,15 @@ describe("listSafeMovementsUseCase", () => {
     const createdAtTo = new Date("2026-07-31T23:59:59.999Z");
 
     const output = await listSafeMovementsUseCase(
-      { type: "SANGRIA", createdAtFrom, createdAtTo, page: 1, pageSize: 20 },
+      {
+        types: ["SANGRIA"],
+        status: "CONFIRMED",
+        search: "recepção",
+        createdAtFrom,
+        createdAtTo,
+        page: 1,
+        pageSize: 20,
+      },
       "org-1",
       { safeMovementRepository },
     );
@@ -30,7 +38,9 @@ describe("listSafeMovementsUseCase", () => {
     expect(list).toHaveBeenCalledWith(
       {
         organizationId: "org-1",
-        type: "SANGRIA",
+        types: ["SANGRIA"],
+        status: "CONFIRMED",
+        search: "recepção",
         createdAtFrom,
         createdAtTo,
       },

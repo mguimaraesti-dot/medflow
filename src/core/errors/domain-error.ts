@@ -169,6 +169,17 @@ export class CategoryHasLinkedRecordsError extends DomainError {
 // Motor de Tesouraria (docs/decisions/adr-tesouraria.md)
 // ---------------------------------------------------------------
 
+export class SafeMovementNotPendingError extends DomainError {
+  readonly code = "SAFE_MOVEMENT_NOT_PENDING";
+  readonly httpStatus = 409;
+
+  constructor(safeMovementId: string) {
+    super("Esta movimentação já foi confirmada ou cancelada.", {
+      safeMovementId,
+    });
+  }
+}
+
 export class InsufficientSafeBalanceError extends DomainError {
   readonly code = "INSUFFICIENT_SAFE_BALANCE";
   readonly httpStatus = 409;

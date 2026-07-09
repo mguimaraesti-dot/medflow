@@ -124,6 +124,8 @@ model User {
   reopenedRegisters         CashRegisterDay[]   @relation("RegisterReopenedBy")
   handoffConfirmedRegisters CashRegisterDay[]   @relation("RegisterHandoffConfirmedBy")
   safeMovements             SafeMovement[]
+  confirmedSafeMovements    SafeMovement[]      @relation("SafeMovementConfirmedBy")
+  cancelledSafeMovements    SafeMovement[]      @relation("SafeMovementCancelledBy")
   createdPayables           AccountsPayable[]   @relation("PayableCreatedBy")
   paidPayables              AccountsPayable[]   @relation("PayablePaidBy")
   deletedPayables           AccountsPayable[]   @relation("PayableDeletedBy")
@@ -497,6 +499,14 @@ enum SafeMovementType {
   ACCOUNTS_PAYABLE_PAYMENT // pagamento de Conta a Pagar com dinheiro do Cofre (Cofre -> Fornecedor)
 }
 
+// PENDING só é usado por CASH_REGISTER_HANDOFF (fechamento de caixa aguardando
+// conferência do Gerente) — todos os outros tipos nascem CONFIRMED e nunca mudam.
+enum SafeMovementStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
 model Safe {
   id             String   @id @default(cuid())
   organizationId String   @unique
@@ -508,8 +518,12 @@ model Safe {
   @@map("safes")
 }
 
-// Saldo nunca é persistido como fonte da verdade — sempre derivado da
-// soma das movimentações (Coding Standards, item 18.1). Nunca update/delete.
+// Saldo nunca é persistido como fonte da verdade — sempre derivado da soma
+// das movimentações CONFIRMED (Coding Standards, item 18.1). `amount`/`type`/
+// os `relatedX` nunca mudam depois de criados e a linha nunca é excluída —
+// a única exceção é a transição de `status` (PENDING -> CONFIRMED/CANCELLED)
+// via confirm-safe-movement/cancel-safe-movement, exclusiva do fechamento de
+// caixa aguardando conferência gerencial.
 model SafeMovement {
   id             String           @id @default(cuid())
   organizationId String
@@ -520,6 +534,7 @@ model SafeMovement {
 
   type           SafeMovementType
   amount         Decimal          @db.Decimal(14, 2)
+  status         SafeMovementStatus @default(CONFIRMED)
 
   relatedCashRegisterDayId String?
   relatedCashRegisterDay   CashRegisterDay? @relation(fields: [relatedCashRegisterDayId], references: [id])
@@ -531,9 +546,19 @@ model SafeMovement {
   performedBy       User    @relation(fields: [performedByUserId], references: [id])
   reason            String? // obrigatório para MANUAL_ADJUSTMENT (validado no DTO)
 
+  confirmedByUserId String?
+  confirmedBy       User?     @relation("SafeMovementConfirmedBy", fields: [confirmedByUserId], references: [id])
+  confirmedAt       DateTime?
+
+  cancelledByUserId String?
+  cancelledBy       User?     @relation("SafeMovementCancelledBy", fields: [cancelledByUserId], references: [id])
+  cancelledAt       DateTime?
+  cancelReason      String?   // obrigatório ao cancelar uma pendência (validado no DTO)
+
   createdAt      DateTime @default(now())
 
   @@index([organizationId, type])
+  @@index([organizationId, status])
   @@index([relatedCashRegisterDayId])
   @@index([relatedAccountsPayableId])
   @@index([safeId, type])

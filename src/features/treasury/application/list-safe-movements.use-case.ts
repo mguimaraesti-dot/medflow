@@ -15,7 +15,9 @@ export async function listSafeMovementsUseCase(
   return deps.safeMovementRepository.list(
     {
       organizationId,
-      type: input.type,
+      types: input.types,
+      status: input.status,
+      search: input.search,
       createdAtFrom: input.createdAtFrom,
       createdAtTo: input.createdAtTo,
     },

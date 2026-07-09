@@ -29,6 +29,7 @@ export function ConfirmDialog({
   confirmLabel,
   pendingLabel,
   isPending,
+  confirmDisabled,
   destructive = true,
   onConfirm,
   onCancel,
@@ -43,6 +44,8 @@ export function ConfirmDialog({
   /** Texto do botão de confirmação enquanto a ação está em andamento (ex: "Excluindo..."). */
   pendingLabel?: string;
   isPending?: boolean;
+  /** Desabilita o botão sem trocar o texto pro `pendingLabel` — usado quando falta preencher um campo obrigatório (ex: motivo). */
+  confirmDisabled?: boolean;
   /** true por padrão — toda ação confirmada aqui é irreversível do ponto de vista do usuário. */
   destructive?: boolean;
   onConfirm: () => void;
@@ -69,7 +72,7 @@ export function ConfirmDialog({
               destructive &&
                 "bg-destructive text-destructive-foreground hover:bg-destructive/90",
             )}
-            disabled={isPending}
+            disabled={isPending || confirmDisabled}
             onClick={(event) => {
               event.preventDefault();
               onConfirm();

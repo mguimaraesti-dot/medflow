@@ -14,7 +14,10 @@ export class PrismaSafeRepository implements SafeRepository {
    * `ACCOUNTS_PAYABLE_PAYMENT` (pagamento de conta com dinheiro do Cofre)
    * tem a mesma direção de saída que `FUNDING`; os demais tipos têm
    * direção implícita pelo próprio `type`; `MANUAL_ADJUSTMENT` carrega seu
-   * próprio sinal (Coding Standards, item 18.1).
+   * próprio sinal (Coding Standards, item 18.1). Só conta `status:
+   * CONFIRMED` — um `CASH_REGISTER_HANDOFF` `PENDING` (fechamento de
+   * caixa aguardando conferência do Gerente) não entra na soma até ser
+   * confirmado.
    */
   async getBalance(organizationId: string): Promise<Prisma.Decimal> {
     const safe = await prisma.safe.findUnique({ where: { organizationId } });
@@ -24,6 +27,7 @@ export class PrismaSafeRepository implements SafeRepository {
       prisma.safeMovement.aggregate({
         where: {
           safeId: safe.id,
+          status: "CONFIRMED",
           type: { in: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
         },
         _sum: { amount: true },
@@ -31,12 +35,17 @@ export class PrismaSafeRepository implements SafeRepository {
       prisma.safeMovement.aggregate({
         where: {
           safeId: safe.id,
+          status: "CONFIRMED",
           type: { in: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
         },
         _sum: { amount: true },
       }),
       prisma.safeMovement.aggregate({
-        where: { safeId: safe.id, type: "MANUAL_ADJUSTMENT" },
+        where: {
+          safeId: safe.id,
+          status: "CONFIRMED",
+          type: "MANUAL_ADJUSTMENT",
+        },
         _sum: { amount: true },
       }),
     ]);

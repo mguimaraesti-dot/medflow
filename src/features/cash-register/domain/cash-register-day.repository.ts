@@ -42,8 +42,11 @@ export interface ReopenCashRegisterDayInput {
  * no Cofre (`SafeMovement` tipo `FUNDING`, na abertura) na mesma
  * transação — mesmo princípio de atomicidade já usado em
  * `AccountsPayableRepository.markAsPaid` (Coding Standards, item 18.2).
- * Fechamento/reabertura não mexem mais no Cofre (dupla conferência
- * removida por decisão explícita).
+ * O próprio fechamento continua sem dupla conferência (a Secretária
+ * fecha sozinha, sem trava) — mas `close()` cria, na mesma transação, um
+ * `SafeMovement` `CASH_REGISTER_HANDOFF`/`PENDING` com o dinheiro
+ * contado, que só passa a valer no saldo do Cofre depois que um Gerente
+ * confirma (`confirm-safe-movement.use-case`).
  */
 export interface CashRegisterDayRepository {
   findById(id: string): Promise<CashRegisterDay | null>;
