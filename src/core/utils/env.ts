@@ -18,12 +18,15 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
 
-  // Google Drive (Service Account) — anexos de Contas a Pagar. Opcionais
-  // aqui de propósito: ausentes, a aplicação inteira continua de pé (só
-  // o recurso de anexos falha, com um erro claro no momento do uso) —
-  // ver `core/google-drive/google-drive.client.ts`.
-  GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().min(1).optional(),
-  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().min(1).optional(),
+  // Google Drive (OAuth2 com refresh token) — anexos de Contas a Pagar.
+  // Service Account foi descartada (contas de serviço não têm cota de
+  // armazenamento no Drive). Opcionais aqui de propósito: ausentes, a
+  // aplicação inteira continua de pé (só o recurso de anexos falha, com
+  // um erro claro no momento do uso) — ver
+  // `core/google-drive/google-drive.client.ts`.
+  GOOGLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
+  GOOGLE_OAUTH_REFRESH_TOKEN: z.string().min(1).optional(),
   GOOGLE_DRIVE_FOLDER_ID: z.string().min(1).optional(),
 });
 
