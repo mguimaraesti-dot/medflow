@@ -12,7 +12,7 @@ describe("buildWhatsAppMessage", () => {
 
     expect(message).toBe(
       [
-        "🧾 *Conta a Pagar*",
+        "⚠️ *Conta a Pagar*",
         "*Nome:* Imobiliária Central",
         `*Vencimento:* ${formatDateOnlyBR("2026-07-20T00:00:00.000Z")}`,
         `*Valor:* ${formatCurrencyBRL("1234.56")}`,

@@ -40,7 +40,7 @@ export function buildWhatsAppMessage(input: {
   dueDate: string | Date;
 }): string {
   return [
-    "🧾 *Conta a Pagar*",
+    "⚠️ *Conta a Pagar*",
     `*Nome:* ${input.supplierName}`,
     `*Vencimento:* ${formatDateOnlyBR(input.dueDate)}`,
     `*Valor:* ${formatCurrencyBRL(input.amount)}`,
