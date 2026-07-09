@@ -120,9 +120,14 @@ export class PrismaSafeMovementRepository implements SafeMovementRepository {
   async sumByCashRegisterDayAndType(
     cashRegisterDayId: string,
     type: SafeMovementType,
+    status?: SafeMovementStatus,
   ): Promise<string> {
     const result = await prisma.safeMovement.aggregate({
-      where: { relatedCashRegisterDayId: cashRegisterDayId, type },
+      where: {
+        relatedCashRegisterDayId: cashRegisterDayId,
+        type,
+        ...(status && { status }),
+      },
       _sum: { amount: true },
     });
     return (result._sum.amount ?? new Prisma.Decimal(0)).toFixed(2);

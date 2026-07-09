@@ -48,10 +48,17 @@ export interface SafeMovementRepository {
     pagination: Pagination,
   ): Promise<PaginatedResult<SafeMovement>>;
 
-  /** Usado no fechamento de caixa para descontar sangrias do dia do Dinheiro Esperado. */
+  /**
+   * Usado no fechamento de caixa: sem `status`, descontar sangrias do
+   * dia do Dinheiro Esperado; com `status: "CONFIRMED"`, somar
+   * recolhimentos (`CASH_REGISTER_HANDOFF`) já confirmados pelo Gerente
+   * neste dia — inclui reaberturas, já que todas compartilham o mesmo
+   * `cashRegisterDayId`.
+   */
   sumByCashRegisterDayAndType(
     cashRegisterDayId: string,
     type: SafeMovementType,
+    status?: SafeMovementStatus,
   ): Promise<string>;
 
   /** Confirma uma movimentação `PENDING` — só o fechamento de caixa (`CASH_REGISTER_HANDOFF`) chega nesse estado. */

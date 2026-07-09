@@ -30,6 +30,14 @@ export interface CloseCashRegisterDayInput {
   closingBalance: string;
   closureNote?: string;
   closedByUserId: string;
+  /**
+   * Valor do `SafeMovement` `CASH_REGISTER_HANDOFF` criado neste
+   * fechamento — `countedAmount` já descontado do que foi confirmado em
+   * fechamentos anteriores do mesmo dia (reaberturas). Nunca igual a
+   * `countedAmount` num segundo fechamento do mesmo dia, senão a
+   * Tesouraria recebe o valor total de novo (bug corrigido).
+   */
+  handoffAmount: string;
 }
 
 export interface ReopenCashRegisterDayInput {

@@ -196,10 +196,12 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
    * Fecha direto pra `CLOSED` (dupla conferência do próprio fechamento
    * continua removida — a Secretária fecha sozinha, sem trava). Na mesma
    * transação, cria um `SafeMovement` `CASH_REGISTER_HANDOFF`/`PENDING`
-   * com o dinheiro físico contado (`countedAmount`) — ele só passa a
-   * valer no saldo do Cofre quando um Gerente confirma
-   * (`confirm-safe-movement.use-case`), mesmo padrão de atomicidade já
-   * usado em `create()` (que já cria `FUNDING` na mesma transação).
+   * com `handoffAmount` (`countedAmount` já líquido do que fechamentos
+   * anteriores do mesmo dia já confirmaram — ver
+   * `close-cash-register.use-case.ts`) — ele só passa a valer no saldo
+   * do Cofre quando um Gerente confirma (`confirm-safe-movement.use-case`),
+   * mesmo padrão de atomicidade já usado em `create()` (que já cria
+   * `FUNDING` na mesma transação).
    */
   async close(
     id: string,
@@ -237,7 +239,7 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
           safeId: safe.id,
           type: "CASH_REGISTER_HANDOFF",
           status: "PENDING",
-          amount: data.countedAmount,
+          amount: data.handoffAmount,
           relatedCashRegisterDayId: id,
           performedByUserId: data.closedByUserId,
         },

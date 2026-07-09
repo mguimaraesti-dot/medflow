@@ -72,6 +72,7 @@ describe("closeCashRegisterUseCase", () => {
         totalIn: "0.00",
         totalOut: "0.00",
         closingBalance: "100.00",
+        handoffAmount: "100.00",
       }),
     );
     expect(result.status).toBe("CLOSED");
@@ -96,7 +97,11 @@ describe("closeCashRegisterUseCase", () => {
     } as unknown as CashFlowEntryRepository;
 
     const safeMovementRepository = {
-      sumByCashRegisterDayAndType: vi.fn().mockResolvedValue("30.00"),
+      sumByCashRegisterDayAndType: vi
+        .fn()
+        .mockImplementation((_id, type: string) =>
+          Promise.resolve(type === "SANGRIA" ? "30.00" : "0.00"),
+        ),
     } as unknown as SafeMovementRepository;
 
     await closeCashRegisterUseCase(
@@ -116,6 +121,7 @@ describe("closeCashRegisterUseCase", () => {
       expect.objectContaining({
         expectedCashAmount: "449.50",
         difference: "0.00",
+        handoffAmount: "449.50",
       }),
     );
   });
@@ -151,6 +157,103 @@ describe("closeCashRegisterUseCase", () => {
     expect(close).toHaveBeenCalledWith(
       "day-1",
       expect.objectContaining({ difference: "-10.00" }),
+    );
+  });
+
+  // Bug reportado: reabrir o caixa depois que a Tesouraria já confirmou o
+  // handoff, e fechar de novo sem nenhuma movimentação nova, reenviava o
+  // valor total do dia (R$1.000 de novo) em vez de R$0 — porque
+  // expectedCashAmount/countedAmount são cumulativos (contam desde a
+  // abertura do dia, através de todas as reaberturas), mas o handoff
+  // criado usava esse total cumulativo direto, sem descontar o que já
+  // tinha sido confirmado.
+  it("não reenvia o handoff já confirmado ao reabrir e fechar sem movimentação nova", async () => {
+    const openRegister = { id: "day-1", openingBalance: "0.00" };
+    const close = vi.fn().mockImplementation((id, data) => ({ id, ...data }));
+
+    const cashRegisterDayRepository = {
+      findOpenByOrganization: vi.fn().mockResolvedValue(openRegister),
+      close,
+    } as unknown as CashRegisterDayRepository;
+
+    const cashFlowEntryRepository = {
+      sumCashOnlyByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "1000.00", totalOut: "0.00" }),
+      sumByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "1000.00", totalOut: "0.00" }),
+    } as unknown as CashFlowEntryRepository;
+
+    const safeMovementRepository = {
+      sumByCashRegisterDayAndType: vi
+        .fn()
+        .mockImplementation((_id, type: string, status?: string) =>
+          Promise.resolve(
+            type === "CASH_REGISTER_HANDOFF" && status === "CONFIRMED"
+              ? "1000.00"
+              : "0.00",
+          ),
+        ),
+    } as unknown as SafeMovementRepository;
+
+    await closeCashRegisterUseCase({ countedAmount: 1000 }, "user-1", "org-1", {
+      cashRegisterDayRepository,
+      cashFlowEntryRepository,
+      safeMovementRepository,
+    });
+
+    expect(close).toHaveBeenCalledWith(
+      "day-1",
+      expect.objectContaining({
+        countedAmount: "1000.00",
+        handoffAmount: "0.00",
+      }),
+    );
+  });
+
+  it("envia só a diferença quando reabre e recebe mais movimentação antes de fechar de novo", async () => {
+    const openRegister = { id: "day-1", openingBalance: "0.00" };
+    const close = vi.fn().mockImplementation((id, data) => ({ id, ...data }));
+
+    const cashRegisterDayRepository = {
+      findOpenByOrganization: vi.fn().mockResolvedValue(openRegister),
+      close,
+    } as unknown as CashRegisterDayRepository;
+
+    const cashFlowEntryRepository = {
+      sumCashOnlyByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "1200.00", totalOut: "0.00" }),
+      sumByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "1200.00", totalOut: "0.00" }),
+    } as unknown as CashFlowEntryRepository;
+
+    const safeMovementRepository = {
+      sumByCashRegisterDayAndType: vi
+        .fn()
+        .mockImplementation((_id, type: string, status?: string) =>
+          Promise.resolve(
+            type === "CASH_REGISTER_HANDOFF" && status === "CONFIRMED"
+              ? "1000.00"
+              : "0.00",
+          ),
+        ),
+    } as unknown as SafeMovementRepository;
+
+    await closeCashRegisterUseCase({ countedAmount: 1200 }, "user-1", "org-1", {
+      cashRegisterDayRepository,
+      cashFlowEntryRepository,
+      safeMovementRepository,
+    });
+
+    expect(close).toHaveBeenCalledWith(
+      "day-1",
+      expect.objectContaining({
+        countedAmount: "1200.00",
+        handoffAmount: "200.00",
+      }),
     );
   });
 });
