@@ -106,3 +106,13 @@ export function formatSmartDueDate(value: string | Date): string {
     timeZone: "UTC",
   }).format(date);
 }
+
+/** "512 B" / "12,4 KB" / "3,1 MB" — usado pela lista de anexos de Contas a Pagar. */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024)
+    return `${kb.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} KB`;
+  const mb = kb / 1024;
+  return `${mb.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`;
+}

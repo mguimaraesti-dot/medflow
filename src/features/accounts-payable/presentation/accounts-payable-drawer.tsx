@@ -5,9 +5,7 @@ import { toast } from "sonner";
 import {
   Ban,
   CheckCircle2,
-  Download,
   Eye,
-  FileText,
   Pencil,
   Repeat,
   Trash2,
@@ -23,7 +21,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { EmptyState } from "@/shared/components/empty-state";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { CopyButton } from "@/shared/components/copy-button";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
@@ -31,9 +28,9 @@ import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
 import { EndRecurringBillDialog } from "./end-recurring-bill-dialog";
 import { RecurringBillOccurrencesDrawer } from "./recurring-bill-occurrences-drawer";
+import { AccountsPayableAttachmentsPanel } from "./accounts-payable-attachments-panel";
 import {
   STATUS_META,
-  getAccountsPayableAttachments,
   getDueDateDisplay,
   getPaymentConfirmationDetail,
   getRecurrenceDisplay,
@@ -133,7 +130,6 @@ export function AccountsPayableDrawer({
   const dueDateDisplay = payable
     ? getDueDateDisplay(payable.dueDate, payable.status)
     : null;
-  const attachments = payable ? getAccountsPayableAttachments(payable) : [];
   const paymentConfirmation = payable
     ? getPaymentConfirmationDetail(payable)
     : null;
@@ -451,36 +447,10 @@ export function AccountsPayableDrawer({
                   </TabsContent>
 
                   <TabsContent value="attachments" className="mt-4">
-                    {attachments.length === 0 ? (
-                      <EmptyState
-                        icon={FileText}
-                        title="Nenhum documento."
-                        description="Documentos vinculados a esta conta (ex: boleto) aparecem aqui."
-                      />
-                    ) : (
-                      <ul className="space-y-2">
-                        {attachments.map((attachment) => (
-                          <li
-                            key={attachment.url}
-                            className="flex items-center justify-between rounded-lg border p-3"
-                          >
-                            <div className="flex items-center gap-2">
-                              <FileText className="text-muted-foreground h-4 w-4" />
-                              <span className="text-sm">{attachment.name}</span>
-                            </div>
-                            <a
-                              href={attachment.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <Download className="h-4 w-4" />
-                              <span className="sr-only">Baixar</span>
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    <AccountsPayableAttachmentsPanel
+                      payable={payable}
+                      canManage={canEditThis}
+                    />
                   </TabsContent>
                 </div>
               </Tabs>

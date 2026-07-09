@@ -20,9 +20,16 @@ interface ApiErrorBody {
  * `{ error: { code, message } }` na falha (`core/errors/error-handler.ts`).
  */
 export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  // FormData (upload de arquivo) precisa que o próprio fetch defina o
+  // Content-Type (com o boundary do multipart) — forçar
+  // "application/json" aqui quebraria o corpo da requisição.
+  const isFormData = init?.body instanceof FormData;
+
   const response = await fetch(url, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: isFormData
+      ? init?.headers
+      : { "Content-Type": "application/json", ...init?.headers },
   });
 
   const body = await response.json();

@@ -271,3 +271,59 @@ export class UnauthenticatedError extends DomainError {
     super("É necessário estar autenticado para realizar esta ação.");
   }
 }
+
+// ---------------------------------------------------------------
+// Anexos de Contas a Pagar (Google Drive)
+// ---------------------------------------------------------------
+
+export class AttachmentTooLargeError extends DomainError {
+  readonly code = "ATTACHMENT_TOO_LARGE";
+  readonly httpStatus = 413;
+
+  constructor(maxSizeMb: number) {
+    super(`O arquivo excede o limite de ${maxSizeMb}MB por anexo.`, {
+      maxSizeMb,
+    });
+  }
+}
+
+export class UnsupportedAttachmentTypeError extends DomainError {
+  readonly code = "UNSUPPORTED_ATTACHMENT_TYPE";
+  readonly httpStatus = 400;
+
+  constructor(mimeType: string) {
+    super(
+      `Tipo de arquivo não suportado: ${mimeType}. Envie PDF, JPG ou PNG.`,
+      {
+        mimeType,
+      },
+    );
+  }
+}
+
+export class NoAttachmentFileError extends DomainError {
+  readonly code = "NO_ATTACHMENT_FILE";
+  readonly httpStatus = 400;
+
+  constructor() {
+    super("Nenhum arquivo foi enviado.");
+  }
+}
+
+/**
+ * Falha externa (Drive fora do ar, cota excedida, credencial inválida,
+ * timeout) — nunca deixa a causa original vazar pro cliente (pode conter
+ * detalhe da API do Google); a causa completa só vai pro log interno
+ * (ver upload/delete/download-accounts-payable-attachment.use-case.ts).
+ */
+export class AttachmentStorageError extends DomainError {
+  readonly code = "ATTACHMENT_STORAGE_ERROR";
+  readonly httpStatus = 502;
+
+  constructor(action: "enviar" | "baixar" | "excluir") {
+    super(
+      `Não foi possível ${action} o anexo agora. Tente novamente em instantes.`,
+      { action },
+    );
+  }
+}

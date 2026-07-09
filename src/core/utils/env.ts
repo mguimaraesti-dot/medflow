@@ -17,6 +17,14 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+
+  // Google Drive (Service Account) — anexos de Contas a Pagar. Opcionais
+  // aqui de propósito: ausentes, a aplicação inteira continua de pé (só
+  // o recurso de anexos falha, com um erro claro no momento do uso) —
+  // ver `core/google-drive/google-drive.client.ts`.
+  GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().min(1).optional(),
+  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().min(1).optional(),
+  GOOGLE_DRIVE_FOLDER_ID: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

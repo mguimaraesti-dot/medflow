@@ -10,7 +10,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL") // conexão via pooler (pgbouncer), usada em runtime
-  directUrl = env("DIRECT_URL")   // conexão direta, usada pelo Prisma para migrations
+  directUrl = env("DIRECT_URL") // conexão direta, usada pelo Prisma para migrations
 }
 
 // ============================================================
@@ -24,17 +24,18 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users            User[]
-  cashRegisterDays CashRegisterDay[]
-  cashFlowEntries  CashFlowEntry[]
-  accountsPayable  AccountsPayable[]
-  categories       Category[]
-  paymentMethods   PaymentMethod[]
-  suppliers        Supplier[]
-  recurringBills   RecurringBill[]
-  settings         OrganizationSettings?
-  safe             Safe?
-  safeMovements    SafeMovement[]
+  users              User[]
+  cashRegisterDays   CashRegisterDay[]
+  cashFlowEntries    CashFlowEntry[]
+  accountsPayable    AccountsPayable[]
+  payableAttachments AccountsPayableAttachment[]
+  categories         Category[]
+  paymentMethods     PaymentMethod[]
+  suppliers          Supplier[]
+  recurringBills     RecurringBill[]
+  settings           OrganizationSettings?
+  safe               Safe?
+  safeMovements      SafeMovement[]
 
   @@map("organizations")
 }
@@ -46,24 +47,24 @@ model OrganizationSettings {
   organizationId String       @unique
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  tradeName      String?
-  legalName      String?
-  cnpj           String?
-  phone          String?
-  whatsapp       String?
-  email          String?
+  tradeName String?
+  legalName String?
+  cnpj      String?
+  phone     String?
+  whatsapp  String?
+  email     String?
 
-  currency       String       @default("BRL")
-  timezone       String       @default("America/Sao_Paulo")
-  openingTime    String       @default("08:00") // usado no alerta "caixa não aberto"
-  closingTime    String       @default("18:00") // usado no alerta "caixa não fechado"
+  currency    String @default("BRL")
+  timezone    String @default("America/Sao_Paulo")
+  openingTime String @default("08:00") // usado no alerta "caixa não aberto"
+  closingTime String @default("18:00") // usado no alerta "caixa não fechado"
 
-  logoUrl        String?
-  primaryColor   String       @default("#0F172A")
-  theme          String       @default("system") // "light" | "dark" | "system"
+  logoUrl      String?
+  primaryColor String  @default("#0F172A")
+  theme        String  @default("system") // "light" | "dark" | "system"
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("organization_settings")
 }
@@ -115,30 +116,31 @@ model User {
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
   name           String
-  email          String        @unique
-  supabaseAuthId String        @unique
+  email          String @unique
+  supabaseAuthId String @unique
 
-  roleId         String?
-  role           Role?         @relation(fields: [roleId], references: [id])
+  roleId String?
+  role   Role?   @relation(fields: [roleId], references: [id])
 
-  status         UserStatus    @default(ACTIVE)
-  lastLoginAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
+  status      UserStatus @default(ACTIVE)
+  lastLoginAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
 
-  auditLogs                 AuditLog[]
-  cashFlowEntries           CashFlowEntry[]     @relation("EntryCreatedBy")
-  openedRegisters           CashRegisterDay[]   @relation("RegisterOpenedBy")
-  closedRegisters           CashRegisterDay[]   @relation("RegisterClosedBy")
-  reopenedRegisters         CashRegisterDay[]   @relation("RegisterReopenedBy")
-  handoffConfirmedRegisters CashRegisterDay[]   @relation("RegisterHandoffConfirmedBy")
-  safeMovements             SafeMovement[]
-  confirmedSafeMovements    SafeMovement[]      @relation("SafeMovementConfirmedBy")
-  cancelledSafeMovements    SafeMovement[]      @relation("SafeMovementCancelledBy")
-  createdPayables           AccountsPayable[]   @relation("PayableCreatedBy")
-  paidPayables              AccountsPayable[]   @relation("PayablePaidBy")
-  deletedPayables           AccountsPayable[]   @relation("PayableDeletedBy")
+  auditLogs                  AuditLog[]
+  cashFlowEntries            CashFlowEntry[]             @relation("EntryCreatedBy")
+  openedRegisters            CashRegisterDay[]           @relation("RegisterOpenedBy")
+  closedRegisters            CashRegisterDay[]           @relation("RegisterClosedBy")
+  reopenedRegisters          CashRegisterDay[]           @relation("RegisterReopenedBy")
+  handoffConfirmedRegisters  CashRegisterDay[]           @relation("RegisterHandoffConfirmedBy")
+  safeMovements              SafeMovement[]
+  confirmedSafeMovements     SafeMovement[]              @relation("SafeMovementConfirmedBy")
+  cancelledSafeMovements     SafeMovement[]              @relation("SafeMovementCancelledBy")
+  createdPayables            AccountsPayable[]           @relation("PayableCreatedBy")
+  paidPayables               AccountsPayable[]           @relation("PayablePaidBy")
+  deletedPayables            AccountsPayable[]           @relation("PayableDeletedBy")
+  uploadedPayableAttachments AccountsPayableAttachment[] @relation("PayableAttachmentCreatedBy")
 
   @@index([organizationId])
   @@map("users")
@@ -166,14 +168,14 @@ enum AuditAction {
 }
 
 model AuditLog {
-  id        String      @id @default(cuid())
-  userId    String?
-  user      User?       @relation(fields: [userId], references: [id])
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
 
   entity    String
   entityId  String
   action    AuditAction
-  reason    String?     // usado obrigatoriamente em CASH_REGISTER_REOPENED
+  reason    String? // usado obrigatoriamente em CASH_REGISTER_REOPENED
   before    Json?
   after     Json?
   ipAddress String?
@@ -198,16 +200,16 @@ model Category {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  name           String
-  type           CategoryType
-  color          String       @default("#64748B") // hex, usado no Dashboard e nos badges
-  icon           String?      // nome do ícone lucide-react (ex: "zap", "home", "wallet")
-  displayOrder   Int          @default(0)
-  active         Boolean      @default(true)
+  name         String
+  type         CategoryType
+  color        String       @default("#64748B") // hex, usado no Dashboard e nos badges
+  icon         String? // nome do ícone lucide-react (ex: "zap", "home", "wallet")
+  displayOrder Int          @default(0)
+  active       Boolean      @default(true)
 
-  cashFlowEntries  CashFlowEntry[]
-  accountsPayable  AccountsPayable[]
-  recurringBills   RecurringBill[]
+  cashFlowEntries CashFlowEntry[]
+  accountsPayable AccountsPayable[]
+  recurringBills  RecurringBill[]
 
   @@unique([organizationId, name, type])
   @@map("categories")
@@ -218,10 +220,10 @@ model PaymentMethod {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  name           String       // Dinheiro, PIX, Cartão Débito, Cartão Crédito, Boleto, Transferência
-  displayOrder   Int          @default(0)
-  active         Boolean      @default(true)
-  isCash         Boolean      @default(false) // usado no cálculo de Dinheiro Esperado (Motor de Tesouraria)
+  name         String // Dinheiro, PIX, Cartão Débito, Cartão Crédito, Boleto, Transferência
+  displayOrder Int     @default(0)
+  active       Boolean @default(true)
+  isCash       Boolean @default(false) // usado no cálculo de Dinheiro Esperado (Motor de Tesouraria)
 
   cashFlowEntries CashFlowEntry[]
 
@@ -239,14 +241,14 @@ model Supplier {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  name           String
-  personType     SupplierPersonType @default(PESSOA_JURIDICA)
-  document       String?      // CPF/CNPJ, opcional na Sprint 1
-  contactName    String?      // pessoa de contato, opcional (Sprint 02 - UX)
-  phone          String?      // telefone de contato, opcional (Sprint 02 - UX)
-  email          String?
-  notes          String?
-  active         Boolean      @default(true)
+  name        String
+  personType  SupplierPersonType @default(PESSOA_JURIDICA)
+  document    String? // CPF/CNPJ, opcional na Sprint 1
+  contactName String? // pessoa de contato, opcional (Sprint 02 - UX)
+  phone       String? // telefone de contato, opcional (Sprint 02 - UX)
+  email       String?
+  notes       String?
+  active      Boolean            @default(true)
 
   accountsPayable AccountsPayable[]
   recurringBills  RecurringBill[]
@@ -265,46 +267,46 @@ enum CashRegisterStatus {
 }
 
 model CashRegisterDay {
-  id             String              @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization   Organization        @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  date           DateTime            @db.Date
-  status         CashRegisterStatus  @default(OPEN)
+  date   DateTime           @db.Date
+  status CashRegisterStatus @default(OPEN)
 
-  openingBalance Decimal             @db.Decimal(14, 2)
-  totalIn        Decimal?            @db.Decimal(14, 2)
-  totalOut       Decimal?            @db.Decimal(14, 2)
-  closingBalance Decimal?            @db.Decimal(14, 2)
+  openingBalance Decimal  @db.Decimal(14, 2)
+  totalIn        Decimal? @db.Decimal(14, 2)
+  totalOut       Decimal? @db.Decimal(14, 2)
+  closingBalance Decimal? @db.Decimal(14, 2)
 
   openedByUserId String
-  openedBy       User                @relation("RegisterOpenedBy", fields: [openedByUserId], references: [id])
-  openedAt       DateTime            @default(now())
+  openedBy       User     @relation("RegisterOpenedBy", fields: [openedByUserId], references: [id])
+  openedAt       DateTime @default(now())
 
   closedByUserId String?
-  closedBy       User?               @relation("RegisterClosedBy", fields: [closedByUserId], references: [id])
+  closedBy       User?     @relation("RegisterClosedBy", fields: [closedByUserId], references: [id])
   closedAt       DateTime?
 
   reopenedByUserId String?
-  reopenedBy       User?             @relation("RegisterReopenedBy", fields: [reopenedByUserId], references: [id])
+  reopenedBy       User?     @relation("RegisterReopenedBy", fields: [reopenedByUserId], references: [id])
   reopenedAt       DateTime?
-  reopenCount      Int               @default(0)
+  reopenCount      Int       @default(0)
 
   // Motor de Tesouraria (ADR — docs/decisions/adr-tesouraria.md): dupla
   // conferência no fechamento — secretária presta contas (countedAmount),
   // gerência confere e confirma o handoff (receivedAmount) ou rejeita.
-  expectedCashAmount  Decimal?  @db.Decimal(14, 2)
-  countedAmount       Decimal?  @db.Decimal(14, 2)
-  receivedAmount      Decimal?  @db.Decimal(14, 2)
-  difference          Decimal?  @db.Decimal(14, 2)
-  confirmedDifference Decimal?  @db.Decimal(14, 2)
+  expectedCashAmount  Decimal? @db.Decimal(14, 2)
+  countedAmount       Decimal? @db.Decimal(14, 2)
+  receivedAmount      Decimal? @db.Decimal(14, 2)
+  difference          Decimal? @db.Decimal(14, 2)
+  confirmedDifference Decimal? @db.Decimal(14, 2)
   closureNote         String?
 
   handoffConfirmedByUserId String?
   handoffConfirmedBy       User?     @relation("RegisterHandoffConfirmedBy", fields: [handoffConfirmedByUserId], references: [id])
   handoffConfirmedAt       DateTime?
 
-  rejectedAt     DateTime?
+  rejectedAt      DateTime?
   rejectionReason String?
 
   cashFlowEntries CashFlowEntry[]
@@ -324,44 +326,44 @@ enum CashFlowType {
 }
 
 model CashFlowEntry {
-  id                 String            @id @default(cuid())
-  organizationId     String
-  organization       Organization      @relation(fields: [organizationId], references: [id])
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  cashRegisterDayId  String
-  cashRegisterDay    CashRegisterDay   @relation(fields: [cashRegisterDayId], references: [id])
+  cashRegisterDayId String
+  cashRegisterDay   CashRegisterDay @relation(fields: [cashRegisterDayId], references: [id])
 
-  type               CashFlowType
-  amount             Decimal           @db.Decimal(14, 2)
-  description        String?
-  occurredAt         DateTime          @default(now())
+  type        CashFlowType
+  amount      Decimal      @db.Decimal(14, 2)
+  description String?
+  occurredAt  DateTime     @default(now())
 
   // obrigatórios no formulário conforme o tipo (Refinamento UX Caixa
   // Recepção): nome do paciente pagando (Entrada) / justificativa da
   // retirada (Saída). Nullable aqui pois estornos gerados pelo sistema
   // não passam por essa validação.
-  patientName        String?
-  withdrawalReason   String?
+  patientName      String?
+  withdrawalReason String?
 
-  categoryId         String
-  category           Category          @relation(fields: [categoryId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  paymentMethodId    String
-  paymentMethod      PaymentMethod     @relation(fields: [paymentMethodId], references: [id])
+  paymentMethodId String
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
 
   // vínculo opcional com Contas a Pagar (usado a partir da Sprint 2)
-  accountsPayableId  String?
-  accountsPayable    AccountsPayable?  @relation(fields: [accountsPayableId], references: [id])
+  accountsPayableId String?
+  accountsPayable   AccountsPayable? @relation(fields: [accountsPayableId], references: [id])
 
-  createdByUserId    String
-  createdBy          User              @relation("EntryCreatedBy", fields: [createdByUserId], references: [id])
-  createdAt          DateTime          @default(now())
+  createdByUserId String
+  createdBy       User     @relation("EntryCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
 
   // estorno
-  isReversed         Boolean           @default(false)
-  reversalOfEntryId  String?           @unique
-  reversalOfEntry    CashFlowEntry?    @relation("EntryReversal", fields: [reversalOfEntryId], references: [id])
-  reversedByEntry    CashFlowEntry?    @relation("EntryReversal")
+  isReversed        Boolean        @default(false)
+  reversalOfEntryId String?        @unique
+  reversalOfEntry   CashFlowEntry? @relation("EntryReversal", fields: [reversalOfEntryId], references: [id])
+  reversedByEntry   CashFlowEntry? @relation("EntryReversal")
 
   @@index([organizationId, cashRegisterDayId])
   @@index([categoryId])
@@ -379,75 +381,80 @@ enum PayableStatus {
   CANCELLED
 }
 
-/** Origem da confirmação de pagamento — hoje só SYSTEM é possível (WhatsApp ainda não integrado, só preparado via `publicToken`). */
+/**
+ * Origem da confirmação de pagamento — hoje só SYSTEM é possível (WhatsApp ainda não integrado, só preparado via `publicToken`).
+ */
 enum PaymentConfirmationSource {
   SYSTEM
   WHATSAPP
 }
 
-/** Fonte do dinheiro usada pra pagar a conta — Banco (padrão, sem efeito no Cofre) ou Cofre (dinheiro em espécie, debita o saldo e gera SafeMovement). */
+/**
+ * Fonte do dinheiro usada pra pagar a conta — Banco (padrão, sem efeito no Cofre) ou Cofre (dinheiro em espécie, debita o saldo e gera SafeMovement).
+ */
 enum PaymentOrigin {
   BANCO
   COFRE
 }
 
 model AccountsPayable {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  publicToken    String        @unique @default(uuid()) // link seguro futuro (WhatsApp)
+  publicToken String @unique @default(uuid()) // link seguro futuro (WhatsApp)
 
-  supplierId     String
-  supplier       Supplier      @relation(fields: [supplierId], references: [id])
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
 
-  categoryId     String
-  category       Category      @relation(fields: [categoryId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  description    String
-  amount         Decimal       @db.Decimal(14, 2)
-  dueDate        DateTime      @db.Date
+  description String
+  amount      Decimal  @db.Decimal(14, 2)
+  dueDate     DateTime @db.Date
 
-  barcode        String?
-  digitableLine  String?
-  pixKey         String?
-  qrCodeUrl      String?
-  boletoPdfUrl   String?
+  barcode       String?
+  digitableLine String?
+  pixKey        String?
+  qrCodeUrl     String?
+  boletoPdfUrl  String?
 
-  status         PayableStatus @default(PENDING)
+  status PayableStatus @default(PENDING)
 
   // Fonte do dinheiro escolhida no cadastro/edição (distinto de `paidVia`,
   // que é o canal de confirmação) — decide se a confirmação de pagamento
   // debita o Cofre automaticamente (ver pay-accounts-payable.use-case).
-  paymentOrigin  PaymentOrigin @default(BANCO)
+  paymentOrigin PaymentOrigin @default(BANCO)
 
-  recurringBillId String?
+  recurringBillId  String?
   recurringBill    RecurringBill? @relation(fields: [recurringBillId], references: [id])
-  occurrenceNumber Int?          // posição desta conta na série (1, 2, 3...) — null se não for recorrente
+  occurrenceNumber Int? // posição desta conta na série (1, 2, 3...) — null se não for recorrente
 
-  createdByUserId String        // quem cadastrou (ex: Secretária)
-  createdBy       User          @relation("PayableCreatedBy", fields: [createdByUserId], references: [id])
-  paidByUserId    String?       // quem confirmou o pagamento (Financeiro/Proprietário)
-  paidBy          User?         @relation("PayablePaidBy", fields: [paidByUserId], references: [id])
+  createdByUserId String // quem cadastrou (ex: Secretária)
+  createdBy       User                       @relation("PayableCreatedBy", fields: [createdByUserId], references: [id])
+  paidByUserId    String? // quem confirmou o pagamento (Financeiro/Proprietário)
+  paidBy          User?                      @relation("PayablePaidBy", fields: [paidByUserId], references: [id])
   paidAt          DateTime?
   paidVia         PaymentConfirmationSource?
 
   // Soft delete (Sprint 05) — nunca DELETE físico; conta some da listagem
   // padrão mas continua no banco pra auditoria e restauração. Só permitido
   // enquanto status === PENDING (ver soft-delete-accounts-payable.use-case).
-  deletedAt        DateTime?
-  deletedByUserId  String?
-  deletedBy        User?          @relation("PayableDeletedBy", fields: [deletedByUserId], references: [id])
-  deletionReason   String?
+  deletedAt       DateTime?
+  deletedByUserId String?
+  deletedBy       User?     @relation("PayableDeletedBy", fields: [deletedByUserId], references: [id])
+  deletionReason  String?
 
   cashFlowEntries CashFlowEntry[]
   // Movimentação do Cofre gerada ao confirmar pagamento com paymentOrigin
   // COFRE (ver ACCOUNTS_PAYABLE_PAYMENT em SafeMovementType) — no máximo 1
   // na prática (uma conta só é paga uma vez).
   safeMovements   SafeMovement[]
+  attachments     AccountsPayableAttachment[]
 
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([organizationId, status])
   @@index([dueDate])
@@ -459,7 +466,41 @@ model AccountsPayable {
   @@map("accounts_payable")
 }
 
-/** Mensal/Quinzenal/Semanal/Anual — usado só pelas recorrências criadas via checkbox "Conta recorrente" (Sprint de Recorrências); o painel antigo (dueDay) sempre grava MONTHLY. */
+/**
+ * Anexos de uma Conta a Pagar (boleto, comprovante, nota fiscal) — o
+ * arquivo em si vive no Google Drive (Service Account, escopo
+ * `drive.file`, pasta única `GOOGLE_DRIVE_FOLDER_ID`); aqui só o
+ * metadado. Exclusão é sempre física (nunca soft delete, diferente de
+ * `AccountsPayable`) — remover o anexo também apaga o arquivo no Drive,
+ * best-effort (ver delete-accounts-payable-attachment.use-case.ts: um
+ * 404 do Drive, arquivo já removido manualmente por fora, não impede
+ * remover o registro).
+ */
+model AccountsPayableAttachment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  accountsPayableId String
+  accountsPayable   AccountsPayable @relation(fields: [accountsPayableId], references: [id])
+
+  driveFileId String // id do arquivo no Google Drive (drive.files.create response.id)
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+
+  createdByUserId String
+  createdBy       User     @relation("PayableAttachmentCreatedBy", fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([accountsPayableId])
+  @@map("accounts_payable_attachments")
+}
+
+/**
+ * Mensal/Quinzenal/Semanal/Anual — usado só pelas recorrências criadas via checkbox "Conta recorrente" (Sprint de Recorrências); o painel antigo (dueDay) sempre grava MONTHLY.
+ */
 enum RecurrencePeriodicity {
   MONTHLY
   BIWEEKLY
@@ -472,26 +513,26 @@ model RecurringBill {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  supplierId     String
-  supplier       Supplier     @relation(fields: [supplierId], references: [id])
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
 
-  categoryId     String
-  category       Category     @relation(fields: [categoryId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  description    String
-  amount         Decimal      @db.Decimal(14, 2)
-  dueDay         Int          // dia do mês (1–28, evita problema em fevereiro)
-  active         Boolean      @default(true)
+  description String
+  amount      Decimal @db.Decimal(14, 2)
+  dueDay      Int // dia do mês (1–28, evita problema em fevereiro)
+  active      Boolean @default(true)
 
   // Campos novos (Sprint de Recorrências) — nullable pra não quebrar as
   // recorrências já criadas pelo painel antigo, que só usa dueDay.
   periodicity    RecurrencePeriodicity @default(MONTHLY)
-  maxOccurrences Int?          // null = sem prazo
-  firstDueDate   DateTime?     @db.Date // vencimento da 1ª ocorrência gerada
+  maxOccurrences Int? // null = sem prazo
+  firstDueDate   DateTime?             @db.Date // vencimento da 1ª ocorrência gerada
 
-  payables       AccountsPayable[]
+  payables AccountsPayable[]
 
-  createdAt      DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   @@index([organizationId])
   @@index([supplierId])
@@ -502,10 +543,10 @@ model RecurringBill {
 // TESOURARIA (Cofre — docs/decisions/adr-tesouraria.md)
 // ============================================================
 enum SafeMovementType {
-  FUNDING                  // abastecimento do caixa (Cofre -> Caixa)
-  SANGRIA                  // sangria (Caixa -> Cofre)
-  CASH_REGISTER_HANDOFF    // fechamento confirmado (Caixa -> Cofre)
-  MANUAL_ADJUSTMENT        // só Admin — amount pode ser negativo (único tipo sem direção implícita)
+  FUNDING // abastecimento do caixa (Cofre -> Caixa)
+  SANGRIA // sangria (Caixa -> Cofre)
+  CASH_REGISTER_HANDOFF // fechamento confirmado (Caixa -> Cofre)
+  MANUAL_ADJUSTMENT // só Admin — amount pode ser negativo (único tipo sem direção implícita)
   ACCOUNTS_PAYABLE_PAYMENT // pagamento de Conta a Pagar com dinheiro do Cofre (Cofre -> Fornecedor)
 }
 
@@ -518,12 +559,12 @@ enum SafeMovementStatus {
 }
 
 model Safe {
-  id             String   @id @default(cuid())
-  organizationId String   @unique
+  id             String       @id @default(cuid())
+  organizationId String       @unique
   organization   Organization @relation(fields: [organizationId], references: [id])
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
-  movements      SafeMovement[]
+  movements SafeMovement[]
 
   @@map("safes")
 }
@@ -535,16 +576,16 @@ model Safe {
 // via confirm-safe-movement/cancel-safe-movement, exclusiva do fechamento de
 // caixa aguardando conferência gerencial.
 model SafeMovement {
-  id             String           @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  organization   Organization     @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
-  safeId         String
-  safe           Safe             @relation(fields: [safeId], references: [id])
+  safeId String
+  safe   Safe   @relation(fields: [safeId], references: [id])
 
-  type           SafeMovementType
-  amount         Decimal          @db.Decimal(14, 2)
-  status         SafeMovementStatus @default(CONFIRMED)
+  type   SafeMovementType
+  amount Decimal            @db.Decimal(14, 2)
+  status SafeMovementStatus @default(CONFIRMED)
 
   relatedCashRegisterDayId String?
   relatedCashRegisterDay   CashRegisterDay? @relation(fields: [relatedCashRegisterDayId], references: [id])
@@ -563,9 +604,9 @@ model SafeMovement {
   cancelledByUserId String?
   cancelledBy       User?     @relation("SafeMovementCancelledBy", fields: [cancelledByUserId], references: [id])
   cancelledAt       DateTime?
-  cancelReason      String?   // obrigatório ao cancelar uma pendência (validado no DTO)
+  cancelReason      String? // obrigatório ao cancelar uma pendência (validado no DTO)
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([organizationId, type])
   @@index([organizationId, status])
