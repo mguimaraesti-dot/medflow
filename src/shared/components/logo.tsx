@@ -1,10 +1,11 @@
 import { cn } from "@/shared/lib/utils";
 
 /**
- * Ícone da marca (pulso + barras ascendentes), do Manual da Marca MedFlow.
- * `tone="brand"` usa as cores da paleta oficial; `tone="mono"` herda
- * `currentColor` (com opacidade nas barras pra manter a hierarquia visual
- * mesmo em uma cor só); `tone="white"` é a variante pra fundos escuros/cor.
+ * Ícone da marca (3 barras ascendentes), do Manual da Marca MedFlow.
+ * `tone="brand"` usa as cores da paleta oficial (clara → escura, da
+ * esquerda pra direita); `tone="mono"` herda `currentColor` (com
+ * opacidade nas barras pra manter a hierarquia visual mesmo em uma cor
+ * só); `tone="white"` é a variante pra fundos escuros/cor.
  */
 export function LogoIcon({
   className,
@@ -13,12 +14,6 @@ export function LogoIcon({
   className?: string;
   tone?: "brand" | "white" | "mono";
 }) {
-  const pulseColor =
-    tone === "brand"
-      ? "#2563EB"
-      : tone === "white"
-        ? "#FFFFFF"
-        : "currentColor";
   const bar1 =
     tone === "brand"
       ? "#60A5FA"
@@ -42,38 +37,30 @@ export function LogoIcon({
 
   return (
     <svg
-      viewBox="0 0 56 32"
+      viewBox="0 0 32 32"
       className={cn("h-6 w-auto", className)}
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <path
-        d="M2,16 H10 L14,4 L19,28 L24,10 L28,20 H32"
-        fill="none"
-        stroke={pulseColor}
-        strokeWidth={3}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
       <rect
-        x={36}
-        y={20}
-        width={4}
-        height={8}
-        rx={2}
+        x={2}
+        y={18}
+        width={7}
+        height={12}
+        rx={2.5}
         fill={bar1}
         opacity={bar1Opacity}
       />
       <rect
-        x={42}
-        y={14}
-        width={4}
-        height={14}
-        rx={2}
+        x={12.5}
+        y={10}
+        width={7}
+        height={20}
+        rx={2.5}
         fill={bar2}
         opacity={bar2Opacity}
       />
-      <rect x={48} y={8} width={4} height={20} rx={2} fill={bar3} />
+      <rect x={23} y={2} width={7} height={28} rx={2.5} fill={bar3} />
     </svg>
   );
 }
