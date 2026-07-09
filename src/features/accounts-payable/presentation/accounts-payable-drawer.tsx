@@ -295,9 +295,7 @@ export function AccountsPayableDrawer({
                       </div>
                     )}
 
-                    {(payable.barcode ||
-                      payable.pixKey ||
-                      payable.qrCodeUrl) && (
+                    {(payable.barcode || payable.pixKey) && (
                       <div className="space-y-3 rounded-lg border p-3">
                         <p className="text-sm font-medium">Pagamento</p>
                         {payable.barcode && (
@@ -335,19 +333,6 @@ export function AccountsPayableDrawer({
                               value={payable.pixKey}
                               label="Copiar PIX"
                               successMessage="PIX copiado"
-                            />
-                          </div>
-                        )}
-                        {payable.qrCodeUrl && (
-                          <div className="space-y-1">
-                            <p className="text-muted-foreground text-xs">
-                              QR Code PIX
-                            </p>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={payable.qrCodeUrl}
-                              alt="QR Code PIX"
-                              className="h-32 w-32 rounded-md border object-contain"
                             />
                           </div>
                         )}

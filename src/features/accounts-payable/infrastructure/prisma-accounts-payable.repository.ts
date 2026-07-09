@@ -63,19 +63,38 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     // "OVERDUE" nunca é persistido — traduz pro par (status PENDING +
     // dueDate no passado). "PENDING" no filtro exclui as vencidas (elas
     // aparecem só no filtro "Vencidas"), mesma lógica do displayStatus.
-    let statusFilter: Prisma.AccountsPayableWhereInput = {};
+    // O range de período (dueDateFrom/dueDateTo) precisa ser mesclado no
+    // mesmo objeto `dueDate` — dois spreads separados de `dueDate` no
+    // `where` não fazem deep-merge, o segundo sobrescreve o primeiro
+    // por inteiro e o filtro de status vira um no-op.
+    const statusFilter: Prisma.AccountsPayableWhereInput = {};
+    const dueDateFilter: Prisma.DateTimeFilter = {};
     if (filter.status === "OVERDUE") {
-      statusFilter = { status: "PENDING", dueDate: { lt: today } };
+      statusFilter.status = "PENDING";
+      dueDateFilter.lt = today;
     } else if (filter.status === "PENDING") {
-      statusFilter = { status: "PENDING", dueDate: { gte: today } };
+      statusFilter.status = "PENDING";
+      dueDateFilter.gte = today;
     } else if (filter.status) {
-      statusFilter = { status: filter.status };
+      statusFilter.status = filter.status;
+    }
+    if (filter.dueDateFrom) {
+      dueDateFilter.gte =
+        dueDateFilter.gte && dueDateFilter.gte > filter.dueDateFrom
+          ? dueDateFilter.gte
+          : filter.dueDateFrom;
+    }
+    if (filter.dueDateTo) {
+      dueDateFilter.lte = filter.dueDateTo;
     }
 
     const where: Prisma.AccountsPayableWhereInput = {
       organizationId: filter.organizationId,
       deletedAt: filter.deletedOnly ? { not: null } : null,
       ...statusFilter,
+      ...(Object.keys(dueDateFilter).length > 0 && {
+        dueDate: dueDateFilter,
+      }),
       ...(filter.supplierId && { supplierId: filter.supplierId }),
       ...(filter.categoryId && { categoryId: filter.categoryId }),
       ...(filter.recurringBillId && {
@@ -102,12 +121,6 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
           { barcode: { contains: filter.search, mode: "insensitive" } },
           { digitableLine: { contains: filter.search, mode: "insensitive" } },
         ],
-      }),
-      ...((filter.dueDateFrom || filter.dueDateTo) && {
-        dueDate: {
-          ...(filter.dueDateFrom && { gte: filter.dueDateFrom }),
-          ...(filter.dueDateTo && { lte: filter.dueDateTo }),
-        },
       }),
     };
 
@@ -408,7 +421,14 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       ...(period.dueDateTo && { lte: period.dueDateTo }),
     };
 
-    const baseWhere: Prisma.AccountsPayableWhereInput = { organizationId };
+    // deletedAt: null é essencial aqui — sem isso, uma conta excluída
+    // (soft delete) continua contando nos cards de KPI mesmo nunca
+    // aparecendo na listagem (que já filtra deletedAt), fazendo o
+    // card mostrar uma contagem que a tabela nunca confirma.
+    const baseWhere: Prisma.AccountsPayableWhereInput = {
+      organizationId,
+      deletedAt: null,
+    };
 
     const [dueToday, dueYesterday, upcoming, overdue, paid] = await Promise.all(
       [
