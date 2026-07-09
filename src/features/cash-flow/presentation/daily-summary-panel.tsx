@@ -10,21 +10,27 @@ import type { CashRegisterDayResponseDTO } from "@/features/cash-register/applic
  * (`cash-balance-header.tsx`/`close-register-dialog.tsx`), sem endpoint
  * novo. `useCashFlowEntries` usa a mesma chave de query já buscada pela
  * tabela de lançamentos, então o React Query reaproveita o cache.
+ *
+ * Continua visível com o caixa fechado (ou sem nenhum caixa aberto hoje)
+ * pra manter a altura do layout ao lado de "Novo Lançamento" — nesse
+ * estado os valores aparecem zerados, nunca o resumo de um dia já
+ * encerrado.
  */
 export function DailySummaryPanel({
   today,
 }: {
-  today: CashRegisterDayResponseDTO;
+  today: CashRegisterDayResponseDTO | null | undefined;
 }) {
+  const isOpen = today?.status === "OPEN";
   const { data } = useCashFlowEntries(
-    { cashRegisterDayId: today.id, pageSize: 100 },
-    { enabled: Boolean(today.id) },
+    { cashRegisterDayId: today?.id, pageSize: 100 },
+    { enabled: isOpen && Boolean(today?.id) },
   );
 
-  const openingBalance = Number(today.openingBalance);
-  const cashIn = Number(today.cashIn ?? 0);
-  const totalIn = Number(today.totalIn ?? 0);
-  const totalOut = Number(today.totalOut ?? 0);
+  const openingBalance = isOpen ? Number(today.openingBalance) : 0;
+  const cashIn = isOpen ? Number(today.cashIn ?? 0) : 0;
+  const totalIn = isOpen ? Number(today.totalIn ?? 0) : 0;
+  const totalOut = isOpen ? Number(today.totalOut ?? 0) : 0;
   const pixIn = totalIn - cashIn;
   const currentBalance = openingBalance + totalIn - totalOut;
 
@@ -42,11 +48,11 @@ export function DailySummaryPanel({
   ];
 
   return (
-    <Card className="rounded-2xl shadow-sm">
+    <Card className="flex h-full flex-col rounded-2xl shadow-sm">
       <CardHeader>
         <CardTitle>Resumo do Dia</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-1 flex-col justify-center space-y-3">
         {rows.map((row) => (
           <div
             key={row.label}
