@@ -2,9 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/api-client";
-import type { ExpensesByCategoryItemResponseDTO } from "../application/dtos/expenses-by-category.response-dto";
+import type { CashFlowDailyTotalResponseDTO } from "../application/dtos/cash-flow-daily-totals.response-dto";
 
-export function useExpensesByCategory(period: {
+export function useCashFlowDailyTotals(period: {
   dateFrom: Date;
   dateTo: Date;
 }) {
@@ -13,10 +13,10 @@ export function useExpensesByCategory(period: {
   params.set("dateTo", period.dateTo.toISOString());
 
   return useQuery({
-    queryKey: ["cash-flow", "expenses-by-category", period],
+    queryKey: ["cash-flow", "daily-totals", period],
     queryFn: () =>
-      apiFetch<ExpensesByCategoryItemResponseDTO[]>(
-        `/api/cash-flow/expenses-by-category?${params.toString()}`,
+      apiFetch<CashFlowDailyTotalResponseDTO[]>(
+        `/api/cash-flow/daily-totals?${params.toString()}`,
       ),
   });
 }

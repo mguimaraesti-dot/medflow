@@ -33,6 +33,9 @@ export interface ListAccountsPayableFilter {
   status?: PayableStatus;
   dueDateFrom?: Date;
   dueDateTo?: Date;
+  /** Filtra por data de pagamento (`paidAt`), não vencimento — usado pelo relatório "Contas Pagas" (Central de Relatórios), onde o período selecionado é sobre quando o pagamento aconteceu. */
+  paidAtFrom?: Date;
+  paidAtTo?: Date;
   supplierId?: string;
   categoryId?: string;
   /** Só as ocorrências de uma recorrência — usado pelo Drawer "Ver Ocorrências"/"Linha do Tempo". */

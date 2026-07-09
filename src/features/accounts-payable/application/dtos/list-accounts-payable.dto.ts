@@ -6,6 +6,9 @@ export const listAccountsPayableSchema = paginationSchema.extend({
   status: z.enum(["PENDING", "PAID", "OVERDUE", "CANCELLED"]).optional(),
   dueDateFrom: z.coerce.date().optional(),
   dueDateTo: z.coerce.date().optional(),
+  /** Filtra por data de pagamento (`paidAt`), não vencimento — usado pelo relatório "Contas Pagas" (Central de Relatórios). */
+  paidAtFrom: z.coerce.date().optional(),
+  paidAtTo: z.coerce.date().optional(),
   supplierId: cuidSchema.optional(),
   categoryId: cuidSchema.optional(),
   recurringBillId: cuidSchema.optional(),

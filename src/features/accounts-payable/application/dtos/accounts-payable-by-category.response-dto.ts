@@ -1,16 +1,16 @@
 import { toMoneyString } from "@/shared/lib/money";
-import type { ExpensesByCategoryItem } from "../get-expenses-by-category.use-case";
+import type { AccountsPayableByCategoryItem } from "../get-accounts-payable-by-category.use-case";
 
-export interface ExpensesByCategoryItemResponseDTO {
+export interface AccountsPayableByCategoryItemResponseDTO {
   categoryId: string;
   categoryName: string;
   color: string;
   total: string;
 }
 
-export function toExpensesByCategoryResponseDTO(
-  items: ExpensesByCategoryItem[],
-): ExpensesByCategoryItemResponseDTO[] {
+export function toAccountsPayableByCategoryResponseDTO(
+  items: AccountsPayableByCategoryItem[],
+): AccountsPayableByCategoryItemResponseDTO[] {
   return items.map((item) => ({
     categoryId: item.categoryId,
     categoryName: item.categoryName,

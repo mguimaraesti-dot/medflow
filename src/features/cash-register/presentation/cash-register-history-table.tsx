@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, Eye } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarDays, Search } from "lucide-react";
 import { useCashRegisterDays } from "./use-cash-register-days";
 import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
 import { EmptyState } from "@/shared/components/empty-state";
+import { ReportExportMenu } from "@/shared/components/report-export-menu";
+import { ReportRowActions } from "@/shared/components/report-row-actions";
 import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 import { Skeleton } from "@/shared/ui/skeleton";
 import {
   Table,
@@ -16,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui/table";
+import type { ReportExportColumn } from "@/shared/lib/export/report-export";
 import type { CashRegisterDayResponseDTO } from "../application/dtos/cash-register-day.response-dto";
 
 const STATUS_BADGE: Record<
@@ -27,20 +30,72 @@ const STATUS_BADGE: Record<
 };
 
 export function CashRegisterHistoryTable({
+  title = "Fechamento Diário",
   dateFrom,
   dateTo,
   onView,
 }: {
+  /** Título usado na exportação — "Fechamento Diário" fora da Central de Relatórios não muda. */
+  title?: string;
   dateFrom?: Date;
   dateTo?: Date;
   onView: (day: CashRegisterDayResponseDTO) => void;
 }) {
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
 
-  const { data, isLoading } = useCashRegisterDays({ dateFrom, dateTo, page });
+  const { data, isLoading } = useCashRegisterDays({
+    dateFrom,
+    dateTo,
+    pageSize: 500,
+  });
+
+  const filteredItems = useMemo(() => {
+    const items = data?.items ?? [];
+    const searchLower = search.trim().toLowerCase();
+    if (!searchLower) return items;
+    return items.filter((day) =>
+      formatDateOnlyBR(day.date).includes(searchLower),
+    );
+  }, [data?.items, search]);
+
+  const columns: ReportExportColumn<CashRegisterDayResponseDTO>[] = [
+    { header: "Data", accessor: (day) => formatDateOnlyBR(day.date) },
+    { header: "Status", accessor: (day) => STATUS_BADGE[day.status].label },
+    {
+      header: "Saldo Inicial",
+      accessor: (day) => formatCurrencyBRL(day.openingBalance),
+    },
+    {
+      header: "Saldo Final",
+      accessor: (day) =>
+        day.closingBalance ? formatCurrencyBRL(day.closingBalance) : "—",
+    },
+    {
+      header: "Diferença",
+      accessor: (day) =>
+        day.difference !== null ? formatCurrencyBRL(day.difference) : "—",
+    },
+  ];
 
   return (
-    <>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="relative w-full sm:w-[280px]">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            placeholder="Pesquisar por data..."
+            className="h-10 rounded-xl pl-9"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+        <ReportExportMenu
+          title={title}
+          columns={columns}
+          rows={filteredItems}
+        />
+      </div>
+
       {isLoading && (
         <div className="space-y-2">
           <Skeleton className="h-9 w-full" />
@@ -49,7 +104,7 @@ export function CashRegisterHistoryTable({
         </div>
       )}
 
-      {!isLoading && data && data.items.length === 0 && (
+      {!isLoading && filteredItems.length === 0 && (
         <EmptyState
           icon={CalendarDays}
           title="Nenhum fechamento encontrado."
@@ -57,12 +112,12 @@ export function CashRegisterHistoryTable({
         />
       )}
 
-      {!isLoading && data && data.items.length > 0 && (
+      {!isLoading && filteredItems.length > 0 && (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Data</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Saldo inicial</TableHead>
@@ -72,7 +127,7 @@ export function CashRegisterHistoryTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.items.map((day) => {
+                {filteredItems.map((day) => {
                   const badge = STATUS_BADGE[day.status];
                   const difference =
                     day.difference !== null ? Number(day.difference) : null;
@@ -111,19 +166,13 @@ export function CashRegisterHistoryTable({
                           ? formatCurrencyBRL(difference)
                           : "—"}
                       </TableCell>
-                      <TableCell
-                        className="text-right"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onView(day)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">Visualizar</span>
-                        </Button>
+                      <TableCell onClick={(event) => event.stopPropagation()}>
+                        <ReportRowActions
+                          title={title}
+                          columns={columns}
+                          row={day}
+                          onView={() => onView(day)}
+                        />
                       </TableCell>
                     </TableRow>
                   );
@@ -132,34 +181,11 @@ export function CashRegisterHistoryTable({
             </Table>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-              Página {data.page} de {data.totalPages} · {data.total}{" "}
-              fechamento(s)
-            </span>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Anterior
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page >= data.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Próxima
-              </Button>
-            </div>
-          </div>
+          <p className="text-muted-foreground text-sm">
+            {data?.total} fechamento(s)
+          </p>
         </>
       )}
-    </>
+    </div>
   );
 }
