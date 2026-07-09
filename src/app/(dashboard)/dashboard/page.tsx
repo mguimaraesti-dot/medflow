@@ -13,10 +13,5 @@ export default async function DashboardPage() {
     redirect("/cash-flow");
   }
 
-  return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
-      <DashboardScreen permissions={user?.permissions ?? []} />
-    </div>
-  );
+  return <DashboardScreen permissions={user?.permissions ?? []} />;
 }

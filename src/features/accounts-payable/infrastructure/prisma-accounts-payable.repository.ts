@@ -515,4 +515,26 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       },
     };
   }
+
+  async sumPaidByDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ count: number; amount: Prisma.Decimal }> {
+    const result = await prisma.accountsPayable.aggregate({
+      where: {
+        organizationId,
+        deletedAt: null,
+        status: "PAID",
+        paidAt: { gte: from, lte: to },
+      },
+      _count: true,
+      _sum: { amount: true },
+    });
+
+    return {
+      count: result._count,
+      amount: result._sum.amount ?? new Prisma.Decimal(0),
+    };
+  }
 }

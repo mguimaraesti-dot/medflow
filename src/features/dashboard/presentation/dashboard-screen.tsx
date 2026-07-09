@@ -1,98 +1,83 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import {
-  Activity,
-  BarChart3,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
-import { PERMISSIONS } from "@/core/permissions/roles-permissions";
-import { CashRegisterStatusCard } from "@/features/cash-register/presentation/cash-register-status-card";
-import { useDashboardSummary } from "./use-dashboard-summary";
-import { AlertsBanner } from "./alerts-banner";
-import { KpiCard } from "@/shared/components/kpi-card";
-import { RecentEntriesList } from "./recent-entries-list";
-import { useUpcomingPayables } from "./use-upcoming-payables";
-import { UpcomingDuesCard } from "@/shared/components/upcoming-dues-card";
-import { formatCurrencyBRL } from "@/shared/lib/format";
+import { DashboardHeader } from "./dashboard-header";
+import { DashboardKpiRow } from "./dashboard-kpi-row";
+import { DashboardPendenciesCard } from "./dashboard-pendencies-card";
+import { DashboardFinancialFlowCard } from "./dashboard-financial-flow-card";
+import { DashboardAgendaCard } from "./dashboard-agenda-card";
+import { DashboardAvailabilityCard } from "./dashboard-availability-card";
+import { DashboardTimelineCard } from "./dashboard-timeline-card";
+import { DashboardQuickActions } from "./dashboard-quick-actions";
+import { useDashboardOverview } from "./use-dashboard-overview";
 import { Skeleton } from "@/shared/ui/skeleton";
 
-// recharts só entra no bundle quando o gráfico é de fato renderizado —
-// evita carregar a biblioteca inteira no bundle inicial do Dashboard.
-const CashFlowChart = dynamic(
-  () => import("./cash-flow-chart").then((mod) => mod.CashFlowChart),
-  { ssr: false, loading: () => <Skeleton className="h-[358px] w-full" /> },
-);
-
 export function DashboardScreen({ permissions }: { permissions: string[] }) {
-  const { data: summary, isLoading } = useDashboardSummary();
-  const { data: upcomingPayables } = useUpcomingPayables();
+  const { data: overview, isLoading } = useDashboardOverview();
 
-  const can = (permission: string) => permissions.includes(permission);
+  if (isLoading || !overview) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-14 w-full" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-80 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <AlertsBanner />
+      <DashboardHeader
+        cashRegisterStatus={overview.cashRegisterStatus}
+        overdueCount={overview.overdueCount}
+        pendingConfirmationCount={overview.pendingConfirmationCount}
+      />
 
-      {isLoading && (
-        <p className="text-muted-foreground text-sm">Carregando dashboard...</p>
-      )}
+      <DashboardKpiRow
+        cashBalance={overview.cashBalance}
+        safeBalance={overview.safeBalance}
+        dueTodayAmount={overview.dueTodayAmount}
+        dueTodayCount={overview.dueTodayCount}
+        overdueAmount={overview.overdueAmount}
+        overdueCount={overview.overdueCount}
+      />
 
-      {summary && (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <KpiCard
-              label="Saldo atual"
-              value={formatCurrencyBRL(summary.currentBalance)}
-              icon={Wallet}
-              iconTone="blue"
-            />
-            <KpiCard
-              label="Receitas hoje"
-              value={formatCurrencyBRL(summary.revenueToday)}
-              tone="positive"
-              icon={TrendingUp}
-              iconTone="green"
-            />
-            <KpiCard
-              label="Despesas hoje"
-              value={formatCurrencyBRL(summary.expensesToday)}
-              tone="negative"
-              icon={TrendingDown}
-              iconTone="red"
-            />
-            <KpiCard
-              label="Resultado do dia"
-              value={formatCurrencyBRL(summary.resultToday)}
-              tone={Number(summary.resultToday) >= 0 ? "positive" : "negative"}
-              icon={Activity}
-              iconTone={Number(summary.resultToday) >= 0 ? "green" : "red"}
-            />
-            <KpiCard
-              label="Resultado do mês"
-              value={formatCurrencyBRL(summary.resultMonth)}
-              tone={Number(summary.resultMonth) >= 0 ? "positive" : "negative"}
-              icon={BarChart3}
-              iconTone={Number(summary.resultMonth) >= 0 ? "green" : "red"}
-            />
-          </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <DashboardPendenciesCard pendencies={overview.pendencies} />
+        <DashboardFinancialFlowCard
+          receivedTodayTotal={overview.receivedTodayTotal}
+          receivedTodayCash={overview.receivedTodayCash}
+          receivedTodayPix={overview.receivedTodayPix}
+          receivedTodayCount={overview.receivedTodayCount}
+          cashBalance={overview.cashBalance}
+          safeBalance={overview.safeBalance}
+          paidTodayAmount={overview.paidTodayAmount}
+          paidTodayCount={overview.paidTodayCount}
+          availableTotal={overview.availableTotal}
+        />
+        <DashboardAgendaCard
+          dueTodayCount={overview.dueTodayCount}
+          overdueCount={overview.overdueCount}
+        />
+      </div>
 
-          <CashRegisterStatusCard
-            canOpen={can(PERMISSIONS.CASH_REGISTER_OPEN)}
-            canClose={can(PERMISSIONS.CASH_REGISTER_CLOSE)}
-            canReopen={can(PERMISSIONS.CASH_REGISTER_REOPEN)}
-          />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.4fr)]">
+        <DashboardAvailabilityCard
+          cashBalance={overview.cashBalance}
+          safeBalance={overview.safeBalance}
+          availableTotal={overview.availableTotal}
+        />
+        <DashboardTimelineCard events={overview.timeline} />
+      </div>
 
-          <CashFlowChart dailySeries={summary.dailySeries} />
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <RecentEntriesList entries={summary.recentEntries} />
-            <UpcomingDuesCard payables={upcomingPayables ?? []} />
-          </div>
-        </>
-      )}
+      <DashboardQuickActions permissions={permissions} />
     </div>
   );
 }

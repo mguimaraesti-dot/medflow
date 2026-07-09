@@ -5,7 +5,10 @@ import type {
   PaymentConfirmationSource,
   PaymentOrigin,
 } from "./accounts-payable.entity";
-import type { AccountsPayableSummary } from "./accounts-payable-summary.entity";
+import type {
+  AccountsPayableSummary,
+  AccountsPayableSummaryBucket,
+} from "./accounts-payable-summary.entity";
 
 export interface CreateAccountsPayableInput {
   organizationId: string;
@@ -190,4 +193,11 @@ export interface AccountsPayableRepository {
     organizationId: string,
     period: { dueDateFrom?: Date; dueDateTo?: Date },
   ): Promise<AccountsPayableSummary>;
+
+  /** Soma agregada de contas pagas dentro de um intervalo de `paidAt` — usado pelo card "Pagamentos" do Fluxo Financeiro do Dashboard. */
+  sumPaidByDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<AccountsPayableSummaryBucket>;
 }
