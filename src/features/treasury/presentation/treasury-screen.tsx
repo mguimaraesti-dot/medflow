@@ -62,13 +62,12 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
     pageSize: 1,
   });
 
+  /** Chips de tipo (Entradas/Saídas/Recepção/Contas a Pagar/Ajustes) são mutuamente exclusivos — clicar substitui a seleção em vez de somar; clicar de novo no mesmo limpa o filtro. */
   function toggleTypes(types: SafeMovementType[]) {
-    const allActive = types.every((type) => selectedTypes.includes(type));
-    setSelectedTypes((prev) =>
-      allActive
-        ? prev.filter((type) => !types.includes(type))
-        : Array.from(new Set([...prev, ...types])),
-    );
+    const isSameSelection =
+      selectedTypes.length === types.length &&
+      types.every((type) => selectedTypes.includes(type));
+    setSelectedTypes(isSameSelection ? [] : types);
   }
 
   return (
