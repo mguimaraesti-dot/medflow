@@ -15,9 +15,11 @@ import {
   Receipt,
   Settings,
   Tags,
+  Users as UsersIcon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { Logo } from "@/shared/components/logo";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/presentation/logout-button";
@@ -47,6 +49,13 @@ const SOLTOS: NavItem[] = [
   { href: "/reports", label: "Relatórios", icon: BarChart3 },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
+
+/** Só some da sidebar — a proteção real continua nas API Routes (`requirePermission`). */
+const USERS_NAV_ITEM: NavItem = {
+  href: "/users",
+  label: "Usuários",
+  icon: UsersIcon,
+};
 
 /** Preferência local — o app não tem outro mecanismo de persistência client-only hoje (tema usa o mesmo padrão via next-themes). */
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "medflow:sidebar-collapsed";
@@ -95,11 +104,14 @@ function NavLink({
 function SidebarNav({
   onNavigate,
   collapsed,
+  permissions,
 }: {
   onNavigate?: () => void;
   collapsed?: boolean;
+  permissions: string[];
 }) {
   const pathname = usePathname();
+  const canManageUsers = permissions.includes(PERMISSIONS.USERS_MANAGE);
 
   return (
     <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-3">
@@ -147,6 +159,14 @@ function SidebarNav({
             collapsed={collapsed}
           />
         ))}
+        {canManageUsers && (
+          <NavLink
+            item={USERS_NAV_ITEM}
+            pathname={pathname}
+            onNavigate={onNavigate}
+            collapsed={collapsed}
+          />
+        )}
       </div>
     </nav>
   );
@@ -217,9 +237,11 @@ function SidebarLogo({ collapsed }: { collapsed?: boolean }) {
 export function AppSidebar({
   userName,
   roleName,
+  permissions,
 }: {
   userName: string;
   roleName: string;
+  permissions: string[];
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -245,7 +267,7 @@ export function AppSidebar({
       )}
     >
       <SidebarLogo collapsed={collapsed} />
-      <SidebarNav collapsed={collapsed} />
+      <SidebarNav collapsed={collapsed} permissions={permissions} />
       <SidebarFooter
         userName={userName}
         roleName={roleName}
@@ -272,9 +294,11 @@ export function AppSidebar({
 export function MobileSidebarTrigger({
   userName,
   roleName,
+  permissions,
 }: {
   userName: string;
   roleName: string;
+  permissions: string[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -299,7 +323,10 @@ export function MobileSidebarTrigger({
         <SheetContent side="left" className="flex w-64 flex-col p-0">
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
           <SidebarLogo />
-          <SidebarNav onNavigate={() => setOpen(false)} />
+          <SidebarNav
+            onNavigate={() => setOpen(false)}
+            permissions={permissions}
+          />
           <SidebarFooter userName={userName} roleName={roleName} />
         </SheetContent>
       </Sheet>

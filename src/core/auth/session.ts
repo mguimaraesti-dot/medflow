@@ -7,8 +7,10 @@ export interface SessionUser {
   organizationId: string | null;
   name: string;
   email: string;
-  roleName: string;
+  /** `null` enquanto o usuário está PENDING (ainda sem perfil atribuído). */
+  roleName: string | null;
   permissions: string[];
+  status: "ACTIVE" | "INACTIVE" | "PENDING";
 }
 
 /**
@@ -43,14 +45,18 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
     include: { role: { include: { permissions: true } } },
   });
 
-  if (!user || !user.active) return null;
+  // INACTIVE é tratado como "sem sessão" (mesmo comportamento de
+  // sempre). PENDING é uma sessão válida, só sem permissão nenhuma —
+  // quem chama decide redirecionar para a tela de aguardando aprovação.
+  if (!user || user.status === "INACTIVE") return null;
 
   return {
     id: user.id,
     organizationId: user.organizationId,
     name: user.name,
     email: user.email,
-    roleName: user.role.name,
-    permissions: user.role.permissions.map((p) => p.key),
+    roleName: user.role?.name ?? null,
+    permissions: user.role?.permissions.map((p) => p.key) ?? [],
+    status: user.status,
   };
 });

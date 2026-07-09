@@ -100,6 +100,15 @@ model Permission {
   @@map("permissions")
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  // Criado via trigger em auth.users (convite de Admin/Gerente ou
+  // primeiro login via Google) — sem roleId até alguém atribuir um
+  // perfil pela tela de Gestão de Acessos.
+  PENDING
+}
+
 model User {
   id             String        @id @default(cuid())
   organizationId String?
@@ -109,10 +118,11 @@ model User {
   email          String        @unique
   supabaseAuthId String        @unique
 
-  roleId         String
-  role           Role          @relation(fields: [roleId], references: [id])
+  roleId         String?
+  role           Role?         @relation(fields: [roleId], references: [id])
 
-  active         Boolean       @default(true)
+  status         UserStatus    @default(ACTIVE)
+  lastLoginAt    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?

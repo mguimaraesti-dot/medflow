@@ -13,8 +13,8 @@ function toAuthenticatedUser(user: UserWithRole): AuthenticatedUser {
     email: user.email,
     supabaseAuthId: user.supabaseAuthId,
     roleId: user.roleId,
-    roleName: user.role.name,
-    active: user.active,
+    roleName: user.role?.name ?? null,
+    status: user.status,
   };
 }
 

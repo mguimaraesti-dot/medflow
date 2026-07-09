@@ -48,6 +48,10 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
  *   pagamento.
  * - Admin gerencia usuários e também pode reabrir o caixa.
  * - Contador só lê (relatórios, Sprint 3).
+ * - Proprietário (Gerente, na Gestão de Acessos) também gerencia
+ *   usuários — mapeamento explícito do pedido de Gestão de Acessos:
+ *   "Gerente" cria/edita usuários e vê relatórios, sem as funções de
+ *   manutenção do sistema que só o Admin tem.
  */
 export const ROLE_PERMISSIONS: Record<
   "ADMIN" | "OWNER" | "SECRETARY" | "FINANCE" | "ACCOUNTANT",
@@ -83,6 +87,7 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.PAYABLE_READ,
     PERMISSIONS.TREASURY_SANGRIA,
     PERMISSIONS.TREASURY_CONFIRM_MOVEMENT,
+    PERMISSIONS.USERS_MANAGE,
     PERMISSIONS.DASHBOARD_READ,
   ],
   FINANCE: [

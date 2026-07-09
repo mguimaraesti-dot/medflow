@@ -221,6 +221,48 @@ export class UserInactiveError extends DomainError {
   }
 }
 
+export class UserPendingApprovalError extends DomainError {
+  readonly code = "USER_PENDING_APPROVAL";
+  readonly httpStatus = 403;
+
+  constructor() {
+    super(
+      "Seu acesso ainda não foi liberado. Aguarde um Gerente ou Administrador atribuir seu perfil.",
+    );
+  }
+}
+
+export class CannotModifyOwnRoleError extends DomainError {
+  readonly code = "CANNOT_MODIFY_OWN_ROLE";
+  readonly httpStatus = 403;
+
+  constructor(reason: "role" | "status" = "role") {
+    super(
+      reason === "role"
+        ? "Você não pode alterar o seu próprio perfil de acesso."
+        : "Você não pode ativar ou desativar o seu próprio usuário.",
+    );
+  }
+}
+
+export class LastActiveAdminError extends DomainError {
+  readonly code = "LAST_ACTIVE_ADMIN";
+  readonly httpStatus = 409;
+
+  constructor() {
+    super("É necessário manter ao menos um Administrador ativo no sistema.");
+  }
+}
+
+export class UserEmailAlreadyExistsError extends DomainError {
+  readonly code = "USER_EMAIL_ALREADY_EXISTS";
+  readonly httpStatus = 409;
+
+  constructor(email: string) {
+    super("Este e-mail já está cadastrado.", { email });
+  }
+}
+
 export class UnauthenticatedError extends DomainError {
   readonly code = "UNAUTHENTICATED";
   readonly httpStatus = 401;

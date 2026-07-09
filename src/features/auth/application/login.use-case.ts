@@ -3,6 +3,7 @@ import { prisma } from "@/core/database/prisma.client";
 import {
   InvalidCredentialsError,
   UserInactiveError,
+  UserPendingApprovalError,
 } from "@/core/errors/domain-error";
 import type { LoginInput } from "./dtos/login.dto";
 import type { UserRepository } from "../domain/user.repository";
@@ -11,7 +12,7 @@ export interface LoginResult {
   userId: string;
   name: string;
   email: string;
-  roleName: string;
+  roleName: string | null;
 }
 
 export interface RequestMeta {
@@ -49,13 +50,14 @@ export async function loginUseCase(
 
   const user = await deps.userRepository.findBySupabaseAuthId(data.user.id);
 
-  if (!user || !user.active) {
+  if (!user || user.status !== "ACTIVE") {
     await deps.supabase.auth.signOut();
     await auditLoginAttempt({
       entityId: user?.id ?? data.user.id,
       success: false,
       meta,
     });
+    if (user?.status === "PENDING") throw new UserPendingApprovalError();
     throw new UserInactiveError();
   }
 
@@ -64,6 +66,11 @@ export async function loginUseCase(
     entityId: user.id,
     success: true,
     meta,
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() },
   });
 
   return {
