@@ -14,10 +14,13 @@ export function CancelSafeMovementDialog({
   movement,
   open,
   onOpenChange,
+  onCancelled,
 }: {
   movement: SafeMovementResponseDTO | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Chamado só quando a rejeição é confirmada com sucesso — nunca ao só fechar/desistir do dialog. */
+  onCancelled?: () => void;
 }) {
   const [reason, setReason] = useState("");
   const cancelMovement = useCancelSafeMovement();
@@ -38,6 +41,7 @@ export function CancelSafeMovementDialog({
         input: { reason: reason.trim() },
       });
       handleOpenChange(false);
+      onCancelled?.();
       toast.success("Conferência rejeitada.");
     } catch (error) {
       toast.error(

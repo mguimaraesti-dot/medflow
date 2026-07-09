@@ -11,10 +11,13 @@ export function ConfirmSafeMovementDialog({
   movement,
   open,
   onOpenChange,
+  onConfirmed,
 }: {
   movement: SafeMovementResponseDTO | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Chamado só quando a conferência é confirmada com sucesso — nunca ao só fechar/cancelar o dialog. */
+  onConfirmed?: () => void;
 }) {
   const confirmMovement = useConfirmSafeMovement();
 
@@ -23,6 +26,7 @@ export function ConfirmSafeMovementDialog({
     try {
       await confirmMovement.mutateAsync(movement.id);
       onOpenChange(false);
+      onConfirmed?.();
       toast.success("Conferência confirmada. Saldo do Cofre atualizado.");
     } catch (error) {
       toast.error(

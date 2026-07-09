@@ -62,7 +62,11 @@ export function SafeMovementsTable({
   const [cancelTarget, setCancelTarget] =
     useState<SafeMovementResponseDTO | null>(null);
 
-  const { data, isLoading } = useSafeMovements({ ...filter, page });
+  const { data, isLoading } = useSafeMovements({
+    ...filter,
+    page,
+    pageSize: 12,
+  });
 
   return (
     <>
@@ -238,6 +242,7 @@ export function SafeMovementsTable({
 
       <SafeMovementDetailDrawer
         movement={selected}
+        canConfirm={canConfirm}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
       />

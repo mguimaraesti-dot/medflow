@@ -120,8 +120,8 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
         {canManualAdjustment && <ManualAdjustmentDialog />}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <Card className="lg:col-span-3">
           <CardContent className="space-y-4 pt-6">
             <TreasuryFiltersBar
               period={period}
