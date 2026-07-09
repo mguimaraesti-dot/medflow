@@ -15,10 +15,17 @@ export interface FinalizeInviteInput {
   organizationId: string;
 }
 
-/** Nunca inclui `status` — ativar/desativar é sempre via `setStatus()`. */
+/**
+ * `status` aqui só existe para a transição PENDING -> ACTIVE, que
+ * acontece como efeito colateral de atribuir um perfil a alguém ainda
+ * pendente (é assim que a Gestão de Acessos "aprova" um usuário criado
+ * via convite/Google) — nunca usado para INACTIVE, isso é sempre via
+ * `setStatus()`.
+ */
 export interface UpdateManagedUserInput {
   name?: string;
   roleId?: string;
+  status?: Extract<ManagedUserStatus, "ACTIVE">;
 }
 
 export interface UserManagementRepository {

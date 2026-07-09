@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/core/auth/session";
+import { getRoleLabel } from "@/core/permissions/roles-permissions";
 import {
   AppSidebar,
   MobileSidebarTrigger,
@@ -28,17 +29,19 @@ export default async function DashboardLayout({
     redirect("/pending-approval");
   }
 
+  const roleLabel = user.roleName ? getRoleLabel(user.roleName) : "—";
+
   return (
     <div className="bg-background flex min-h-screen">
       <AppSidebar
         userName={user.name}
-        roleName={user.roleName ?? "—"}
+        roleName={roleLabel}
         permissions={user.permissions}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileSidebarTrigger
           userName={user.name}
-          roleName={user.roleName ?? "—"}
+          roleName={roleLabel}
           permissions={user.permissions}
         />
         <main className="flex-1 space-y-6 p-4 lg:p-6">{children}</main>

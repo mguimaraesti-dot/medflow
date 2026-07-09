@@ -122,3 +122,24 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.DASHBOARD_READ,
   ],
 };
+
+/**
+ * Rótulo em português exibido ao usuário (Gestão de Acessos, sidebar)
+ * — nunca usado para autorização, só apresentação. Os 5 perfis
+ * continuam existindo no banco (`RoleName`); isso não os renomeia,
+ * só troca o texto mostrado. Perfis fora de `VISIBLE_ROLE_NAMES` não
+ * têm rótulo aqui de propósito — não aparecem no seletor da tela de
+ * Usuários (pedido explícito: "os demais ocultar").
+ */
+export const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Administrador",
+  OWNER: "Gerente",
+  SECRETARY: "Secretária",
+};
+
+export function getRoleLabel(roleName: string): string {
+  return ROLE_LABELS[roleName] ?? roleName;
+}
+
+/** Únicos perfis oferecidos no seletor de "Novo Usuário"/"Editar Usuário" — Financeiro e Contador continuam existindo (usuários antigos mantêm o perfil), só saem da lista de escolha. */
+export const VISIBLE_ROLE_NAMES = ["ADMIN", "OWNER", "SECRETARY"] as const;

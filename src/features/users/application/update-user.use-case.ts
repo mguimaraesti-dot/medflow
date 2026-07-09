@@ -47,8 +47,21 @@ export async function updateUserUseCase(
     }
   }
 
-  const before = { name: target.name, roleName: target.roleName };
-  const user = await deps.userManagementRepository.update(id, input);
+  // Atribuir um perfil a um usuário PENDING é o próprio ato de
+  // aprová-lo — sem isso, o Admin "atribui o perfil" mas o usuário
+  // continua travado na tela de aguardando aprovação.
+  const activatesPending =
+    target.status === "PENDING" && input.roleId !== undefined;
+
+  const before = {
+    name: target.name,
+    roleName: target.roleName,
+    status: target.status,
+  };
+  const user = await deps.userManagementRepository.update(id, {
+    ...input,
+    ...(activatesPending && { status: "ACTIVE" }),
+  });
 
   await prisma.auditLog.create({
     data: {
@@ -57,7 +70,7 @@ export async function updateUserUseCase(
       entityId: user.id,
       action: "UPDATE",
       before,
-      after: { name: user.name, roleName: user.roleName },
+      after: { name: user.name, roleName: user.roleName, status: user.status },
     },
   });
 

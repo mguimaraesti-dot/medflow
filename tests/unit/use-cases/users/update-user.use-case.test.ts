@@ -122,6 +122,58 @@ describe("updateUserUseCase", () => {
     expect(result.roleName).toBe("OWNER");
   });
 
+  it("ativa automaticamente um usuário PENDING ao atribuir um perfil", async () => {
+    const target = buildUser({
+      status: "PENDING",
+      roleId: null,
+      roleName: null,
+    });
+    const update = vi.fn().mockResolvedValue({
+      ...target,
+      roleId: "role-secretary",
+      roleName: "SECRETARY",
+      status: "ACTIVE",
+    });
+    const userManagementRepository = {
+      findById: vi.fn().mockResolvedValue(target),
+      update,
+    } as unknown as UserManagementRepository;
+
+    const result = await updateUserUseCase(
+      "user-1",
+      { name: "Ana", roleId: "role-secretary" },
+      "actor-1",
+      "org-1",
+      { userManagementRepository },
+    );
+
+    expect(update).toHaveBeenCalledWith("user-1", {
+      name: "Ana",
+      roleId: "role-secretary",
+      status: "ACTIVE",
+    });
+    expect(result.status).toBe("ACTIVE");
+  });
+
+  it("não reativa um usuário INACTIVE só por editar o nome (sem roleId)", async () => {
+    const target = buildUser({ status: "INACTIVE" });
+    const update = vi.fn().mockResolvedValue({ ...target, name: "Novo Nome" });
+    const userManagementRepository = {
+      findById: vi.fn().mockResolvedValue(target),
+      update,
+    } as unknown as UserManagementRepository;
+
+    await updateUserUseCase(
+      "user-1",
+      { name: "Novo Nome" },
+      "actor-1",
+      "org-1",
+      { userManagementRepository },
+    );
+
+    expect(update).toHaveBeenCalledWith("user-1", { name: "Novo Nome" });
+  });
+
   it("não checa último Admin quando o alvo já não é Admin ativo", async () => {
     const target = buildUser({ roleName: "SECRETARY", status: "ACTIVE" });
     const countActiveAdmins = vi.fn();

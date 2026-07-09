@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/shared/ui/table";
 import { formatDateOnlyBR, formatDateTimeBR } from "@/shared/lib/format";
+import { getRoleLabel } from "@/core/permissions/roles-permissions";
 import type { UserResponseDTO } from "../application/dtos/user.response-dto";
 
 const STATUS_META: Record<
@@ -90,7 +91,7 @@ export function UsersTable({
                 {user.email}
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {user.roleName ?? "—"}
+                {user.roleName ? getRoleLabel(user.roleName) : "—"}
               </TableCell>
               <TableCell>
                 <Badge variant="outline" className={status.className}>

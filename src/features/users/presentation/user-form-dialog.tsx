@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { createUserSchema } from "../application/dtos/create-user.dto";
 import { useCreateUser } from "./use-create-user";
 import { useUpdateUser } from "./use-update-user";
+import { useSetUserStatus } from "./use-set-user-status";
 import { useRoles } from "./use-roles";
 import { ApiError } from "@/shared/lib/api-client";
+import {
+  VISIBLE_ROLE_NAMES,
+  getRoleLabel,
+} from "@/core/permissions/roles-permissions";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { Checkbox } from "@/shared/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -52,6 +58,12 @@ export function UserFormDialog({
   const { data: roles } = useRoles();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const setUserStatus = useSetUserStatus();
+  const [isActive, setIsActive] = useState(true);
+
+  const visibleRoles = roles?.filter((role) =>
+    (VISIBLE_ROLE_NAMES as readonly string[]).includes(role.name),
+  );
 
   const {
     register,
@@ -70,6 +82,7 @@ export function UserFormDialog({
         email: user?.email ?? "",
         roleId: user?.roleId ?? "",
       });
+      setIsActive(user?.status !== "INACTIVE");
     }
   }, [open, user, reset]);
 
@@ -80,6 +93,23 @@ export function UserFormDialog({
           userId: user.id,
           input: { name: values.name, roleId: values.roleId },
         });
+        // Ativar um PENDING já acontece sozinho ao salvar o perfil
+        // (backend). Aqui só cobre os casos que dependem do checkbox:
+        // reativar quem estava INACTIVE, ou rejeitar (deixar INACTIVE)
+        // alguém que acabaria de ser ativado.
+        if (!isSelf) {
+          if (isActive && user.status === "INACTIVE") {
+            await setUserStatus.mutateAsync({
+              userId: user.id,
+              status: "ACTIVE",
+            });
+          } else if (!isActive && user.status !== "INACTIVE") {
+            await setUserStatus.mutateAsync({
+              userId: user.id,
+              status: "INACTIVE",
+            });
+          }
+        }
         toast.success("Usuário atualizado.");
       } else {
         await createUser.mutateAsync(values);
@@ -95,7 +125,8 @@ export function UserFormDialog({
     }
   }
 
-  const isPending = createUser.isPending || updateUser.isPending;
+  const isPending =
+    createUser.isPending || updateUser.isPending || setUserStatus.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,7 +138,7 @@ export function UserFormDialog({
             </DialogTitle>
             <DialogDescription>
               {isEdit
-                ? "Altere o nome ou o perfil de acesso."
+                ? "Altere o nome, o perfil de acesso ou o status."
                 : "Um e-mail de convite será enviado para o usuário definir a própria senha."}
             </DialogDescription>
           </DialogHeader>
@@ -153,9 +184,9 @@ export function UserFormDialog({
                       <SelectValue placeholder="Selecione um perfil" />
                     </SelectTrigger>
                     <SelectContent>
-                      {roles?.map((role) => (
+                      {visibleRoles?.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
-                          {role.description ?? role.name}
+                          {getRoleLabel(role.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -173,6 +204,24 @@ export function UserFormDialog({
                 </p>
               )}
             </div>
+
+            {isEdit && !isSelf && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="isActive"
+                  checked={isActive}
+                  onCheckedChange={(checked) => setIsActive(checked === true)}
+                />
+                <Label htmlFor="isActive" className="font-normal">
+                  Usuário ativo
+                </Label>
+              </div>
+            )}
+            {isEdit && isSelf && (
+              <p className="text-muted-foreground text-xs">
+                Você não pode ativar ou desativar o seu próprio usuário.
+              </p>
+            )}
           </div>
 
           <DialogFooter>

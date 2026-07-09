@@ -93,6 +93,7 @@ export class PrismaUserManagementRepository implements UserManagementRepository 
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.roleId !== undefined && { roleId: data.roleId }),
+        ...(data.status !== undefined && { status: data.status }),
       },
       include: ROLE_INCLUDE,
     });
