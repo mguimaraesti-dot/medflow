@@ -323,7 +323,7 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "bg-background relative hidden shrink-0 flex-col border-r transition-[width] duration-200 ease-in-out lg:flex",
+        "bg-background relative sticky top-0 hidden h-screen shrink-0 flex-col self-start border-r transition-[width] duration-200 ease-in-out lg:flex",
         collapsed ? "w-[72px]" : "w-64",
       )}
     >
