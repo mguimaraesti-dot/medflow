@@ -41,9 +41,13 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
  * docs/sprints/MedFlow-Sprint1-Revisada.md (US03 a US08), com o ajuste
  * de autonomia da Secretária no ciclo do caixa (decisão explícita do
  * usuário — dupla conferência do Motor de Tesouraria removida):
- * - Secretária lança, cadastra, e agora também abre/fecha/reabre o
- *   caixa sozinha (reabertura sempre com justificativa obrigatória) —
- *   não confirma pagamento nem estorna lançamentos.
+ * - Secretária só acessa o módulo de Caixa Recepção — abre/fecha/reabre
+ *   o caixa (reabertura sempre com justificativa obrigatória) e lança
+ *   entradas/saídas, mas não confirma pagamento, não estorna
+ *   lançamentos e não enxerga nenhum outro módulo (Contas a Pagar,
+ *   Dashboard, Tesouraria, Relatórios etc.) — decisão explícita do
+ *   pedido de Gestão de Acessos: "acesso SOMENTE aos módulos de Caixa
+ *   e Recepção".
  * - Financeiro/Proprietário lançam, estornam, fecham caixa e confirmam
  *   pagamento.
  * - Admin gerencia usuários e também pode reabrir o caixa.
@@ -104,6 +108,7 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.TREASURY_CONFIRM_MOVEMENT,
     PERMISSIONS.DASHBOARD_READ,
   ],
+  /** Só o módulo de Caixa Recepção — nunca ganha PAYABLE_, DASHBOARD_READ, TREASURY_ ou USERS_MANAGE. */
   SECRETARY: [
     PERMISSIONS.CASH_FLOW_CREATE,
     PERMISSIONS.CASH_FLOW_READ,
@@ -111,9 +116,6 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.CASH_REGISTER_CLOSE,
     PERMISSIONS.CASH_REGISTER_REOPEN,
     PERMISSIONS.CASH_REGISTER_READ,
-    PERMISSIONS.PAYABLE_CREATE,
-    PERMISSIONS.PAYABLE_READ,
-    PERMISSIONS.DASHBOARD_READ,
   ],
   ACCOUNTANT: [
     PERMISSIONS.CASH_FLOW_READ,
@@ -143,3 +145,23 @@ export function getRoleLabel(roleName: string): string {
 
 /** Únicos perfis oferecidos no seletor de "Novo Usuário"/"Editar Usuário" — Financeiro e Contador continuam existindo (usuários antigos mantêm o perfil), só saem da lista de escolha. */
 export const VISIBLE_ROLE_NAMES = ["ADMIN", "OWNER", "SECRETARY"] as const;
+
+/**
+ * A sidebar usa isto pra decidir se mostra os módulos "administrativos"
+ * sem permissão própria dedicada (Categorias, Relatórios,
+ * Configurações — hoje sem `requirePermission` específico ou cobertos
+ * só por `cashflow:read`/`cash-register:read`, as mesmas que a
+ * Secretária já precisa pro Caixa Recepção). Sem isso, checar só essas
+ * duas permissões deixaria a Secretária ver módulos que o pedido de
+ * Gestão de Acessos deixa explícito que ela não deve acessar.
+ */
+export function hasBroaderThanCashRegisterAccess(
+  permissions: string[],
+): boolean {
+  return permissions.some(
+    (permission) =>
+      permission === PERMISSIONS.DASHBOARD_READ ||
+      permission === PERMISSIONS.PAYABLE_READ ||
+      permission.startsWith("treasury:"),
+  );
+}

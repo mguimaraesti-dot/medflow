@@ -19,7 +19,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { PERMISSIONS } from "@/core/permissions/roles-permissions";
+import {
+  PERMISSIONS,
+  hasBroaderThanCashRegisterAccess,
+} from "@/core/permissions/roles-permissions";
 import { Logo } from "@/shared/components/logo";
 import { ThemeToggle } from "@/shared/components/theme-toggle";
 import { LogoutButton } from "@/features/auth/presentation/logout-button";
@@ -31,23 +34,70 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Cada item só aparece pra quem tem a permissão correspondente — a Secretária (só Caixa Recepção) não pode ver os demais módulos. */
+  isVisible: (permissions: string[]) => boolean;
 }
 
+const hasTreasuryAccess = (permissions: string[]) =>
+  permissions.some((permission) => permission.startsWith("treasury:"));
+
 const FINANCEIRO: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/cash-flow", label: "Caixa Recepção", icon: ArrowLeftRight },
-  { href: "/accounts-payable", label: "Contas a Pagar", icon: Receipt },
-  { href: "/treasury", label: "Tesouraria", icon: Landmark },
+  {
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    isVisible: (p) => p.includes(PERMISSIONS.DASHBOARD_READ),
+  },
+  {
+    href: "/cash-flow",
+    label: "Caixa Recepção",
+    icon: ArrowLeftRight,
+    isVisible: (p) => p.includes(PERMISSIONS.CASH_FLOW_READ),
+  },
+  {
+    href: "/accounts-payable",
+    label: "Contas a Pagar",
+    icon: Receipt,
+    isVisible: (p) => p.includes(PERMISSIONS.PAYABLE_READ),
+  },
+  {
+    href: "/treasury",
+    label: "Tesouraria",
+    icon: Landmark,
+    isVisible: hasTreasuryAccess,
+  },
 ];
 
 const CADASTROS: NavItem[] = [
-  { href: "/suppliers", label: "Beneficiários", icon: Building2 },
-  { href: "/categories", label: "Categorias", icon: Tags },
+  {
+    href: "/suppliers",
+    label: "Beneficiários",
+    icon: Building2,
+    isVisible: (p) => p.includes(PERMISSIONS.PAYABLE_READ),
+  },
+  {
+    href: "/categories",
+    label: "Categorias",
+    icon: Tags,
+    // cashflow:read sozinho não basta — é a mesma permissão que a
+    // Secretária tem pro Caixa Recepção.
+    isVisible: hasBroaderThanCashRegisterAccess,
+  },
 ];
 
 const SOLTOS: NavItem[] = [
-  { href: "/reports", label: "Relatórios", icon: BarChart3 },
-  { href: "/settings", label: "Configurações", icon: Settings },
+  {
+    href: "/reports",
+    label: "Relatórios",
+    icon: BarChart3,
+    isVisible: hasBroaderThanCashRegisterAccess,
+  },
+  {
+    href: "/settings",
+    label: "Configurações",
+    icon: Settings,
+    isVisible: hasBroaderThanCashRegisterAccess,
+  },
 ];
 
 /** Só some da sidebar — a proteção real continua nas API Routes (`requirePermission`). */
@@ -55,6 +105,7 @@ const USERS_NAV_ITEM: NavItem = {
   href: "/users",
   label: "Usuários",
   icon: UsersIcon,
+  isVisible: (p) => p.includes(PERMISSIONS.USERS_MANAGE),
 };
 
 /** Preferência local — o app não tem outro mecanismo de persistência client-only hoje (tema usa o mesmo padrão via next-themes). */
@@ -111,63 +162,73 @@ function SidebarNav({
   permissions: string[];
 }) {
   const pathname = usePathname();
-  const canManageUsers = permissions.includes(PERMISSIONS.USERS_MANAGE);
+
+  const financeiro = FINANCEIRO.filter((item) => item.isVisible(permissions));
+  const cadastros = CADASTROS.filter((item) => item.isVisible(permissions));
+  const soltos = SOLTOS.filter((item) => item.isVisible(permissions));
+  const showUsers = USERS_NAV_ITEM.isVisible(permissions);
 
   return (
     <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-3">
-      <div className="space-y-1">
-        {!collapsed && (
-          <p className="text-muted-foreground px-3 text-xs font-semibold tracking-wider uppercase">
-            Financeiro
-          </p>
-        )}
-        {FINANCEIRO.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            pathname={pathname}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-          />
-        ))}
-      </div>
+      {financeiro.length > 0 && (
+        <div className="space-y-1">
+          {!collapsed && (
+            <p className="text-muted-foreground px-3 text-xs font-semibold tracking-wider uppercase">
+              Financeiro
+            </p>
+          )}
+          {financeiro.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              pathname={pathname}
+              onNavigate={onNavigate}
+              collapsed={collapsed}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="space-y-1">
-        {!collapsed && (
-          <p className="text-muted-foreground px-3 text-xs font-semibold tracking-wider uppercase">
-            Cadastros
-          </p>
-        )}
-        {CADASTROS.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            pathname={pathname}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-          />
-        ))}
-      </div>
+      {cadastros.length > 0 && (
+        <div className="space-y-1">
+          {!collapsed && (
+            <p className="text-muted-foreground px-3 text-xs font-semibold tracking-wider uppercase">
+              Cadastros
+            </p>
+          )}
+          {cadastros.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              pathname={pathname}
+              onNavigate={onNavigate}
+              collapsed={collapsed}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="space-y-1">
-        {SOLTOS.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            pathname={pathname}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-          />
-        ))}
-        {canManageUsers && (
-          <NavLink
-            item={USERS_NAV_ITEM}
-            pathname={pathname}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-          />
-        )}
-      </div>
+      {(soltos.length > 0 || showUsers) && (
+        <div className="space-y-1">
+          {soltos.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              pathname={pathname}
+              onNavigate={onNavigate}
+              collapsed={collapsed}
+            />
+          ))}
+          {showUsers && (
+            <NavLink
+              item={USERS_NAV_ITEM}
+              pathname={pathname}
+              onNavigate={onNavigate}
+              collapsed={collapsed}
+            />
+          )}
+        </div>
+      )}
     </nav>
   );
 }
