@@ -401,7 +401,10 @@ export function AccountsPayableTable({
                 {sortedItems.map((payable) => {
                   const badge = STATUS_META[payable.displayStatus];
                   const category = categoryById.get(payable.categoryId);
-                  const dueDateDisplay = getDueDateDisplay(payable.dueDate);
+                  const dueDateDisplay = getDueDateDisplay(
+                    payable.dueDate,
+                    payable.status,
+                  );
                   const paymentConfirmation =
                     getPaymentConfirmationDetail(payable);
                   const attachments = getAccountsPayableAttachments(payable);

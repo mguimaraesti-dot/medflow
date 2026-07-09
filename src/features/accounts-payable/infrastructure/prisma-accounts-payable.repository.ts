@@ -212,6 +212,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         supplierId: data.supplierId,
         categoryId: data.categoryId,
         description: data.description,
+        amount: data.amount,
         dueDate: data.dueDate,
         paymentOrigin: data.paymentOrigin,
         barcode: data.barcode,

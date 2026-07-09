@@ -11,6 +11,7 @@ import {
   Pencil,
   Repeat,
   Trash2,
+  X,
   XCircle,
 } from "lucide-react";
 import {
@@ -129,7 +130,9 @@ export function AccountsPayableDrawer({
     : [];
 
   const badge = payable ? STATUS_META[payable.displayStatus] : null;
-  const dueDateDisplay = payable ? getDueDateDisplay(payable.dueDate) : null;
+  const dueDateDisplay = payable
+    ? getDueDateDisplay(payable.dueDate, payable.status)
+    : null;
   const attachments = payable ? getAccountsPayableAttachments(payable) : [];
   const paymentConfirmation = payable
     ? getPaymentConfirmationDetail(payable)
@@ -210,7 +213,11 @@ export function AccountsPayableDrawer({
                   {formatCurrencyBRL(payable.amount)}
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  {dueDateDisplay.tone === "danger" ? "Venceu" : "Vence"}{" "}
+                  {payable.status === "PAID" || payable.status === "CANCELLED"
+                    ? "Vencimento"
+                    : dueDateDisplay.tone === "danger"
+                      ? "Venceu"
+                      : "Vence"}{" "}
                   {dueDateDisplay.top.toLowerCase()}
                   {dueDateDisplay.bottom && ` · ${dueDateDisplay.bottom}`}
                 </p>
@@ -478,56 +485,63 @@ export function AccountsPayableDrawer({
                 </div>
               </Tabs>
 
-              {(canPayThis ||
-                canEditThis ||
-                canDeleteThis ||
-                canCancelThis) && (
-                <div className="flex gap-2 border-t p-4">
-                  {canPayThis && (
-                    <Button
-                      type="button"
-                      className="flex-1"
-                      onClick={() => setPaying(true)}
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Confirmar pagamento
-                    </Button>
-                  )}
-                  {canEditThis && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={canPayThis ? "" : "flex-1"}
-                      onClick={() => onEdit?.(payable)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Editar conta
-                    </Button>
-                  )}
-                  {canCancelThis && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="text-destructive hover:text-destructive"
-                      onClick={onCancelClick}
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Cancelar
-                    </Button>
-                  )}
-                  {canDeleteThis && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeleting(true)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Excluir
-                    </Button>
-                  )}
-                </div>
-              )}
+              <div className="flex flex-wrap gap-2 border-t p-4">
+                {canPayThis && (
+                  <Button
+                    type="button"
+                    className="flex-1"
+                    onClick={() => setPaying(true)}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Confirmar pagamento
+                  </Button>
+                )}
+                {canEditThis && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={canPayThis ? "" : "flex-1"}
+                    onClick={() => onEdit?.(payable)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Editar conta
+                  </Button>
+                )}
+                {canCancelThis && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={onCancelClick}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancelar
+                  </Button>
+                )}
+                {canDeleteThis && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setDeleting(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Excluir
+                  </Button>
+                )}
+                {/* Sempre visível — o X do canto do Sheet some fácil no
+                    mobile; este garante um jeito claro de fechar mesmo
+                    quando a conta não tem nenhuma ação disponível (ex:
+                    conta paga/cancelada, sem permissão de edição). */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  <X className="h-4 w-4" />
+                  Fechar
+                </Button>
+              </div>
             </>
           )}
         </SheetContent>

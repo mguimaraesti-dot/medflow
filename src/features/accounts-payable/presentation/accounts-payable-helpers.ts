@@ -102,8 +102,19 @@ export interface DueDateDisplay {
   fullDate: string;
 }
 
-/** Linha 1: relativo se estiver perto (Hoje/Amanhã/Há N dias) ou a data curta; linha 2: complementa (data curta), nunca o dia da semana. */
-export function getDueDateDisplay(dueDate: string | Date): DueDateDisplay {
+/**
+ * Linha 1: relativo se estiver perto (Hoje/Amanhã/Há N dias) ou a data
+ * curta; linha 2: complementa (data curta), nunca o dia da semana.
+ *
+ * `status`: conta PAGA ou CANCELADA já foi resolvida — nunca mostra "Há N
+ * dias" em vermelho pra ela, mesmo que o vencimento tenha ficado no
+ * passado (isso é esperado numa conta paga em atraso, não um alerta).
+ * Sempre a data neutra, tom "default".
+ */
+export function getDueDateDisplay(
+  dueDate: string | Date,
+  status?: PayableStatus,
+): DueDateDisplay {
   const date = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
   const shortDate = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -119,7 +130,8 @@ export function getDueDateDisplay(dueDate: string | Date): DueDateDisplay {
   const weekday = weekdayRaw.charAt(0).toUpperCase() + weekdayRaw.slice(1);
   const fullDate = formatDateOnlyBR(date);
 
-  const smart = formatSmartDueDate(date);
+  const isResolved = status === "PAID" || status === "CANCELLED";
+  const smart = isResolved ? "" : formatSmartDueDate(date);
 
   if (smart.startsWith("Há")) {
     return { top: smart, bottom: shortDate, tone: "danger", weekday, fullDate };
@@ -143,8 +155,9 @@ export function getDueDateDisplay(dueDate: string | Date): DueDateDisplay {
     };
   }
 
-  // Data distante: só "15 Jul." na tabela — dia da semana fica disponível no
-  // Tooltip/Drawer (Refinamento Contas a Pagar).
+  // Data distante (ou conta já paga/cancelada): só "15 Jul." na tabela —
+  // dia da semana fica disponível no Tooltip/Drawer (Refinamento Contas a
+  // Pagar).
   const month = new Intl.DateTimeFormat("pt-BR", {
     month: "short",
     timeZone: "UTC",

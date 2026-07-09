@@ -65,17 +65,20 @@ export interface MarkAsPaidInput {
 }
 
 /**
- * Campos editáveis via `update()` — de propósito, nunca inclui `amount` nem
- * `status`: valor e ciclo de vida continuam imutáveis fora de
- * pagar/cancelar. Serve tanto pra edição de contas recorrentes
- * (fornecedor/categoria/vencimento/observação podem mudar entre ocorrências)
- * quanto pra corrigir/completar dados de pagamento (`paymentOrigin`,
- * `barcode`, `pixKey`) depois do cadastro inicial.
+ * Campos editáveis via `update()` — nunca inclui `status`: ciclo de vida
+ * continua imutável fora de pagar/cancelar. `amount` é editável (o use
+ * case já garante que só chega aqui enquanto a conta está PENDENTE —
+ * `PayableAlreadyProcessedError` bloqueia fora disso). Serve tanto pra
+ * edição de contas recorrentes (fornecedor/categoria/vencimento/valor/
+ * observação podem mudar entre ocorrências) quanto pra corrigir/completar
+ * dados de pagamento (`paymentOrigin`, `barcode`, `pixKey`) depois do
+ * cadastro inicial.
  */
 export interface UpdateAccountsPayableInput {
   supplierId: string;
   categoryId: string;
   description: string;
+  amount: string; // convertido para Decimal só na infraestrutura
   dueDate: Date;
   paymentOrigin: PaymentOrigin;
   barcode?: string;
@@ -101,8 +104,8 @@ export interface UpdateManyForSeriesInput {
 
 /**
  * Contrato do repositório de AccountsPayable. `update()` é deliberadamente
- * restrito (ver `UpdateAccountsPayableInput`) — valor e status continuam só
- * mudando via pagar/cancelar, nunca editados diretamente.
+ * restrito (ver `UpdateAccountsPayableInput`) — `status` continua só
+ * mudando via pagar/cancelar, nunca editado diretamente.
  */
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;

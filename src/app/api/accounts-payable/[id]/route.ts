@@ -14,10 +14,11 @@ import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/inf
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
 
 /**
- * Edição escopada (fornecedor/categoria/vencimento/observação) — nunca
- * altera valor nem status. Só permitida enquanto a conta está PENDENTE.
+ * Edição escopada (fornecedor/categoria/valor/vencimento/observação) —
+ * nunca altera status. Só permitida enquanto a conta está PENDENTE.
  * Quando pertence a uma recorrência, `scope: "SERIES"` propaga a mudança
- * às próximas ocorrências ainda pendentes.
+ * às próximas ocorrências ainda pendentes (valor e vencimento continuam
+ * os de cada ocorrência, nunca sobrescritos em lote).
  */
 export async function PATCH(
   request: NextRequest,

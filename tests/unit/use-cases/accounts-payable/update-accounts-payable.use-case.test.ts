@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 import { updateAccountsPayableUseCase } from "@/features/accounts-payable/application/update-accounts-payable.use-case";
 import {
   NotFoundError,
@@ -18,6 +19,7 @@ function buildPayable(overrides: Record<string, unknown> = {}) {
     supplierId: "supplier-old",
     categoryId: "cat-old",
     description: "Antigo",
+    amount: new Prisma.Decimal("500.00"),
     dueDate: new Date("2026-07-05T00:00:00.000Z"),
     recurringBillId: null,
     occurrenceNumber: null,
@@ -29,6 +31,7 @@ const baseInput = {
   supplierId: "supplier-new",
   categoryId: "cat-new",
   description: "Novo",
+  amount: 750,
   dueDate: new Date("2026-08-05T00:00:00.000Z"),
   paymentOrigin: "BANCO" as const,
   scope: "SINGLE" as const,

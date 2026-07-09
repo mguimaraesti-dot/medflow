@@ -13,12 +13,12 @@ interface Deps {
 }
 
 /**
- * Edição escopada: só fornecedor/categoria/vencimento/observação, só
- * enquanto a conta está PENDENTE (valor e status nunca mudam por aqui).
- * Quando a conta pertence a uma recorrência e `scope: "SERIES"` é
- * escolhido, propaga fornecedor/categoria/descrição pras próximas
- * ocorrências ainda PENDENTES (cada uma mantém seu próprio vencimento) —
- * ocorrências já pagas ou canceladas nunca são tocadas.
+ * Edição escopada: fornecedor/categoria/vencimento/valor/observação, só
+ * enquanto a conta está PENDENTE (status nunca muda por aqui). Quando a
+ * conta pertence a uma recorrência e `scope: "SERIES"` é escolhido, propaga
+ * fornecedor/categoria/descrição pras próximas ocorrências ainda PENDENTES
+ * (cada uma mantém seu próprio vencimento e valor) — ocorrências já pagas
+ * ou canceladas nunca são tocadas.
  */
 export async function updateAccountsPayableUseCase(
   id: string,
@@ -40,6 +40,7 @@ export async function updateAccountsPayableUseCase(
     supplierId: input.supplierId,
     categoryId: input.categoryId,
     description: input.description,
+    amount: input.amount.toFixed(2),
     dueDate: input.dueDate,
     paymentOrigin: input.paymentOrigin,
     barcode: input.barcode,
@@ -64,6 +65,7 @@ export async function updateAccountsPayableUseCase(
         supplierId: payable.supplierId,
         categoryId: payable.categoryId,
         description: payable.description,
+        amount: payable.amount.toFixed(2),
         dueDate: payable.dueDate,
         paymentOrigin: payable.paymentOrigin,
         barcode: payable.barcode,

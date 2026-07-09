@@ -18,8 +18,8 @@ import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
 import { Textarea } from "@/shared/ui/textarea";
 import { SupplierCombobox } from "@/shared/components/supplier-combobox";
 import { CategoryCombobox } from "@/shared/components/category-combobox";
+import { CurrencyInput } from "@/shared/components/currency-input";
 import { useCategories } from "@/features/categories/presentation/use-categories";
-import { formatCurrencyBRL } from "@/shared/lib/format";
 import { ApiError } from "@/shared/lib/api-client";
 import { useUpdateAccountsPayable } from "./use-update-accounts-payable";
 import {
@@ -31,6 +31,7 @@ import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-pa
 interface EditFormValues {
   supplierId: string;
   categoryId: string;
+  amount: number;
   dueDate: string;
   description: string;
   paymentOrigin: "BANCO" | "COFRE";
@@ -42,6 +43,7 @@ function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
   return {
     supplierId: payable.supplierId,
     categoryId: payable.categoryId,
+    amount: Number(payable.amount),
     dueDate: new Date(payable.dueDate).toISOString().slice(0, 10),
     description: payable.description,
     paymentOrigin: payable.paymentOrigin,
@@ -51,10 +53,12 @@ function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
 }
 
 /**
- * Edição escopada: fornecedor/categoria/vencimento/observação — nunca
- * valor (imutável fora do cadastro inicial). Quando a conta pertence a
- * uma recorrência, pergunta se a mudança vale só pra esta ocorrência ou
- * pras próximas também.
+ * Edição escopada: fornecedor/categoria/valor/vencimento/observação — o
+ * valor só é editável enquanto a conta está PENDENTE (o dialog só abre
+ * pra contas PENDENTES; o backend também bloqueia fora disso). Quando a
+ * conta pertence a uma recorrência, pergunta se a mudança vale só pra
+ * esta ocorrência ou pras próximas também (o valor nunca é propagado em
+ * lote, só o desta ocorrência muda).
  */
 export function AccountsPayableEditDialog({
   payable,
@@ -82,6 +86,7 @@ export function AccountsPayableEditDialog({
     defaultValues: {
       supplierId: "",
       categoryId: "",
+      amount: 0,
       dueDate: "",
       description: "",
       paymentOrigin: "BANCO",
@@ -171,10 +176,24 @@ export function AccountsPayableEditDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Valor</Label>
-                  <p className="text-muted-foreground flex h-10 items-center text-sm">
-                    {formatCurrencyBRL(payable.amount)} — não editável
-                  </p>
+                  <Label htmlFor="edit-amount">Valor</Label>
+                  <Controller
+                    control={control}
+                    name="amount"
+                    rules={{ required: true, min: 0.01 }}
+                    render={({ field }) => (
+                      <CurrencyInput
+                        id="edit-amount"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                  {errors.amount && (
+                    <p className="text-destructive text-sm">
+                      Informe um valor maior que zero.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
