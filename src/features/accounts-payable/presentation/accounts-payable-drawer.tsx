@@ -23,6 +23,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { CopyButton } from "@/shared/components/copy-button";
+import { CopyToWhatsAppButton } from "./copy-to-whatsapp-button";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
@@ -499,6 +500,11 @@ export function AccountsPayableDrawer({
                     Excluir
                   </Button>
                 )}
+                <CopyToWhatsAppButton
+                  payable={payable}
+                  supplierName={supplierName ?? payable.description}
+                  variant="full"
+                />
                 {/* Sempre visível — o X do canto do Sheet some fácil no
                     mobile; este garante um jeito claro de fechar mesmo
                     quando a conta não tem nenhuma ação disponível (ex:

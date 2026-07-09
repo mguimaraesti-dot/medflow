@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useAccountsPayable } from "./use-accounts-payable";
 import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
+import { CopyToWhatsAppButton } from "./copy-to-whatsapp-button";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
@@ -597,6 +598,13 @@ export function AccountsPayableTable({
                         onClick={(event) => event.stopPropagation()}
                       >
                         <div className="flex items-center justify-end gap-1">
+                          <CopyToWhatsAppButton
+                            payable={payable}
+                            supplierName={
+                              supplierById.get(payable.supplierId)?.name ??
+                              payable.description
+                            }
+                          />
                           {canPayThis ? (
                             <Button
                               type="button"
