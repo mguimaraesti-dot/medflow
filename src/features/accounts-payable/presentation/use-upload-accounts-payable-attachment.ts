@@ -26,6 +26,10 @@ export function useUploadAccountsPayableAttachment() {
       queryClient.invalidateQueries({
         queryKey: ["accounts-payable-attachments", accountsPayableId],
       });
+      // A contagem exibida na coluna "Documentos" da listagem vem do
+      // mesmo objeto retornado por /api/accounts-payable — sem isso, o
+      // número só atualizaria num refetch por outro motivo.
+      queryClient.invalidateQueries({ queryKey: ["accounts-payable"] });
     },
   });
 }

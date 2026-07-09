@@ -22,6 +22,8 @@ export function useDeleteAccountsPayableAttachment() {
       queryClient.invalidateQueries({
         queryKey: ["accounts-payable-attachments", accountsPayableId],
       });
+      // Mesmo motivo do upload — mantém a contagem da coluna "Documentos" em dia.
+      queryClient.invalidateQueries({ queryKey: ["accounts-payable"] });
     },
   });
 }

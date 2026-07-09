@@ -27,6 +27,10 @@ const USER_NAMES_INCLUDE = {
     take: 1,
     select: { id: true },
   },
+  // Coluna "Documentos" da listagem — conta os anexos reais (Drive), não
+  // inclui o boleto legado (`boletoPdfUrl`, que não é uma linha em
+  // `AccountsPayableAttachment`).
+  _count: { select: { attachments: true } },
 } as const;
 
 type AccountsPayableRowWithUserNames = Prisma.AccountsPayableGetPayload<{
@@ -34,13 +38,15 @@ type AccountsPayableRowWithUserNames = Prisma.AccountsPayableGetPayload<{
 }>;
 
 function toDomain(row: AccountsPayableRowWithUserNames): AccountsPayable {
-  const { createdBy, paidBy, deletedBy, safeMovements, ...payable } = row;
+  const { createdBy, paidBy, deletedBy, safeMovements, _count, ...payable } =
+    row;
   return {
     ...payable,
     createdByUserName: createdBy.name,
     paidByUserName: paidBy?.name ?? null,
     deletedByUserName: deletedBy?.name ?? null,
     paidSafeMovementId: safeMovements[0]?.id ?? null,
+    attachmentsCount: _count.attachments,
   };
 }
 

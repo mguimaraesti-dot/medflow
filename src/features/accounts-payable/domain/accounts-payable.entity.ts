@@ -46,6 +46,8 @@ export interface AccountsPayable {
   paidVia: PaymentConfirmationSource | null;
   /** Denormalizado só pra exibição (Drawer "Nº movimentação") — via join na infraestrutura. `null` até a conta ser paga via Cofre. */
   paidSafeMovementId: string | null;
+  /** Denormalizado só pra exibição (coluna "Documentos" da listagem) — via `_count` na infraestrutura. Não inclui o boleto legado (`boletoPdfUrl`), que não é um `AccountsPayableAttachment`. */
+  attachmentsCount: number;
 
   /** Soft delete — não persistido fisicamente. `null` enquanto a conta não foi excluída. */
   deletedAt: Date | null;

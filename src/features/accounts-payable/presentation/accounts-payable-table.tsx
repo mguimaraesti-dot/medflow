@@ -265,8 +265,9 @@ export function AccountsPayableTable({
         }
         case "ATTACHMENTS":
           return (
-            (getAccountsPayableAttachments(a).length -
-              getAccountsPayableAttachments(b).length) *
+            (getAccountsPayableAttachments(a).length +
+              a.attachmentsCount -
+              (getAccountsPayableAttachments(b).length + b.attachmentsCount)) *
             dir
           );
         case "DUE_DATE":
@@ -407,7 +408,14 @@ export function AccountsPayableTable({
                   );
                   const paymentConfirmation =
                     getPaymentConfirmationDetail(payable);
-                  const attachments = getAccountsPayableAttachments(payable);
+                  // "Documentos" combina o boleto legado (link direto,
+                  // sem upload) com os anexos reais enviados ao Drive —
+                  // `attachmentsCount` vem do `_count` da listagem, não
+                  // de uma consulta extra por linha.
+                  const legacyAttachments =
+                    getAccountsPayableAttachments(payable);
+                  const totalAttachments =
+                    legacyAttachments.length + payable.attachmentsCount;
                   const canPayThis =
                     canPay &&
                     (payable.displayStatus === "PENDING" ||
@@ -548,7 +556,7 @@ export function AccountsPayableTable({
                           className="hidden w-16 lg:table-cell"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          {attachments.length === 0 ? (
+                          {totalAttachments === 0 ? (
                             <span className="text-muted-foreground text-sm">
                               —
                             </span>
@@ -561,16 +569,23 @@ export function AccountsPayableTable({
                                   onClick={() => onView(payable, "attachments")}
                                 >
                                   <Paperclip className="h-3.5 w-3.5" />
-                                  {attachments.length}
+                                  {totalAttachments}
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <ul className="space-y-0.5">
-                                  {attachments.map((attachment) => (
+                                  {legacyAttachments.map((attachment) => (
                                     <li key={attachment.url}>
                                       {attachment.name}
                                     </li>
                                   ))}
+                                  {payable.attachmentsCount > 0 && (
+                                    <li>
+                                      {payable.attachmentsCount === 1
+                                        ? "1 anexo enviado"
+                                        : `${payable.attachmentsCount} anexos enviados`}
+                                    </li>
+                                  )}
                                 </ul>
                               </TooltipContent>
                             </Tooltip>

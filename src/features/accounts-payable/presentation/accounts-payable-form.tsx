@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { createAccountsPayableSchema } from "../application/dtos/create-accounts-payable.dto";
 import { useCreateAccountsPayable } from "./use-create-accounts-payable";
+import { useUploadAccountsPayableAttachment } from "./use-upload-accounts-payable-attachment";
 import { SupplierCombobox } from "@/shared/components/supplier-combobox";
 import { CategoryCombobox } from "@/shared/components/category-combobox";
 import { useCategories } from "@/features/categories/presentation/use-categories";
@@ -92,6 +93,7 @@ export function AccountsPayableForm({
   const [occurrenceCount, setOccurrenceCount] = useState("12");
   const [attachments, setAttachments] = useState<File[]>([]);
   const createAccountsPayable = useCreateAccountsPayable();
+  const uploadAttachment = useUploadAccountsPayableAttachment();
   const { data: categories } = useCategories("OUT");
 
   const {
@@ -108,19 +110,35 @@ export function AccountsPayableForm({
   async function onSubmit(values: AccountsPayableFormValues) {
     setServerError(null);
     try {
-      // Documentos ainda não têm caso de uso no backend (exigem um model de
-      // Attachment/Storage que ainda não existe) — por isso não entram no
-      // payload, mesmo já coletados na tela.
       const maxOccurrences =
         recurrenceEnd === "AFTER_COUNT"
           ? Number.parseInt(occurrenceCount, 10)
           : undefined;
 
-      await createAccountsPayable.mutateAsync({
+      // Documentos só podem ser enviados depois da conta existir (o upload
+      // precisa de um accountsPayableId válido pra vincular no Drive) — o
+      // upload nunca entra no mesmo payload de criação.
+      const created = await createAccountsPayable.mutateAsync({
         ...values,
         dueDate: new Date(values.dueDate),
         recurrence: isRecurring ? { periodicity, maxOccurrences } : undefined,
       });
+
+      let attachmentError: string | null = null;
+      if (attachments.length > 0) {
+        try {
+          await uploadAttachment.mutateAsync({
+            accountsPayableId: created.id,
+            files: attachments,
+          });
+        } catch (uploadErr) {
+          attachmentError =
+            uploadErr instanceof ApiError
+              ? uploadErr.message
+              : "Não foi possível enviar o(s) anexo(s).";
+        }
+      }
+
       reset(emptyFormValues);
       setIsRecurring(false);
       setPeriodicity("MONTHLY");
@@ -132,6 +150,13 @@ export function AccountsPayableForm({
           ? "Conta recorrente cadastrada."
           : "Conta a pagar cadastrada.",
       );
+      // A conta em si foi criada com sucesso — a falha no anexo é
+      // reportada à parte (nunca em silêncio) e não desfaz o cadastro.
+      if (attachmentError) {
+        toast.error(
+          `Conta cadastrada, mas o anexo não foi enviado: ${attachmentError} Abra a conta em Contas a Pagar e tente anexar novamente pela aba Documentos.`,
+        );
+      }
       onSuccess?.();
     } catch (error) {
       const message =
@@ -376,10 +401,12 @@ export function AccountsPayableForm({
         )}
         <Button
           type="submit"
-          disabled={createAccountsPayable.isPending}
+          disabled={
+            createAccountsPayable.isPending || uploadAttachment.isPending
+          }
           className="from-primary to-brand-secondary bg-gradient-to-b shadow-sm"
         >
-          {createAccountsPayable.isPending ? (
+          {createAccountsPayable.isPending || uploadAttachment.isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Salvando...

@@ -33,6 +33,8 @@ export interface AccountsPayableResponseDTO {
   paidVia: PaymentConfirmationSource | null;
   /** Nº da movimentação do Cofre gerada ao pagar via COFRE — `null` sempre que `paymentOrigin` for BANCO ou a conta ainda não foi paga. */
   paidSafeMovementId: string | null;
+  /** Quantidade de anexos reais (Google Drive) vinculados — não inclui o boleto legado (`boletoPdfUrl`). */
+  attachmentsCount: number;
   deletedAt: Date | null;
   deletedByUserName: string | null;
   deletionReason: string | null;
@@ -79,6 +81,7 @@ export function toAccountsPayableResponseDTO(
     paidAt: payable.paidAt,
     paidVia: payable.paidVia,
     paidSafeMovementId: payable.paidSafeMovementId,
+    attachmentsCount: payable.attachmentsCount,
     deletedAt: payable.deletedAt,
     deletedByUserName: payable.deletedByUserName,
     deletionReason: payable.deletionReason,

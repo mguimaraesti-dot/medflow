@@ -31,6 +31,7 @@ function buildPayable(
     paidAt: null,
     paidVia: null,
     paidSafeMovementId: null,
+    attachmentsCount: 0,
     deletedAt: null,
     deletedByUserId: null,
     deletedByUserName: null,
