@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 export type PayableStatus = "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
 
-/** Hoje só "SYSTEM" é possível — WhatsApp ainda não integrado (só preparado via `publicToken`). */
+/** "WHATSAPP" é gravado pelo webhook da Z-API ao confirmar pagamento pelo botão "Pago" (ver handle-zapi-webhook.use-case.ts). */
 export type PaymentConfirmationSource = "SYSTEM" | "WHATSAPP";
 
 /** Fonte do dinheiro escolhida no cadastro/edição — distinto de `paidVia` (canal de confirmação). `COFRE` debita o saldo da Tesouraria ao confirmar o pagamento. */
@@ -48,6 +48,11 @@ export interface AccountsPayable {
   paidSafeMovementId: string | null;
   /** Denormalizado só pra exibição (coluna "Documentos" da listagem) — via `_count` na infraestrutura. Não inclui o boleto legado (`boletoPdfUrl`), que não é um `AccountsPayableAttachment`. */
   attachmentsCount: number;
+
+  /** Dias antes do vencimento em que o lembrete de WhatsApp começa a ser enviado (cron diário). */
+  reminderDaysBefore: number;
+  /** Evita reenviar o lembrete mais de uma vez no mesmo dia. `null` se nunca foi enviado. */
+  lastReminderSentAt: Date | null;
 
   /** Soft delete — não persistido fisicamente. `null` enquanto a conta não foi excluída. */
   deletedAt: Date | null;

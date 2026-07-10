@@ -169,6 +169,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         recurringBillId: data.recurringBillId,
         occurrenceNumber: data.occurrenceNumber,
         createdByUserId: data.createdByUserId,
+        reminderDaysBefore: data.reminderDaysBefore,
       },
       include: USER_NAMES_INCLUDE,
     });
@@ -203,6 +204,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         recurringBillId: item.recurringBillId,
         occurrenceNumber: item.occurrenceNumber,
         createdByUserId: item.createdByUserId,
+        reminderDaysBefore: item.reminderDaysBefore,
       })),
     });
 

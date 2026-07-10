@@ -165,6 +165,7 @@ enum AuditAction {
   CASH_REGISTER_CONFERENCE_REJECTED
   SAFE_SANGRIA
   SAFE_MANUAL_ADJUSTMENT
+  WHATSAPP_REMINDER_SENT
 }
 
 model AuditLog {
@@ -437,6 +438,13 @@ model AccountsPayable {
   paidBy          User?                      @relation("PayablePaidBy", fields: [paidByUserId], references: [id])
   paidAt          DateTime?
   paidVia         PaymentConfirmationSource?
+
+  // Cobrança via WhatsApp (Z-API) — lembrete automático (cron diário)
+  // até a conta ser paga. reminderDaysBefore conta a partir de dueDate
+  // (ex: 5 = começa a lembrar 5 dias antes do vencimento).
+  // lastReminderSentAt evita reenviar mais de uma vez no mesmo dia.
+  reminderDaysBefore Int       @default(5)
+  lastReminderSentAt DateTime?
 
   // Soft delete (Sprint 05) — nunca DELETE físico; conta some da listagem
   // padrão mas continua no banco pra auditoria e restauração. Só permitido
