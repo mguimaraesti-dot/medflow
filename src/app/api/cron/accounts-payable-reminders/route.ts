@@ -15,6 +15,12 @@ const organizationSettingsRepository =
 const supplierRepository = new PrismaSupplierRepository();
 const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
+// Processa cada conta pendente em sequência, até 3 mensagens com
+// pequenos intervalos cada uma (ver zapi-whatsapp-messaging.ts) — 60s
+// dá folga pra um lote pequeno/médio; se o volume de lembretes crescer
+// muito, isso precisa virar processamento em lote/paralelo de verdade.
+export const maxDuration = 60;
+
 /**
  * Chamada 1x por dia pela Vercel Cron (`vercel.json`) — sem sessão,
  * autenticada pelo header `Authorization: Bearer $CRON_SECRET` que a

@@ -17,6 +17,11 @@ const organizationSettingsRepository =
 const supplierRepository = new PrismaSupplierRepository();
 const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
+// Até 3 mensagens sequenciais com pequenos intervalos entre elas (ver
+// zapi-whatsapp-messaging.ts) passam do timeout padrão de 10s da
+// Vercel — 30s dá folga sem exigir plano Pro.
+export const maxDuration = 30;
+
 /** Botão "Enviar WhatsApp agora" no cadastro da conta — dispara o lembrete na hora, independente da janela de antecedência do cron. */
 export async function POST(
   _request: Request,

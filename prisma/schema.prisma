@@ -443,8 +443,15 @@ model AccountsPayable {
   // até a conta ser paga. reminderDaysBefore conta a partir de dueDate
   // (ex: 5 = começa a lembrar 5 dias antes do vencimento).
   // lastReminderSentAt evita reenviar mais de uma vez no mesmo dia.
-  reminderDaysBefore Int       @default(5)
-  lastReminderSentAt DateTime?
+  // lastReminderMessageId guarda o id da mensagem de texto (Z-API) do
+  // cartão-resumo — usado pra casar a resposta "PAGO" com a conta certa
+  // quando a pessoa responde citando essa mensagem no WhatsApp (o
+  // número é único pra clínica inteira, nunca por conta, então o
+  // telefone sozinho não desambigua nada — ver
+  // handle-zapi-webhook.use-case.ts).
+  reminderDaysBefore   Int       @default(5)
+  lastReminderSentAt   DateTime?
+  lastReminderMessageId String?
 
   // Soft delete (Sprint 05) — nunca DELETE físico; conta some da listagem
   // padrão mas continua no banco pra auditoria e restauração. Só permitido

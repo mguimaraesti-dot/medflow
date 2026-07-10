@@ -8,10 +8,14 @@ import { logger } from "@/core/logger/logger";
  * Nunca importar este módulo em código "use client": lê `ZAPI_TOKEN` e
  * `ZAPI_CLIENT_TOKEN` (segredos), só existe no servidor.
  *
- * O formato exato dos endpoints (`/send-button-list`, `/send-button-actions`)
- * segue a documentação pública da Z-API — não foi validado contra a API
- * de verdade dentro deste projeto ainda. Ver aviso equivalente no
- * webhook (`app/api/webhooks/zapi/route.ts`) sobre o payload de entrada.
+ * Só usa `/send-text` (mensagem de texto simples) — testamos
+ * manualmente os endpoints de botão interativo (`/send-button-list`,
+ * `/send-button-otp`, `/send-button-pix`) nesta instância e NENHUM
+ * entrega de fato no WhatsApp, mesmo respondendo 200 com
+ * zaapId/messageId. Por isso a confirmação de pagamento também deixou
+ * de ser por clique de botão e passou a ser por resposta de texto
+ * ("PAGO"), citando a mensagem do lembrete — ver
+ * `handle-zapi-webhook.use-case.ts`.
  *
  * IMPORTANTE: a Z-API às vezes responde HTTP 200 mesmo quando a
  * mensagem não é entregue de verdade (instância desconectada, número
@@ -66,7 +70,8 @@ function bodyIndicatesFailure(parsedBody: unknown): boolean {
   return Boolean(body.error) || body.value === false;
 }
 
-async function post(path: string, body: unknown): Promise<void> {
+/** Devolve o corpo já parseado (ou `undefined` se não for JSON) — quem chama extrai o id da mensagem, se precisar. */
+async function post(path: string, body: unknown): Promise<unknown> {
   // Nomes das chaves evitam a substring "token" de propósito — o logger
   // redige qualquer valor cuja chave contenha "token"/"secret"/etc
   // (core/logger/logger.ts), o que apagaria esses booleanos de
@@ -121,50 +126,33 @@ async function post(path: string, body: unknown): Promise<void> {
     status: response.status,
     body: responseText,
   });
+
+  return parsedBody;
 }
 
-export interface SendButtonListInput {
+/** Resposta documentada da Z-API pro `/send-text` — não validada de verdade ainda; `messageId` cai pra `undefined` se o nome do campo for outro (ajustar após o primeiro teste real). */
+interface ZapiSendTextResponse {
+  zaapId?: string;
+  messageId?: string;
+  id?: string;
+}
+
+export interface SendTextInput {
   phone: string;
   message: string;
-  /** Id do botão "Pago" — o webhook devolve esse mesmo valor no clique. */
-  buttonId: string;
-  buttonLabel: string;
 }
 
-/** Mensagem 1 do lembrete: cartão-resumo com botão "Pago". */
-export async function sendButtonListMessage(
-  input: SendButtonListInput,
-): Promise<void> {
-  await post("/send-button-list", {
+/** Único tipo de mensagem usado hoje — texto simples (ver aviso no topo do arquivo). Devolve o id da mensagem enviada, usado pra casar a resposta "PAGO" (citação) com a conta certa. */
+export async function sendTextMessage(
+  input: SendTextInput,
+): Promise<{ messageId: string | null }> {
+  const responseBody = (await post("/send-text", {
     phone: input.phone,
     message: input.message,
-    buttonList: {
-      buttons: [{ id: input.buttonId, label: input.buttonLabel }],
-    },
-  });
-}
+  })) as ZapiSendTextResponse | undefined;
 
-export interface SendCopyButtonInput {
-  phone: string;
-  message: string;
-  copyCode: string;
-  buttonLabel: string;
-}
+  const messageId =
+    responseBody?.messageId ?? responseBody?.zaapId ?? responseBody?.id;
 
-/** Mensagens 2 e 3 do lembrete: código de barras / chave Pix com botão de copiar. */
-export async function sendCopyButtonMessage(
-  input: SendCopyButtonInput,
-): Promise<void> {
-  await post("/send-button-actions", {
-    phone: input.phone,
-    message: input.message,
-    buttonActions: [
-      {
-        id: "copy",
-        type: "COPY",
-        copyCode: input.copyCode,
-        label: input.buttonLabel,
-      },
-    ],
-  });
+  return { messageId: messageId ?? null };
 }

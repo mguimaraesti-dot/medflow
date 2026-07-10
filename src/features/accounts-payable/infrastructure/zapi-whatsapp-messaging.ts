@@ -1,46 +1,60 @@
-import { sendButtonListMessage, sendCopyButtonMessage } from "./zapi-client";
+import { sendTextMessage } from "./zapi-client";
 import type {
   WhatsAppMessagingPort,
   WhatsAppPaymentReminderInput,
 } from "../domain/whatsapp-messaging.port";
 
+/** Pequeno intervalo entre as mensagens (evita parecer spam) — curto de propósito: 3 mensagens sequenciais já competem com o limite de tempo da função serverless (ver `maxDuration` nas rotas que chamam este adapter). */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Implementa `WhatsAppMessagingPort` sobre a Z-API. As mensagens de
- * boleto/Pix só são enviadas quando a conta tem o dado correspondente
- * cadastrado — nem toda conta a pagar tem boleto ou chave Pix.
+ * Implementa `WhatsAppMessagingPort` sobre a Z-API usando `/send-text`
+ * (mensagem de texto simples) — os endpoints de botão interativo desta
+ * instância não entregam de fato (ver aviso em `zapi-client.ts`). As
+ * mensagens de boleto/Pix só são enviadas quando a conta tem o dado
+ * correspondente cadastrado — nem toda conta a pagar tem boleto ou
+ * chave Pix.
  */
 export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
-  ): Promise<void> {
-    await sendButtonListMessage({
+  ): Promise<{ messageId: string | null }> {
+    const { messageId } = await sendTextMessage({
       phone: input.phone,
       message:
-        `📋 *Lembrete de pagamento*\n\n` +
+        `🧾 *Conta a Pagar*\n\n` +
         `Fornecedor: ${input.supplierName}\n` +
         `Descrição: ${input.description}\n` +
         `Valor: ${input.amount}\n` +
-        `Vencimento: ${input.dueDate}`,
-      buttonId: input.publicToken,
-      buttonLabel: "Pago",
+        `Vencimento: ${input.dueDate}\n\n` +
+        `✅ Assim que pagar, responda *esta mensagem* (cite-a) com *PAGO* para darmos baixa automaticamente.`,
     });
 
     if (input.digitableLine) {
-      await sendCopyButtonMessage({
+      await delay(1200);
+      await sendTextMessage({
         phone: input.phone,
-        message: "📄 Código de barras do boleto:",
-        copyCode: input.digitableLine,
-        buttonLabel: "Copiar código",
+        message: `📄 Código de barras do boleto:\n${input.digitableLine}`,
       });
     }
 
     if (input.pixKey) {
-      await sendCopyButtonMessage({
+      await delay(1200);
+      await sendTextMessage({
         phone: input.phone,
-        message: "💠 Chave Pix para pagamento:",
-        copyCode: input.pixKey,
-        buttonLabel: "Copiar chave Pix",
+        message: `💠 Chave Pix para pagamento:\n${input.pixKey}`,
       });
     }
+
+    return { messageId };
+  }
+
+  async sendPaymentConfirmedMessage(phone: string): Promise<void> {
+    await sendTextMessage({
+      phone,
+      message: "✅ Pagamento confirmado! Obrigado.",
+    });
   }
 }

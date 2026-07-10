@@ -59,11 +59,11 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return row ? toDomain(row) : null;
   }
 
-  async findByPublicToken(
-    publicToken: string,
+  async findByLastReminderMessageId(
+    messageId: string,
   ): Promise<AccountsPayable | null> {
-    const row = await prisma.accountsPayable.findUnique({
-      where: { publicToken },
+    const row = await prisma.accountsPayable.findFirst({
+      where: { lastReminderMessageId: messageId },
       include: USER_NAMES_INCLUDE,
     });
     return row ? toDomain(row) : null;
@@ -574,10 +574,14 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return rows.map(toDomain);
   }
 
-  async touchReminderSent(id: string, sentAt: Date): Promise<void> {
+  async touchReminderSent(
+    id: string,
+    sentAt: Date,
+    messageId: string | null,
+  ): Promise<void> {
     await prisma.accountsPayable.update({
       where: { id },
-      data: { lastReminderSentAt: sentAt },
+      data: { lastReminderSentAt: sentAt, lastReminderMessageId: messageId },
     });
   }
 }

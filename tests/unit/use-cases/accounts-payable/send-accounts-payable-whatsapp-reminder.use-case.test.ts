@@ -65,7 +65,8 @@ function buildDeps(overrides: {
 
   const whatsAppMessaging = {
     sendPaymentReminder:
-      overrides.sendPaymentReminder ?? vi.fn().mockResolvedValue(undefined),
+      overrides.sendPaymentReminder ??
+      vi.fn().mockResolvedValue({ messageId: "msg-123" }),
   } as unknown as WhatsAppMessagingPort;
 
   return {
@@ -162,7 +163,6 @@ describe("sendAccountsPayableWhatsAppReminderUseCase", () => {
     expect(deps.whatsAppMessaging.sendPaymentReminder).toHaveBeenCalledWith(
       expect.objectContaining({
         phone: "11999999999",
-        publicToken: "token-1",
         supplierName: "Fornecedor Teste",
         digitableLine: "12345",
         pixKey: "pix-key-1",
@@ -170,6 +170,6 @@ describe("sendAccountsPayableWhatsAppReminderUseCase", () => {
     );
     expect(
       deps.accountsPayableRepository.touchReminderSent,
-    ).toHaveBeenCalledWith("payable-1", expect.any(Date));
+    ).toHaveBeenCalledWith("payable-1", expect.any(Date), "msg-123");
   });
 });

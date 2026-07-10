@@ -38,6 +38,7 @@ function payable(overrides: Partial<AccountsPayable>): AccountsPayable {
     attachmentsCount: 0,
     reminderDaysBefore: 5,
     lastReminderSentAt: null,
+    lastReminderMessageId: null,
     deletedAt: null,
     deletedByUserId: null,
     deletedByUserName: null,

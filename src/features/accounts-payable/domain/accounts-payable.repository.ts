@@ -118,8 +118,10 @@ export interface UpdateManyForSeriesInput {
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;
 
-  /** Usado pelo webhook da Z-API — o clique no botão "Pago" só carrega o `publicToken`, nunca o id interno. */
-  findByPublicToken(publicToken: string): Promise<AccountsPayable | null>;
+  /** Usado pelo webhook da Z-API — casa a resposta "PAGO" (citando a mensagem do lembrete) com a conta que gerou aquele `lastReminderMessageId`. */
+  findByLastReminderMessageId(
+    messageId: string,
+  ): Promise<AccountsPayable | null>;
 
   list(
     filter: ListAccountsPayableFilter,
@@ -218,6 +220,10 @@ export interface AccountsPayableRepository {
    */
   listPendingForReminders(organizationId: string): Promise<AccountsPayable[]>;
 
-  /** Marca que o lembrete foi enviado agora — evita reenviar mais de uma vez no mesmo dia. */
-  touchReminderSent(id: string, sentAt: Date): Promise<void>;
+  /** Marca que o lembrete foi enviado agora (evita reenviar mais de uma vez no mesmo dia) e guarda o id da mensagem do cartão-resumo (`messageId` pode ser `null` se a Z-API não devolveu um). */
+  touchReminderSent(
+    id: string,
+    sentAt: Date,
+    messageId: string | null,
+  ): Promise<void>;
 }

@@ -60,10 +60,10 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
     hasPixKey: Boolean(payable.pixKey),
   });
 
+  let messageId: string | null;
   try {
-    await deps.whatsAppMessaging.sendPaymentReminder({
+    const result = await deps.whatsAppMessaging.sendPaymentReminder({
       phone: settings.whatsapp,
-      publicToken: payable.publicToken,
       supplierName: supplier.name,
       description: payable.description,
       amount: formatCurrencyBRL(payable.amount.toString()),
@@ -71,6 +71,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
       digitableLine: payable.digitableLine,
       pixKey: payable.pixKey,
     });
+    messageId = result.messageId;
   } catch (error) {
     logger.error("Falha ao enviar lembrete de WhatsApp", {
       accountsPayableId: payable.id,
@@ -80,7 +81,11 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
   }
 
   const sentAt = new Date();
-  await deps.accountsPayableRepository.touchReminderSent(payable.id, sentAt);
+  await deps.accountsPayableRepository.touchReminderSent(
+    payable.id,
+    sentAt,
+    messageId,
+  );
 
   await prisma.auditLog.create({
     data: {
