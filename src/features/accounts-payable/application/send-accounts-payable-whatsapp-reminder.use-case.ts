@@ -54,6 +54,12 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
     throw new NotFoundError("Fornecedor", payable.supplierId);
   }
 
+  logger.info("prestes a chamar Z-API", {
+    accountsPayableId: payable.id,
+    hasDigitableLine: Boolean(payable.digitableLine),
+    hasPixKey: Boolean(payable.pixKey),
+  });
+
   try {
     await deps.whatsAppMessaging.sendPaymentReminder({
       phone: settings.whatsapp,

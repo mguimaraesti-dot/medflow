@@ -67,8 +67,22 @@ function bodyIndicatesFailure(parsedBody: unknown): boolean {
 }
 
 async function post(path: string, body: unknown): Promise<void> {
+  // Nomes das chaves evitam a substring "token" de propósito — o logger
+  // redige qualquer valor cuja chave contenha "token"/"secret"/etc
+  // (core/logger/logger.ts), o que apagaria esses booleanos de
+  // diagnóstico e não o segredo em si (aqui só existe true/false).
+  logger.info("prestes a chamar Z-API (post)", {
+    path,
+    instanceIdConfigured: Boolean(process.env.ZAPI_INSTANCE_ID),
+    apiCredentialConfigured: Boolean(process.env.ZAPI_TOKEN),
+    clientCredentialConfigured: Boolean(process.env.ZAPI_CLIENT_TOKEN),
+  });
+
   const { instanceId, token, clientToken } = loadConfig();
   const url = `https://api.z-api.io/instances/${instanceId}/token/${token}${path}`;
+
+  // Nunca loga `url` inteira — tem instanceId/token embutidos no path.
+  logger.info("chamando fetch da Z-API agora", { path });
 
   let response: Response;
   try {
