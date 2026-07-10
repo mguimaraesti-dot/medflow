@@ -38,6 +38,7 @@ function makeSafeRepo(balance: string): SafeRepository {
 
 const organizationSettingsRepository: OrganizationSettingsRepository = {
   findByOrganization: vi.fn().mockResolvedValue(null),
+  update: vi.fn(),
 };
 
 describe("openCashRegisterUseCase", () => {
