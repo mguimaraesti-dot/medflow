@@ -118,6 +118,9 @@ export interface UpdateManyForSeriesInput {
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;
 
+  /** Usado pelo webhook da Z-API — o clique no botão "Pago" só carrega o `publicToken`, nunca o id interno. */
+  findByPublicToken(publicToken: string): Promise<AccountsPayable | null>;
+
   list(
     filter: ListAccountsPayableFilter,
     pagination: Pagination,
@@ -205,4 +208,16 @@ export interface AccountsPayableRepository {
     from: Date,
     to: Date,
   ): Promise<AccountsPayableSummaryBucket>;
+
+  /**
+   * Candidatas ao lembrete de WhatsApp (cron diário) — só PENDENTES e
+   * não excluídas. O filtro de janela (`hoje >= dueDate -
+   * reminderDaysBefore`) e "já lembrado hoje" acontece em código no
+   * use case, não aqui (mesmo padrão de agregação em código já usado
+   * no projeto).
+   */
+  listPendingForReminders(organizationId: string): Promise<AccountsPayable[]>;
+
+  /** Marca que o lembrete foi enviado agora — evita reenviar mais de uma vez no mesmo dia. */
+  touchReminderSent(id: string, sentAt: Date): Promise<void>;
 }
