@@ -2,6 +2,7 @@ import { prisma } from "@/core/database/prisma.client";
 import { Prisma } from "@prisma/client";
 import { buildPaginatedResult } from "@/shared/lib/pagination";
 import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
+import { todayDateOnlyBR } from "@/shared/lib/format";
 import type {
   AccountsPayableRepository,
   CreateAccountsPayableInput,
@@ -63,8 +64,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     filter: ListAccountsPayableFilter,
     pagination: Pagination,
   ): Promise<PaginatedResult<AccountsPayable>> {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    const today = todayDateOnlyBR();
 
     // "OVERDUE" nunca é persistido — traduz pro par (status PENDING +
     // dueDate no passado). "PENDING" no filtro exclui as vencidas (elas
@@ -423,8 +423,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     organizationId: string,
     period: { dueDateFrom?: Date; dueDateTo?: Date },
   ): Promise<AccountsPayableSummary> {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    const today = todayDateOnlyBR();
     const endOfToday = new Date(today);
     endOfToday.setUTCHours(23, 59, 59, 999);
     const yesterday = new Date(today);

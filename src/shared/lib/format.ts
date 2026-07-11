@@ -71,6 +71,27 @@ export function formatDateOnlyLocalBR(value: string | Date): string {
 }
 
 /**
+ * "Hoje" no calendário de Brasília, representado como Date à meia-noite
+ * UTC — mesmo formato de `dueDate` (`@db.Date`), pra poder comparar os
+ * dois diretamente. NUNCA usar `new Date(); .setUTCHours(0,0,0,0)` pra
+ * isso: aquilo trunca pro dia corrente em UTC, que a partir de ~21h no
+ * horário de Brasília já é o dia seguinte (BRT = UTC-3) — uma conta com
+ * vencimento hoje passava a contar como vencida horas antes da meia-noite
+ * real em Brasília. Aqui o dia é lido primeiro no fuso certo.
+ */
+export function todayDateOnlyBR(referenceDate: Date = new Date()): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: DISPLAY_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(referenceDate);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+}
+
+/**
  * Data "inteligente" para a coluna Vencimento (UX spec Contas a Pagar):
  * "Hoje"/"Amanhã" perto, "Há N dias" no passado, "20 Jul" caso contrário
  * — evita mostrar só a data crua. Mesma correção de timezone de
@@ -84,12 +105,7 @@ export function formatSmartDueDate(value: string | Date): string {
     date.getUTCDate(),
   );
 
-  const now = new Date();
-  const todayUTC = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
+  const todayUTC = todayDateOnlyBR().getTime();
 
   const diffDays = Math.round((dateUTC - todayUTC) / 86_400_000);
 

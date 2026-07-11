@@ -29,6 +29,7 @@ import {
   getAccountsPayableAttachments,
   getDueDateDisplay,
   getPaymentConfirmationDetail,
+  getPaymentConfirmationDisplayName,
 } from "./accounts-payable-helpers";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
@@ -522,7 +523,13 @@ export function AccountsPayableTable({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <p className="cursor-help truncate text-sm font-medium">
-                                  {paymentConfirmation.userName.split(" ")[0]}
+                                  {paymentConfirmation.source === "WhatsApp"
+                                    ? getPaymentConfirmationDisplayName(
+                                        paymentConfirmation,
+                                      )
+                                    : paymentConfirmation.userName.split(
+                                        " ",
+                                      )[0]}
                                 </p>
                               </TooltipTrigger>
                               <TooltipContent>

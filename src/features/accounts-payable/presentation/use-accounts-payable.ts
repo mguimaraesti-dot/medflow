@@ -52,5 +52,19 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
         `/api/accounts-payable?${params.toString()}`,
       ),
     placeholderData: keepPreviousData,
+    // Enquanto houver alguma conta pendente com lembrete de WhatsApp já
+    // enviado (aguardando confirmação via clique no botão "Pago"), busca
+    // de novo a cada 15s — o webhook confirma o pagamento em segundo
+    // plano, sem nenhuma ação do usuário na tela, então sem isso o
+    // status só atualizava depois de um F5 manual. Escolhido por ser o
+    // mais simples de manter no estágio atual do projeto (sem
+    // infraestrutura nova — Supabase Realtime exigiria configurar
+    // canal/policies à parte só pra isso).
+    refetchInterval: (query) => {
+      const hasPendingReminder = query.state.data?.items.some(
+        (item) => item.status === "PENDING" && item.lastReminderSentAt !== null,
+      );
+      return hasPendingReminder ? 15_000 : false;
+    },
   });
 }

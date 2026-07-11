@@ -249,6 +249,20 @@ export function getPaymentConfirmationDetail(
   };
 }
 
+/**
+ * Nome de exibição da confirmação de pagamento — quando veio da
+ * automação do WhatsApp, mostra "Dr. Flávio" em vez do nome técnico
+ * real ("Automação WhatsApp (Z-API)"), que continua disponível (no
+ * hover/tooltip de quem exibe isso) pra manter o registro técnico
+ * visível. Só de exibição — `paidByUserName`/auditoria continuam
+ * gravando o nome técnico real, sem mudança.
+ */
+export function getPaymentConfirmationDisplayName(
+  detail: PaymentConfirmationDetail,
+): string {
+  return detail.source === "WhatsApp" ? "Dr. Flávio" : detail.userName;
+}
+
 export interface AccountsPayableEvent {
   id: string;
   label: string;

@@ -71,14 +71,30 @@ describe("toAccountsPayableResponseDTO", () => {
     expect(dto.displayStatus).toBe("PENDING");
   });
 
-  it("vira OVERDUE só a partir do dia seguinte ao vencimento", () => {
-    const referenceDate = new Date("2026-07-06T00:00:01.000Z");
+  it("vira OVERDUE só a partir do dia seguinte ao vencimento, no horário de Brasília", () => {
+    // 2026-07-06T03:00:01Z = 2026-07-06T00:00:01 em Brasília (UTC-3) —
+    // já é o dia seguinte no calendário de Brasília.
+    const referenceDate = new Date("2026-07-06T03:00:01.000Z");
     const dto = toAccountsPayableResponseDTO(
       buildPayable({ dueDate: new Date("2026-07-05T00:00:00.000Z") }),
       referenceDate,
     );
 
     expect(dto.displayStatus).toBe("OVERDUE");
+  });
+
+  it("não vira OVERDUE horas antes da meia-noite real em Brasília, mesmo já sendo o dia seguinte em UTC (bug corrigido)", () => {
+    // 2026-07-06T01:00:00Z = 2026-07-05T22:00:00 em Brasília — já é dia
+    // 6 em UTC, mas ainda é dia 5 (o próprio dia do vencimento) em
+    // Brasília. Reproduz o bug relatado: conta cadastrada com
+    // vencimento hoje nascendo "vencida" a partir de ~21h de Brasília.
+    const referenceDate = new Date("2026-07-06T01:00:00.000Z");
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({ dueDate: new Date("2026-07-05T00:00:00.000Z") }),
+      referenceDate,
+    );
+
+    expect(dto.displayStatus).toBe("PENDING");
   });
 
   it("PAID nunca vira OVERDUE, mesmo com vencimento no passado", () => {

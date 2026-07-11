@@ -1,4 +1,5 @@
 import { toMoneyString } from "@/shared/lib/money";
+import { todayDateOnlyBR } from "@/shared/lib/format";
 import type {
   AccountsPayable,
   PayableStatus,
@@ -49,12 +50,11 @@ export function toAccountsPayableResponseDTO(
   payable: AccountsPayable,
   referenceDate: Date = new Date(),
 ): AccountsPayableResponseDTO {
-  // Compara só a data (UTC), nunca o horário — senão uma conta com
-  // vencimento hoje vira "Vencida" assim que passa da meia-noite UTC
-  // (bem antes do fim do dia no horário de Brasília). "Vencida" só a
-  // partir do dia seguinte ao vencimento.
-  const referenceDay = new Date(referenceDate);
-  referenceDay.setUTCHours(0, 0, 0, 0);
+  // "Hoje" no calendário de Brasília, não em UTC (ver todayDateOnlyBR)
+  // — senão uma conta com vencimento hoje vira "Vencida" horas antes da
+  // meia-noite real em Brasília. "Vencida" só a partir do dia seguinte
+  // ao vencimento.
+  const referenceDay = todayDateOnlyBR(referenceDate);
   const displayStatus: PayableStatus =
     payable.status === "PENDING" && payable.dueDate < referenceDay
       ? "OVERDUE"

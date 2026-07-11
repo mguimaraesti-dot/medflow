@@ -23,7 +23,6 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { CopyButton } from "@/shared/components/copy-button";
-import { CopyToWhatsAppButton } from "./copy-to-whatsapp-button";
 import { SendWhatsAppReminderButton } from "./send-whatsapp-reminder-button";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
@@ -35,6 +34,7 @@ import {
   STATUS_META,
   getDueDateDisplay,
   getPaymentConfirmationDetail,
+  getPaymentConfirmationDisplayName,
   getRecurrenceDisplay,
   shortMovementNumber,
   toAccountsPayableEvents,
@@ -266,7 +266,20 @@ export function AccountsPayableDrawer({
                       />
                       <Field
                         label="Confirmado por"
-                        value={paymentConfirmation?.userName ?? "—"}
+                        value={
+                          paymentConfirmation ? (
+                            <span
+                              className="cursor-help"
+                              title={paymentConfirmation.userName}
+                            >
+                              {getPaymentConfirmationDisplayName(
+                                paymentConfirmation,
+                              )}
+                            </span>
+                          ) : (
+                            "—"
+                          )
+                        }
                       />
                       <Field
                         label="Origem do Pagamento"
@@ -290,7 +303,15 @@ export function AccountsPayableDrawer({
                       <div className="space-y-2 rounded-lg border p-3">
                         <p className="flex items-center gap-1.5 text-sm font-medium">
                           <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
-                          Confirmado por {paymentConfirmation.userName}
+                          Confirmado por{" "}
+                          <span
+                            className="cursor-help"
+                            title={paymentConfirmation.userName}
+                          >
+                            {getPaymentConfirmationDisplayName(
+                              paymentConfirmation,
+                            )}
+                          </span>
                         </p>
                         <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
                           <span>Origem: {paymentConfirmation.source}</span>
@@ -509,11 +530,6 @@ export function AccountsPayableDrawer({
                     Excluir
                   </Button>
                 )}
-                <CopyToWhatsAppButton
-                  payable={payable}
-                  supplierName={supplierName ?? payable.description}
-                  variant="full"
-                />
                 {canPayThis && <SendWhatsAppReminderButton payable={payable} />}
                 {/* Sempre visível — o X do canto do Sheet some fácil no
                     mobile; este garante um jeito claro de fechar mesmo
