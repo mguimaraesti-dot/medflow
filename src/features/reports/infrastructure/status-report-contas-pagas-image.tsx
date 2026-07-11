@@ -3,7 +3,6 @@ import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
 import type { StatusReportContasPagasSummary } from "../domain/status-report-contas-pagas.entity";
 import {
   BLUE,
-  GREEN,
   DARK_TEXT,
   MUTED_TEXT,
   BORDER,
@@ -40,7 +39,27 @@ function ReportCard({
   );
 }
 
-/** `ReportCard` com um título interno — usado pelas seções de gráfico (barras/rosca/semanas). */
+/** Título de seção com ícone — cabeçalho de cada `ChartCard`. */
+function SectionTitle({
+  title,
+  iconPath,
+}: {
+  title: string;
+  iconPath: string;
+}) {
+  return (
+    <div
+      style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}
+    >
+      <Icon path={iconPath} color={DARK_TEXT} size={22} />
+      <div style={{ display: "flex", fontSize: 20, fontWeight: 800 }}>
+        {title}
+      </div>
+    </div>
+  );
+}
+
+/** `ReportCard` com um `SectionTitle` interno — usado pelas seções de gráfico (barras/rosca/semanas). */
 function ChartCard({
   title,
   iconPath,
@@ -52,39 +71,9 @@ function ChartCard({
 }) {
   return (
     <ReportCard style={{ padding: "12px 26px" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 8,
-        }}
-      >
-        <Icon path={iconPath} color={DARK_TEXT} size={22} />
-        <div style={{ display: "flex", fontSize: 20, fontWeight: 800 }}>
-          {title}
-        </div>
-      </div>
+      <SectionTitle title={title} iconPath={iconPath} />
       {children}
     </ReportCard>
-  );
-}
-
-/** Título de seção fora de card (usado só se precisar de um heading solto — as seções deste relatório usam `ChartCard`). */
-function SectionTitle({
-  title,
-  iconPath,
-}: {
-  title: string;
-  iconPath: string;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <Icon path={iconPath} color={DARK_TEXT} size={26} />
-      <div style={{ display: "flex", fontSize: 24, fontWeight: 800 }}>
-        {title}
-      </div>
-    </div>
   );
 }
 
@@ -181,8 +170,6 @@ function KpiCard({
 const DONUT_SIZE = 220;
 const DONUT_RADIUS = 84;
 const DONUT_STROKE = 34;
-const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
-
 /** Rosca genérica — arcos desenhados via `<circle>`+`strokeDasharray` (Satori não roda libs de gráfico). Rótulos de percentual posicionados por trigonometria no ponto médio de cada fatia. */
 function DonutChart({
   segments,
