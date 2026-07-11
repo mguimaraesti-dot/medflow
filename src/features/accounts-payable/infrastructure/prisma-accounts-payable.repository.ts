@@ -232,6 +232,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         paymentOrigin: data.paymentOrigin,
         barcode: data.barcode,
         pixKey: data.pixKey,
+        reminderDaysBefore: data.reminderDaysBefore,
       },
       include: USER_NAMES_INCLUDE,
     });

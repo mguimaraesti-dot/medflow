@@ -37,6 +37,7 @@ interface EditFormValues {
   paymentOrigin: "BANCO" | "COFRE";
   barcode: string;
   pixKey: string;
+  reminderDaysBefore: number;
 }
 
 function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
@@ -49,6 +50,7 @@ function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
     paymentOrigin: payable.paymentOrigin,
     barcode: payable.barcode ?? "",
     pixKey: payable.pixKey ?? "",
+    reminderDaysBefore: payable.reminderDaysBefore,
   };
 }
 
@@ -92,6 +94,7 @@ export function AccountsPayableEditDialog({
       paymentOrigin: "BANCO",
       barcode: "",
       pixKey: "",
+      reminderDaysBefore: 5,
     },
   });
 
@@ -256,6 +259,25 @@ export function AccountsPayableEditDialog({
                 <div className="space-y-2">
                   <Label htmlFor="edit-pixKey">Chave PIX</Label>
                   <Input id="edit-pixKey" {...register("pixKey")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-reminderDaysBefore">
+                    Lembrete de WhatsApp (dias antes)
+                  </Label>
+                  <Input
+                    id="edit-reminderDaysBefore"
+                    type="number"
+                    min={0}
+                    max={60}
+                    {...register("reminderDaysBefore", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                  {errors.reminderDaysBefore && (
+                    <p className="text-destructive text-sm">
+                      Informe um valor entre 0 e 60.
+                    </p>
+                  )}
                 </div>
               </div>
 

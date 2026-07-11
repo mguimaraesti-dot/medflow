@@ -91,6 +91,7 @@ export interface UpdateAccountsPayableInput {
   paymentOrigin: PaymentOrigin;
   barcode?: string;
   pixKey?: string;
+  reminderDaysBefore: number;
 }
 
 export interface SoftDeleteAccountsPayableInput {

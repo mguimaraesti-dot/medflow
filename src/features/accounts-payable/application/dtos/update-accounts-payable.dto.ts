@@ -29,6 +29,8 @@ export const updateAccountsPayableSchema = z.object({
   barcode: shortTextSchema(100),
   pixKey: shortTextSchema(200),
   scope: z.enum(["SINGLE", "SERIES"]).default("SINGLE"),
+  /** Dias antes do vencimento em que o lembrete de WhatsApp começa a ser enviado. */
+  reminderDaysBefore: z.number().int().min(0).max(60),
 });
 
 export type UpdateAccountsPayableInput = z.infer<

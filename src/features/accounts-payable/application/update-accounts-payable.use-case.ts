@@ -45,6 +45,7 @@ export async function updateAccountsPayableUseCase(
     paymentOrigin: input.paymentOrigin,
     barcode: input.barcode,
     pixKey: input.pixKey,
+    reminderDaysBefore: input.reminderDaysBefore,
   };
 
   const applyToSeries = input.scope === "SERIES" && payable.recurringBillId;
@@ -70,6 +71,7 @@ export async function updateAccountsPayableUseCase(
         paymentOrigin: payable.paymentOrigin,
         barcode: payable.barcode,
         pixKey: payable.pixKey,
+        reminderDaysBefore: payable.reminderDaysBefore,
       },
       after: changes,
     },

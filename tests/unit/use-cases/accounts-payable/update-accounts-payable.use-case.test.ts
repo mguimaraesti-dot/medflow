@@ -35,6 +35,7 @@ const baseInput = {
   dueDate: new Date("2026-08-05T00:00:00.000Z"),
   paymentOrigin: "BANCO" as const,
   scope: "SINGLE" as const,
+  reminderDaysBefore: 5,
 };
 
 describe("updateAccountsPayableUseCase", () => {
