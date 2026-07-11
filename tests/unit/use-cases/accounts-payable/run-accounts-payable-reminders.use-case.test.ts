@@ -53,9 +53,7 @@ function buildDeps(
     ),
   } as never;
 
-  const whatsAppMessaging = {
-    sendSeparatorMessage: vi.fn().mockResolvedValue(undefined),
-  } as unknown as WhatsAppMessagingPort;
+  const whatsAppMessaging = {} as unknown as WhatsAppMessagingPort;
 
   return {
     accountsPayableRepository,
@@ -163,40 +161,6 @@ describe("runAccountsPayableRemindersUseCase", () => {
     expect(result).toEqual({ sentCount: 1, failedCount: 1 });
   });
 
-  it("insere separador entre contas do mesmo lote, mas nunca antes da primeira", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(TODAY);
-    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
-
-    const candidates = [
-      payable({ id: "payable-1" }),
-      payable({ id: "payable-2" }),
-      payable({ id: "payable-3" }),
-    ];
-    const deps = buildDeps(candidates);
-
-    await runAccountsPayableRemindersUseCase("org-1", deps);
-
-    expect(deps.whatsAppMessaging.sendSeparatorMessage).toHaveBeenCalledTimes(
-      2,
-    );
-    expect(deps.whatsAppMessaging.sendSeparatorMessage).toHaveBeenCalledWith(
-      "11999999999",
-    );
-  });
-
-  it("não envia separador quando só há 1 conta due no lote", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(TODAY);
-    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
-
-    const deps = buildDeps([payable({ id: "payable-1" })]);
-
-    await runAccountsPayableRemindersUseCase("org-1", deps);
-
-    expect(deps.whatsAppMessaging.sendSeparatorMessage).not.toHaveBeenCalled();
-  });
-
   it("não processa quando a hora atual não bate com reminderSendHour (nem consulta contas pendentes)", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(TODAY);
@@ -256,7 +220,6 @@ describe("runAccountsPayableRemindersUseCase", () => {
 
     const result = await runAccountsPayableRemindersUseCase("org-1", deps);
 
-    expect(deps.whatsAppMessaging.sendSeparatorMessage).not.toHaveBeenCalled();
     expect(result).toEqual({ sentCount: 2, failedCount: 0 });
   });
 });

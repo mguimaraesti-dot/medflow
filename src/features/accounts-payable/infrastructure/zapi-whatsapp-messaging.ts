@@ -1,5 +1,4 @@
 import {
-  sendTextMessage,
   sendButtonListMessage,
   sendButtonCodeMessage,
   sendButtonPixMessage,
@@ -53,7 +52,7 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       await delay(3000);
       await sendButtonCodeMessage({
         phone: input.phone,
-        message: "Código de barras da fatura:",
+        message: `*${input.supplierName}*\nCódigo de barras da fatura:`,
         code: input.barcode,
         buttonText: "Copiar código de barras",
       });
@@ -70,12 +69,5 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     }
 
     return { messageId };
-  }
-
-  async sendSeparatorMessage(phone: string): Promise<void> {
-    await sendTextMessage({
-      phone,
-      message: "*".repeat(30),
-    });
   }
 }

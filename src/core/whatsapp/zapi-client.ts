@@ -20,8 +20,9 @@ import { logger } from "@/core/logger/logger";
  * (`pago_<accountsPayableId>`) — a confirmação de pagamento volta a
  * ser por clique, não mais por resposta de texto "PAGO".
  *
- * `/send-text` continua existindo pra mensagens sem interação
- * (separador entre contas do mesmo lote, agradecimento pós-pagamento).
+ * `/send-text` (`sendTextMessage`) não tem uso atual no projeto — mantida
+ * disponível caso surja necessidade de mensagem simples sem interação
+ * (ex: agradecimento pós-pagamento).
  *
  * IMPORTANTE: a Z-API às vezes responde HTTP 200 mesmo quando a
  * mensagem não é entregue de verdade (instância desconectada, número

@@ -40,7 +40,4 @@ export interface WhatsAppMessagingPort {
   sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }>;
-
-  /** Mensagem separadora entre um lembrete e outro, quando o cron dispara mais de uma conta pro mesmo telefone na mesma execução. */
-  sendSeparatorMessage(phone: string): Promise<void>;
 }
