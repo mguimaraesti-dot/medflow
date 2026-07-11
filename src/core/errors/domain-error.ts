@@ -327,3 +327,36 @@ export class AttachmentStorageError extends DomainError {
     );
   }
 }
+
+// ---------------------------------------------------------------
+// Lembretes de WhatsApp (Z-API)
+// ---------------------------------------------------------------
+
+export class WhatsAppNotConfiguredError extends DomainError {
+  readonly code = "WHATSAPP_NOT_CONFIGURED";
+  readonly httpStatus = 422;
+
+  constructor(organizationId: string) {
+    super(
+      "Cadastre o número de WhatsApp da organização em Configurações antes de enviar lembretes.",
+      { organizationId },
+    );
+  }
+}
+
+/**
+ * Falha externa (Z-API fora do ar, instância desconectada, número
+ * inválido) — nunca deixa a causa original vazar pro cliente; a causa
+ * completa só vai pro log interno (ver
+ * send-accounts-payable-whatsapp-reminder.use-case.ts).
+ */
+export class WhatsAppSendError extends DomainError {
+  readonly code = "WHATSAPP_SEND_ERROR";
+  readonly httpStatus = 502;
+
+  constructor(accountsPayableId: string) {
+    super("Não foi possível enviar o lembrete por WhatsApp agora.", {
+      accountsPayableId,
+    });
+  }
+}

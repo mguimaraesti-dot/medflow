@@ -3,6 +3,10 @@ import { PrismaClient, RoleName } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
 import { ROLE_PERMISSIONS } from "../src/core/permissions/roles-permissions";
 import {
+  WHATSAPP_SYSTEM_USER_EMAIL,
+  WHATSAPP_SYSTEM_USER_NAME,
+} from "../src/features/accounts-payable/domain/whatsapp-system-user";
+import {
   INCOME_CATEGORIES,
   EXPENSE_CATEGORIES,
   PAYMENT_METHODS,
@@ -169,6 +173,30 @@ async function upsertAdminUser(organizationId: string, supabaseAuthId: string) {
   return user;
 }
 
+/**
+ * Usuário de sistema sem organização e sem conta real no Supabase Auth
+ * (nunca faz login) — só existe pra manter `paidByUserId`/
+ * `performedByUserId` apontando pra um usuário de verdade quando o
+ * pagamento é confirmado pelo webhook da Z-API (sem ninguém logado).
+ * `organizationId: null` o mantém fora da listagem de Gestão de Acessos
+ * (que sempre filtra por organização). O `supabaseAuthId` é um valor
+ * sentinela fixo — nunca corresponde a uma conta real.
+ */
+async function upsertWhatsAppSystemUser(): Promise<void> {
+  await prisma.user.upsert({
+    where: { email: WHATSAPP_SYSTEM_USER_EMAIL },
+    update: { name: WHATSAPP_SYSTEM_USER_NAME },
+    create: {
+      email: WHATSAPP_SYSTEM_USER_EMAIL,
+      name: WHATSAPP_SYSTEM_USER_NAME,
+      supabaseAuthId: "00000000-0000-0000-0000-000000000000",
+      status: "INACTIVE",
+    },
+  });
+
+  console.log(`✔ Usuário de sistema garantido (${WHATSAPP_SYSTEM_USER_EMAIL})`);
+}
+
 async function upsertCategories(organizationId: string) {
   const all = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 
@@ -266,6 +294,7 @@ async function main() {
   const organization = await upsertOrganization();
   const supabaseAuthId = await upsertAdminAuthUser();
   const admin = await upsertAdminUser(organization.id, supabaseAuthId);
+  await upsertWhatsAppSystemUser();
   await upsertCategories(organization.id);
   await upsertPaymentMethods(organization.id);
   await upsertSafe(organization.id, admin.id);

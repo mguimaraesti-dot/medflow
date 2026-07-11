@@ -35,6 +35,10 @@ export interface AccountsPayableResponseDTO {
   paidSafeMovementId: string | null;
   /** Quantidade de anexos reais (Google Drive) vinculados — não inclui o boleto legado (`boletoPdfUrl`). */
   attachmentsCount: number;
+  /** Dias antes do vencimento em que o lembrete de WhatsApp começa a ser enviado. */
+  reminderDaysBefore: number;
+  /** Última vez que o lembrete de WhatsApp foi enviado — `null` se nunca. */
+  lastReminderSentAt: Date | null;
   deletedAt: Date | null;
   deletedByUserName: string | null;
   deletionReason: string | null;
@@ -82,6 +86,8 @@ export function toAccountsPayableResponseDTO(
     paidVia: payable.paidVia,
     paidSafeMovementId: payable.paidSafeMovementId,
     attachmentsCount: payable.attachmentsCount,
+    reminderDaysBefore: payable.reminderDaysBefore,
+    lastReminderSentAt: payable.lastReminderSentAt,
     deletedAt: payable.deletedAt,
     deletedByUserName: payable.deletedByUserName,
     deletionReason: payable.deletionReason,

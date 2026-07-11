@@ -1,0 +1,133 @@
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { runAccountsPayableRemindersUseCase } from "@/features/accounts-payable/application/run-accounts-payable-reminders.use-case";
+import { sendAccountsPayableWhatsAppReminderUseCase } from "@/features/accounts-payable/application/send-accounts-payable-whatsapp-reminder.use-case";
+import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
+
+vi.mock(
+  "@/features/accounts-payable/application/send-accounts-payable-whatsapp-reminder.use-case",
+  () => ({ sendAccountsPayableWhatsAppReminderUseCase: vi.fn() }),
+);
+
+const TODAY = new Date("2026-07-20T00:00:00.000Z");
+
+function payable(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "payable-1",
+    dueDate: new Date("2026-07-25T00:00:00.000Z"),
+    reminderDaysBefore: 5,
+    lastReminderSentAt: null,
+    ...overrides,
+  };
+}
+
+function buildDeps(candidates: ReturnType<typeof payable>[]) {
+  const accountsPayableRepository = {
+    listPendingForReminders: vi.fn().mockResolvedValue(candidates),
+  } as unknown as AccountsPayableRepository;
+
+  return {
+    accountsPayableRepository,
+    organizationSettingsRepository: {} as never,
+    supplierRepository: {} as never,
+    whatsAppMessaging: {} as never,
+  };
+}
+
+describe("runAccountsPayableRemindersUseCase", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockReset();
+  });
+
+  it("envia quando hoje já entrou na janela (hoje >= dueDate - reminderDaysBefore)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const candidate = payable({
+      dueDate: new Date("2026-07-25T00:00:00.000Z"),
+      reminderDaysBefore: 5,
+    });
+    const deps = buildDeps([candidate]);
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).toHaveBeenCalledWith(
+      "payable-1",
+      "org-1",
+      null,
+      deps,
+    );
+    expect(result).toEqual({ sentCount: 1, failedCount: 0 });
+  });
+
+  it("não envia quando ainda não entrou na janela", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+
+    const candidate = payable({
+      dueDate: new Date("2026-07-30T00:00:00.000Z"),
+      reminderDaysBefore: 5,
+    });
+    const deps = buildDeps([candidate]);
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).not.toHaveBeenCalled();
+    expect(result).toEqual({ sentCount: 0, failedCount: 0 });
+  });
+
+  it("não reenvia quando já foi lembrado hoje", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+
+    const candidate = payable({
+      dueDate: new Date("2026-07-25T00:00:00.000Z"),
+      reminderDaysBefore: 5,
+      lastReminderSentAt: new Date("2026-07-20T10:00:00.000Z"),
+    });
+    const deps = buildDeps([candidate]);
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).not.toHaveBeenCalled();
+    expect(result).toEqual({ sentCount: 0, failedCount: 0 });
+  });
+
+  it("reenvia quando o último lembrete foi em um dia anterior", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const candidate = payable({
+      dueDate: new Date("2026-07-25T00:00:00.000Z"),
+      reminderDaysBefore: 5,
+      lastReminderSentAt: new Date("2026-07-19T10:00:00.000Z"),
+    });
+    const deps = buildDeps([candidate]);
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ sentCount: 1, failedCount: 0 });
+  });
+
+  it("uma falha de envio não interrompe as demais contas do lote", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase)
+      .mockRejectedValueOnce(new Error("falhou"))
+      .mockResolvedValueOnce(undefined);
+
+    const candidates = [
+      payable({ id: "payable-1" }),
+      payable({ id: "payable-2" }),
+    ];
+    const deps = buildDeps(candidates);
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ sentCount: 1, failedCount: 1 });
+  });
+});

@@ -1,5 +1,8 @@
 import { prisma } from "@/core/database/prisma.client";
-import type { OrganizationSettingsRepository } from "../domain/organization-settings.repository";
+import type {
+  OrganizationSettingsRepository,
+  UpdateOrganizationSettingsInput,
+} from "../domain/organization-settings.repository";
 import type { OrganizationSettings } from "../domain/organization-settings.entity";
 
 export class PrismaOrganizationSettingsRepository implements OrganizationSettingsRepository {
@@ -8,6 +11,16 @@ export class PrismaOrganizationSettingsRepository implements OrganizationSetting
   ): Promise<OrganizationSettings | null> {
     return prisma.organizationSettings.findUnique({
       where: { organizationId },
+    });
+  }
+
+  async update(
+    organizationId: string,
+    data: UpdateOrganizationSettingsInput,
+  ): Promise<OrganizationSettings> {
+    return prisma.organizationSettings.update({
+      where: { organizationId },
+      data: { whatsapp: data.whatsapp },
     });
   }
 }

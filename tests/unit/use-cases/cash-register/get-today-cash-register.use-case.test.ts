@@ -7,6 +7,7 @@ import type { OrganizationSettingsRepository } from "@/features/organization-set
 
 const organizationSettingsRepository: OrganizationSettingsRepository = {
   findByOrganization: vi.fn().mockResolvedValue(null),
+  update: vi.fn(),
 };
 
 describe("getTodayCashRegisterUseCase", () => {

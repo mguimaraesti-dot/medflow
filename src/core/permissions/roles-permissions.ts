@@ -32,6 +32,9 @@ export const PERMISSIONS = {
   USERS_MANAGE: "users:manage",
 
   DASHBOARD_READ: "dashboard:read",
+
+  /** Configurações da organização (ex: WhatsApp da clínica) — mesmo nível de USERS_MANAGE (Admin/Gerente). */
+  ORGANIZATION_SETTINGS_MANAGE: "organization-settings:manage",
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -78,6 +81,7 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.TREASURY_CONFIRM_MOVEMENT,
     PERMISSIONS.USERS_MANAGE,
     PERMISSIONS.DASHBOARD_READ,
+    PERMISSIONS.ORGANIZATION_SETTINGS_MANAGE,
   ],
   OWNER: [
     PERMISSIONS.CASH_FLOW_CREATE,
@@ -93,6 +97,7 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.TREASURY_CONFIRM_MOVEMENT,
     PERMISSIONS.USERS_MANAGE,
     PERMISSIONS.DASHBOARD_READ,
+    PERMISSIONS.ORGANIZATION_SETTINGS_MANAGE,
   ],
   FINANCE: [
     PERMISSIONS.CASH_FLOW_CREATE,

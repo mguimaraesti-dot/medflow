@@ -1,0 +1,37 @@
+import { prisma } from "@/core/database/prisma.client";
+import { logger } from "@/core/logger/logger";
+import type { OrganizationSettingsRepository } from "../domain/organization-settings.repository";
+import type { OrganizationSettings } from "../domain/organization-settings.entity";
+import type { UpdateOrganizationSettingsInput } from "./dtos/update-organization-settings.dto";
+
+interface Deps {
+  organizationSettingsRepository: OrganizationSettingsRepository;
+}
+
+export async function updateOrganizationSettingsUseCase(
+  input: UpdateOrganizationSettingsInput,
+  organizationId: string,
+  updatedByUserId: string,
+  deps: Deps,
+): Promise<OrganizationSettings> {
+  const settings = await deps.organizationSettingsRepository.update(
+    organizationId,
+    { whatsapp: input.whatsapp },
+  );
+
+  await prisma.auditLog.create({
+    data: {
+      userId: updatedByUserId,
+      entity: "OrganizationSettings",
+      entityId: settings.id,
+      action: "UPDATE",
+      after: { whatsapp: settings.whatsapp },
+    },
+  });
+
+  logger.info("Configurações da organização atualizadas", {
+    organizationId,
+  });
+
+  return settings;
+}

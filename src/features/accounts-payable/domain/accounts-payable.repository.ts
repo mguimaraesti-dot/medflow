@@ -26,6 +26,8 @@ export interface CreateAccountsPayableInput {
   recurringBillId?: string;
   occurrenceNumber?: number;
   createdByUserId: string;
+  /** Omitido = usa o default do banco (5). Dias antes do vencimento em que o lembrete de WhatsApp começa a ser enviado. */
+  reminderDaysBefore?: number;
 }
 
 export interface ListAccountsPayableFilter {
@@ -116,6 +118,11 @@ export interface UpdateManyForSeriesInput {
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;
 
+  /** Usado pelo webhook da Z-API — casa a resposta "PAGO" (citando a mensagem do lembrete) com a conta que gerou aquele `lastReminderMessageId`. */
+  findByLastReminderMessageId(
+    messageId: string,
+  ): Promise<AccountsPayable | null>;
+
   list(
     filter: ListAccountsPayableFilter,
     pagination: Pagination,
@@ -203,4 +210,20 @@ export interface AccountsPayableRepository {
     from: Date,
     to: Date,
   ): Promise<AccountsPayableSummaryBucket>;
+
+  /**
+   * Candidatas ao lembrete de WhatsApp (cron diário) — só PENDENTES e
+   * não excluídas. O filtro de janela (`hoje >= dueDate -
+   * reminderDaysBefore`) e "já lembrado hoje" acontece em código no
+   * use case, não aqui (mesmo padrão de agregação em código já usado
+   * no projeto).
+   */
+  listPendingForReminders(organizationId: string): Promise<AccountsPayable[]>;
+
+  /** Marca que o lembrete foi enviado agora (evita reenviar mais de uma vez no mesmo dia) e guarda o id da mensagem do cartão-resumo (`messageId` pode ser `null` se a Z-API não devolveu um). */
+  touchReminderSent(
+    id: string,
+    sentAt: Date,
+    messageId: string | null,
+  ): Promise<void>;
 }

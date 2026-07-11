@@ -24,6 +24,7 @@ import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { CopyButton } from "@/shared/components/copy-button";
 import { CopyToWhatsAppButton } from "./copy-to-whatsapp-button";
+import { SendWhatsAppReminderButton } from "./send-whatsapp-reminder-button";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
@@ -275,6 +276,14 @@ export function AccountsPayableDrawer({
                             : "🏦 Banco"
                         }
                       />
+                      <Field
+                        label="Último lembrete de WhatsApp"
+                        value={
+                          payable.lastReminderSentAt
+                            ? formatDateTimeBR(payable.lastReminderSentAt)
+                            : "—"
+                        }
+                      />
                     </div>
 
                     {paymentConfirmation && (
@@ -505,6 +514,7 @@ export function AccountsPayableDrawer({
                   supplierName={supplierName ?? payable.description}
                   variant="full"
                 />
+                {canPayThis && <SendWhatsAppReminderButton payable={payable} />}
                 {/* Sempre visível — o X do canto do Sheet some fácil no
                     mobile; este garante um jeito claro de fechar mesmo
                     quando a conta não tem nenhuma ação disponível (ex:

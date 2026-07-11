@@ -26,6 +26,8 @@ export interface CreateRecurringAccountsPayableInput {
   periodicity: RecurrencePeriodicity;
   /** undefined = sem prazo — gera um lote fixo de próximas ocorrências (`UNLIMITED_BATCH_SIZE`). */
   maxOccurrences?: number;
+  /** Omitido = usa o default do banco (5). Aplicado igualmente a todas as ocorrências geradas. */
+  reminderDaysBefore?: number;
 }
 
 export interface CreateRecurringAccountsPayableResult {
@@ -111,6 +113,7 @@ export async function createRecurringAccountsPayableUseCase(
       recurringBillId: recurringBill.id,
       occurrenceNumber: i + 1,
       createdByUserId,
+      reminderDaysBefore: input.reminderDaysBefore,
     };
   });
 

@@ -59,6 +59,16 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return row ? toDomain(row) : null;
   }
 
+  async findByLastReminderMessageId(
+    messageId: string,
+  ): Promise<AccountsPayable | null> {
+    const row = await prisma.accountsPayable.findFirst({
+      where: { lastReminderMessageId: messageId },
+      include: USER_NAMES_INCLUDE,
+    });
+    return row ? toDomain(row) : null;
+  }
+
   async list(
     filter: ListAccountsPayableFilter,
     pagination: Pagination,
@@ -169,6 +179,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         recurringBillId: data.recurringBillId,
         occurrenceNumber: data.occurrenceNumber,
         createdByUserId: data.createdByUserId,
+        reminderDaysBefore: data.reminderDaysBefore,
       },
       include: USER_NAMES_INCLUDE,
     });
@@ -203,6 +214,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         recurringBillId: item.recurringBillId,
         occurrenceNumber: item.occurrenceNumber,
         createdByUserId: item.createdByUserId,
+        reminderDaysBefore: item.reminderDaysBefore,
       })),
     });
 
@@ -549,5 +561,27 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       count: result._count,
       amount: result._sum.amount ?? new Prisma.Decimal(0),
     };
+  }
+
+  async listPendingForReminders(
+    organizationId: string,
+  ): Promise<AccountsPayable[]> {
+    const rows = await prisma.accountsPayable.findMany({
+      where: { organizationId, status: "PENDING", deletedAt: null },
+      include: USER_NAMES_INCLUDE,
+      orderBy: { dueDate: "asc" },
+    });
+    return rows.map(toDomain);
+  }
+
+  async touchReminderSent(
+    id: string,
+    sentAt: Date,
+    messageId: string | null,
+  ): Promise<void> {
+    await prisma.accountsPayable.update({
+      where: { id },
+      data: { lastReminderSentAt: sentAt, lastReminderMessageId: messageId },
+    });
   }
 }

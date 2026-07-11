@@ -57,6 +57,7 @@ const emptyFormValues: AccountsPayableFormValues = {
   qrCodeUrl: "",
   boletoPdfUrl: "",
   paymentOrigin: "BANCO",
+  reminderDaysBefore: 5,
 };
 
 type Periodicity = RecurrenceInput["periodicity"];
@@ -377,6 +378,23 @@ export function AccountsPayableForm({
             <div className="space-y-2">
               <Label htmlFor="pixKey">Chave PIX</Label>
               <Input id="pixKey" {...register("pixKey")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reminderDaysBefore">
+                Lembrete de WhatsApp (dias antes)
+              </Label>
+              <Input
+                id="reminderDaysBefore"
+                type="number"
+                min={0}
+                max={60}
+                {...register("reminderDaysBefore", { valueAsNumber: true })}
+              />
+              {errors.reminderDaysBefore && (
+                <p className="text-destructive text-sm">
+                  {errors.reminderDaysBefore.message}
+                </p>
+              )}
             </div>
           </div>
 
