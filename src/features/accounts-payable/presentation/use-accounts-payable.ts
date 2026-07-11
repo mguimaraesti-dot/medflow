@@ -24,10 +24,6 @@ export interface AccountsPayableFilter {
   pageSize?: number;
   /** Só usado pela tela "Contas Excluídas" (requer payable:delete no backend). */
   deletedOnly?: boolean;
-  /** "Dr. Flávio" (BANCO) ou "Cofre" — usado pelo Relatório de Contas a Pagar consolidado. */
-  paymentOrigin?: "BANCO" | "COFRE";
-  /** Combinado com `status` omitido, pra listar Pagas+Pendentes+Vencidas juntas sem Canceladas — usado pelo Relatório de Contas a Pagar consolidado. */
-  excludeCancelled?: boolean;
 }
 
 export function useAccountsPayable(filter: AccountsPayableFilter) {
@@ -46,8 +42,6 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
   if (filter.recurringOnly) params.set("recurringOnly", filter.recurringOnly);
   if (filter.search) params.set("search", filter.search);
   if (filter.deletedOnly) params.set("deletedOnly", "true");
-  if (filter.paymentOrigin) params.set("paymentOrigin", filter.paymentOrigin);
-  if (filter.excludeCancelled) params.set("excludeCancelled", "true");
   params.set("page", String(filter.page ?? 1));
   params.set("pageSize", String(filter.pageSize ?? 20));
 

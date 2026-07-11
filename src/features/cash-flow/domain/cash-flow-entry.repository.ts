@@ -34,14 +34,12 @@ export interface CashFlowEntrySums {
   totalOut: string;
 }
 
-/** Projeção mínima usada pelo Dashboard e pelo Relatório de Despesas por Categoria para agregar em código (sem SQL raw). */
+/** Projeção mínima usada pelo Dashboard para agregar em código (sem SQL raw). */
 export interface CashFlowEntryProjection {
   type: CashFlowEntryType;
   amount: Prisma.Decimal;
   occurredAt: Date;
   categoryId: string;
-  /** `paymentMethod.isCash` — usado pelo Relatório de Caixa Recepção pra separar Entradas em Dinheiro x PIX. */
-  isCash: boolean;
 }
 
 /** Projeção usada pelos insights (origem das receitas por categoria + por hora). */

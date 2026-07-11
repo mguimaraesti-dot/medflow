@@ -9,12 +9,4 @@ export interface SafeRepository {
    * persistido (Coding Standards, item 18.1).
    */
   getBalance(organizationId: string): Promise<Prisma.Decimal>;
-
-  /**
-   * Mesma lógica de `getBalance()`, mas só até (exclusive) uma data —
-   * usado no Relatório de Cofre pra "saldo inicial do período"
-   * (saldo de tudo que aconteceu antes do início do período
-   * selecionado).
-   */
-  getBalanceAsOf(organizationId: string, asOf: Date): Promise<Prisma.Decimal>;
 }

@@ -102,11 +102,6 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       organizationId: filter.organizationId,
       deletedAt: filter.deletedOnly ? { not: null } : null,
       ...statusFilter,
-      ...(filter.excludeCancelled &&
-        Object.keys(statusFilter).length === 0 && {
-          status: { not: "CANCELLED" },
-        }),
-      ...(filter.paymentOrigin && { paymentOrigin: filter.paymentOrigin }),
       ...(Object.keys(dueDateFilter).length > 0 && {
         dueDate: dueDateFilter,
       }),
