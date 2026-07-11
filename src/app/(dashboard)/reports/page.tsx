@@ -1,5 +1,5 @@
-import { StatusReportScreen } from "@/features/reports/presentation/status-report-screen";
+import { ReportsCatalogScreen } from "@/features/reports/presentation/reports-catalog-screen";
 
 export default function ReportsPage() {
-  return <StatusReportScreen />;
+  return <ReportsCatalogScreen />;
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import {
   PeriodSelector,
   computePeriodRange,
@@ -49,7 +50,14 @@ export function StatusReportScreen() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Relatórios</h1>
+        <Link
+          href="/reports"
+          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Relatórios
+        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight">Status Report</h1>
         <p className="text-muted-foreground text-sm">
           Resumo financeiro do período em imagem, pronto pra baixar ou enviar
           por WhatsApp.

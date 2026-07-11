@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { join } from "path";
 import { ImageResponse } from "next/og";
 import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
 import type { StatusReportSummary } from "../domain/status-report.entity";
@@ -10,6 +12,24 @@ const DARK_TEXT = "#1F2937";
 const MUTED_TEXT = "#6B7280";
 const BORDER = "#E5E7EB";
 const GREEN_BG = "#ECFDF5";
+
+/**
+ * Logo da Clínica MAE (único cliente do MVP hoje — CLAUDE.md) embutido
+ * como asset estático da feature. Se o MedFlow virar multiempresa de
+ * verdade, isso precisa virar um upload por organização; por ora, um
+ * arquivo fixo é a solução certa pro escopo atual.
+ */
+let cachedLogoDataUri: string | null = null;
+function loadOrganizationLogoDataUri(): string {
+  if (cachedLogoDataUri) return cachedLogoDataUri;
+  const filePath = join(
+    process.cwd(),
+    "src/features/reports/infrastructure/assets/clinica-mae-logo.jpeg",
+  );
+  const base64 = readFileSync(filePath).toString("base64");
+  cachedLogoDataUri = `data:image/jpeg;base64,${base64}`;
+  return cachedLogoDataUri;
+}
 
 /** Ícones em linha (stroke, sem preenchimento) — satori (`next/og`) só suporta um subconjunto de SVG, então cada um é desenhado à mão em vez de reaproveitar o lucide-react. */
 function Icon({
@@ -57,9 +77,9 @@ const ICON_PATHS = {
   sliders: "M4 6h6M14 6h6M4 12h10M18 12h2M4 18h4M12 18h8",
 };
 
-function StatusReportLogo() {
+function MedFlowIcon() {
   return (
-    <svg width="34" height="34" viewBox="0 0 32 32" fill="none">
+    <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
       <rect x="2" y="18" width="7" height="12" rx="2.5" fill="#60A5FA" />
       <rect x="12.5" y="10" width="7" height="20" rx="2.5" fill="#2563EB" />
       <rect x="23" y="2" width="7" height="28" rx="2.5" fill="#1E3A8A" />
@@ -86,13 +106,13 @@ function KpiCard({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
         flex: 1,
         position: "relative",
         backgroundColor: highlighted ? GREEN_BG : "#FFFFFF",
         border: `1px solid ${highlighted ? GREEN : BORDER}`,
         borderRadius: 16,
-        padding: "38px 12px",
+        padding: "32px 12px",
       }}
     >
       {highlighted && (
@@ -100,13 +120,13 @@ function KpiCard({
           style={{
             display: "flex",
             position: "absolute",
-            top: -14,
-            right: 10,
+            top: -16,
+            right: 8,
             backgroundColor: GREEN,
             color: "#FFFFFF",
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 700,
-            padding: "4px 10px",
+            padding: "5px 12px",
             borderRadius: 999,
           }}
         >
@@ -118,18 +138,18 @@ function KpiCard({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 48,
-          height: 48,
+          width: 52,
+          height: 52,
           borderRadius: 999,
           backgroundColor: `${color}1A`,
         }}
       >
-        <Icon path={iconPath} color={color} size={24} />
+        <Icon path={iconPath} color={color} size={26} />
       </div>
       <div
         style={{
           display: "flex",
-          fontSize: 15,
+          fontSize: 18,
           fontWeight: 700,
           color: MUTED_TEXT,
           letterSpacing: 0.5,
@@ -140,7 +160,7 @@ function KpiCard({
       <div
         style={{
           display: "flex",
-          fontSize: highlighted ? 34 : 28,
+          fontSize: highlighted ? 40 : 33,
           fontWeight: 800,
           color,
         }}
@@ -175,17 +195,25 @@ function CategoryRow({
       style={{
         display: "flex",
         alignItems: "center",
-        padding: "26px 32px",
+        padding: "24px 32px",
         borderTop: isTotal ? `2px solid ${DARK_TEXT}` : `1px solid ${BORDER}`,
         backgroundColor: isTotal ? LIGHT_GRAY : "#FFFFFF",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 2 }}>
-        {!isTotal && <Icon path={iconPath} color={MUTED_TEXT} size={20} />}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          flex: 2,
+          minWidth: 0,
+        }}
+      >
+        {!isTotal && <Icon path={iconPath} color={MUTED_TEXT} size={24} />}
         <div
           style={{
             display: "flex",
-            fontSize: 23,
+            fontSize: 27,
             fontWeight: isTotal ? 800 : 600,
             color: DARK_TEXT,
           }}
@@ -196,9 +224,9 @@ function CategoryRow({
       <div
         style={{
           display: "flex",
-          flex: 1,
+          flex: 1.2,
           justifyContent: "flex-end",
-          fontSize: 23,
+          fontSize: 24,
           fontWeight: isTotal ? 800 : 600,
           color: income !== null ? GREEN : MUTED_TEXT,
         }}
@@ -208,9 +236,9 @@ function CategoryRow({
       <div
         style={{
           display: "flex",
-          flex: 1,
+          flex: 1.2,
           justifyContent: "flex-end",
-          fontSize: 23,
+          fontSize: 24,
           fontWeight: isTotal ? 800 : 600,
           color: expense !== null ? RED : MUTED_TEXT,
         }}
@@ -220,9 +248,9 @@ function CategoryRow({
       <div
         style={{
           display: "flex",
-          flex: 1,
+          flex: 1.2,
           justifyContent: "flex-end",
-          fontSize: 23,
+          fontSize: 24,
           fontWeight: 800,
           color: balance !== null ? balanceColor : MUTED_TEXT,
         }}
@@ -248,13 +276,15 @@ const CATEGORY_ICONS: Record<string, string> = {
  * layout fixo seguindo a especificação visual aprovada. Sem fonte
  * Poppins embutida (satori cairia pra fallback silencioso sem o
  * arquivo de fonte); usa a sans-serif padrão do satori, mantendo
- * pesos/tamanhos análogos.
+ * pesos/tamanhos análogos. Fontes deliberadamente grandes (a imagem é
+ * feita pra ser vista em tela de celular, não em monitor).
  */
 export async function renderStatusReportImage(
   input: StatusReportSummary,
 ): Promise<ArrayBuffer> {
   const superavit = Number(input.closingBalance) - Number(input.openingBalance);
   const isSuperavit = superavit >= 0;
+  const logoDataUri = loadOrganizationLogoDataUri();
 
   const image = new ImageResponse(
     <div
@@ -273,16 +303,17 @@ export async function renderStatusReportImage(
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
-          padding: "64px 56px 36px",
+          alignItems: "center",
+          padding: "48px 56px 28px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <StatusReportLogo />
-          <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>
-            {input.organizationName}
-          </div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoDataUri}
+          width={176}
+          height={110}
+          alt={input.organizationName}
+        />
         <div
           style={{
             display: "flex",
@@ -293,21 +324,21 @@ export async function renderStatusReportImage(
           <div
             style={{
               display: "flex",
-              fontSize: 34,
+              fontSize: 40,
               fontWeight: 800,
               color: BLUE,
             }}
           >
             STATUS REPORT
           </div>
-          <div style={{ display: "flex", fontSize: 18, color: MUTED_TEXT }}>
+          <div style={{ display: "flex", fontSize: 22, color: MUTED_TEXT }}>
             Relatório Financeiro do Período
           </div>
         </div>
       </div>
 
       {/* Informações do período */}
-      <div style={{ display: "flex", padding: "0 56px 40px" }}>
+      <div style={{ display: "flex", padding: "0 56px 28px" }}>
         <div
           style={{
             display: "flex",
@@ -318,25 +349,25 @@ export async function renderStatusReportImage(
             justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Icon path={ICON_PATHS.calendar} color={BLUE} size={22} />
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <Icon path={ICON_PATHS.calendar} color={BLUE} size={26} />
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
+              <div style={{ display: "flex", fontSize: 18, color: MUTED_TEXT }}>
                 Período
               </div>
-              <div style={{ display: "flex", fontSize: 19, fontWeight: 700 }}>
+              <div style={{ display: "flex", fontSize: 24, fontWeight: 700 }}>
                 {formatDateOnlyBR(input.dateFrom)} a{" "}
                 {formatDateOnlyBR(input.dateTo)}
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Icon path={ICON_PATHS.clock} color={BLUE} size={22} />
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <Icon path={ICON_PATHS.clock} color={BLUE} size={26} />
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
+              <div style={{ display: "flex", fontSize: 18, color: MUTED_TEXT }}>
                 Emitido em
               </div>
-              <div style={{ display: "flex", fontSize: 19, fontWeight: 700 }}>
+              <div style={{ display: "flex", fontSize: 24, fontWeight: 700 }}>
                 {formatDateOnlyBR(input.generatedAt)} às{" "}
                 {String(input.generatedAt.getUTCHours()).padStart(2, "0")}:
                 {String(input.generatedAt.getUTCMinutes()).padStart(2, "0")}
@@ -347,7 +378,7 @@ export async function renderStatusReportImage(
       </div>
 
       {/* Indicadores principais */}
-      <div style={{ display: "flex", gap: 20, padding: "12px 56px 48px" }}>
+      <div style={{ display: "flex", gap: 20, padding: "8px 56px 36px" }}>
         <KpiCard
           label="SALDO INICIAL"
           value={input.openingBalance}
@@ -383,12 +414,12 @@ export async function renderStatusReportImage(
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            marginBottom: 20,
+            gap: 14,
+            marginBottom: 16,
           }}
         >
-          <Icon path={ICON_PATHS.barChart} color={DARK_TEXT} size={26} />
-          <div style={{ display: "flex", fontSize: 26, fontWeight: 800 }}>
+          <Icon path={ICON_PATHS.barChart} color={DARK_TEXT} size={30} />
+          <div style={{ display: "flex", fontSize: 30, fontWeight: 800 }}>
             RESUMO POR CATEGORIA
           </div>
         </div>
@@ -405,14 +436,14 @@ export async function renderStatusReportImage(
             style={{
               display: "flex",
               backgroundColor: "#F8FAFC",
-              padding: "20px 32px",
+              padding: "16px 32px",
             }}
           >
             <div
               style={{
                 display: "flex",
                 flex: 2,
-                fontSize: 14,
+                fontSize: 18,
                 fontWeight: 700,
                 color: MUTED_TEXT,
               }}
@@ -422,9 +453,9 @@ export async function renderStatusReportImage(
             <div
               style={{
                 display: "flex",
-                flex: 1,
+                flex: 1.2,
                 justifyContent: "flex-end",
-                fontSize: 14,
+                fontSize: 18,
                 fontWeight: 700,
                 color: MUTED_TEXT,
               }}
@@ -434,9 +465,9 @@ export async function renderStatusReportImage(
             <div
               style={{
                 display: "flex",
-                flex: 1,
+                flex: 1.2,
                 justifyContent: "flex-end",
-                fontSize: 14,
+                fontSize: 18,
                 fontWeight: 700,
                 color: MUTED_TEXT,
               }}
@@ -446,9 +477,9 @@ export async function renderStatusReportImage(
             <div
               style={{
                 display: "flex",
-                flex: 1,
+                flex: 1.2,
                 justifyContent: "flex-end",
-                fontSize: 14,
+                fontSize: 18,
                 fontWeight: 700,
                 color: MUTED_TEXT,
               }}
@@ -476,7 +507,7 @@ export async function renderStatusReportImage(
       </div>
 
       {/* Card de resultado final */}
-      <div style={{ display: "flex", padding: "44px 56px 0" }}>
+      <div style={{ display: "flex", padding: "32px 56px 0" }}>
         <div
           style={{
             display: "flex",
@@ -486,7 +517,7 @@ export async function renderStatusReportImage(
             backgroundColor: GREEN_BG,
             border: `1px solid ${GREEN}`,
             borderRadius: 16,
-            padding: "44px 40px",
+            padding: "36px 40px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
@@ -495,8 +526,8 @@ export async function renderStatusReportImage(
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 68,
-                height: 68,
+                width: 72,
+                height: 72,
                 borderRadius: 999,
                 backgroundColor: `${GREEN}26`,
               }}
@@ -506,14 +537,14 @@ export async function renderStatusReportImage(
                   isSuperavit ? ICON_PATHS.trendingUp : ICON_PATHS.trendingDown
                 }
                 color={GREEN}
-                size={34}
+                size={38}
               />
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div
                 style={{
                   display: "flex",
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: 700,
                   color: MUTED_TEXT,
                 }}
@@ -523,7 +554,7 @@ export async function renderStatusReportImage(
               <div
                 style={{
                   display: "flex",
-                  fontSize: 40,
+                  fontSize: 46,
                   fontWeight: 800,
                   color: GREEN,
                 }}
@@ -539,66 +570,59 @@ export async function renderStatusReportImage(
               alignItems: "flex-end",
             }}
           >
-            <div style={{ display: "flex", fontSize: 18, color: MUTED_TEXT }}>
+            <div style={{ display: "flex", fontSize: 20, color: MUTED_TEXT }}>
               {isSuperavit ? "Superávit de" : "Déficit de"}
             </div>
             <div
               style={{
                 display: "flex",
-                fontSize: 28,
+                fontSize: 32,
                 fontWeight: 800,
                 color: isSuperavit ? GREEN : RED,
               }}
             >
               {formatCurrencyBRL(Math.abs(superavit).toFixed(2))}
             </div>
-            <div style={{ display: "flex", fontSize: 16, color: MUTED_TEXT }}>
+            <div style={{ display: "flex", fontSize: 18, color: MUTED_TEXT }}>
               em relação ao saldo inicial.
             </div>
           </div>
         </div>
       </div>
 
-      {/* Rodapé */}
+      {/* Rodapé — sem flex:1/justify-end: com as fontes maiores o
+            conteúdo já ocupa quase toda a tela, então o rodapé só
+            precisa vir logo em seguida, não ser empurrado pro fundo. */}
       <div
         style={{
           display: "flex",
-          flex: 1,
-          flexDirection: "column",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "24px 56px 40px",
+          borderTop: `1px solid ${BORDER}`,
+          marginTop: 28,
         }}
       >
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "32px 56px 48px",
-            borderTop: `1px solid ${BORDER}`,
-            marginTop: 24,
+            alignItems: "baseline",
+            gap: 6,
+            fontSize: 20,
+            color: MUTED_TEXT,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 6,
-              fontSize: 18,
-              color: MUTED_TEXT,
-            }}
-          >
-            <span>Relatório gerado pelo</span>
-            <span style={{ color: BLUE, fontWeight: 700 }}>MedFlow</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <StatusReportLogo />
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", fontSize: 18, fontWeight: 800 }}>
-                MedFlow
-              </div>
-              <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
-                Gestão financeira inteligente para clínicas
-              </div>
+          <span>Relatório gerado pelo</span>
+          <span style={{ color: BLUE, fontWeight: 700 }}>MedFlow</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <MedFlowIcon />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", fontSize: 20, fontWeight: 800 }}>
+              MedFlow
+            </div>
+            <div style={{ display: "flex", fontSize: 16, color: MUTED_TEXT }}>
+              Gestão financeira inteligente para clínicas
             </div>
           </div>
         </div>
