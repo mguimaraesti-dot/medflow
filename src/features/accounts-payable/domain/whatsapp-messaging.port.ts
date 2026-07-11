@@ -9,6 +9,8 @@
  * de barras/Pix com botão de copiar) — ver histórico em
  * `zapi-client.ts`. A confirmação de pagamento é por clique no botão
  * "Pago", que carrega o id da conta — ver `handle-zapi-webhook.use-case.ts`.
+ * A baixa acontece silenciosamente no sistema — decisão de produto:
+ * nenhuma mensagem de confirmação é enviada de volta ao WhatsApp.
  */
 export interface WhatsAppPaymentReminderInput {
   /** Usado como id do botão "Pago" (`pago_<accountsPayableId>`) — o webhook lê esse id direto do payload do clique, sem precisar casar telefone nem mensagem. */
@@ -38,9 +40,6 @@ export interface WhatsAppMessagingPort {
   sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }>;
-
-  /** Mensagem de agradecimento enviada depois que o webhook confirma o pagamento (clique no botão "Pago"). */
-  sendPaymentConfirmedMessage(phone: string): Promise<void>;
 
   /** Mensagem separadora entre um lembrete e outro, quando o cron dispara mais de uma conta pro mesmo telefone na mesma execução. */
   sendSeparatorMessage(phone: string): Promise<void>;

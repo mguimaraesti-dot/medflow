@@ -8,12 +8,10 @@ import { handleZapiWebhookUseCase } from "@/features/accounts-payable/applicatio
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
 import { PrismaUserRepository } from "@/features/auth/infrastructure/prisma-user.repository";
-import { ZapiWhatsAppMessaging } from "@/features/accounts-payable/infrastructure/zapi-whatsapp-messaging";
 
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
 const safeRepository = new PrismaSafeRepository();
 const userRepository = new PrismaUserRepository();
-const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
 /**
  * Recebe o clique no botão "Pago" enviado pela Z-API — sem sessão,
@@ -88,9 +86,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data: { received: true, ignored: true } });
     }
 
-    const phoneRaw: unknown = body?.phone;
-    const phone = typeof phoneRaw === "string" ? phoneRaw : "";
-
     // MVP mono-organização (CLAUDE.md) — o webhook não tem sessão, então
     // resolve a única organização existente (mesmo padrão do cron).
     const organization = await prisma.organization.findFirst();
@@ -99,16 +94,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data: { received: true, ignored: true } });
     }
 
-    await handleZapiWebhookUseCase(
-      { phone, accountsPayableId },
-      organization.id,
-      {
-        accountsPayableRepository,
-        safeRepository,
-        userRepository,
-        whatsAppMessaging,
-      },
-    );
+    await handleZapiWebhookUseCase({ accountsPayableId }, organization.id, {
+      accountsPayableRepository,
+      safeRepository,
+      userRepository,
+    });
 
     return NextResponse.json({ data: { received: true } });
   } catch (error) {
