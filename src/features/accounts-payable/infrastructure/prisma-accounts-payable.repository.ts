@@ -12,7 +12,10 @@ import type {
   UpdateAccountsPayableInput,
   UpdateManyForSeriesInput,
 } from "../domain/accounts-payable.repository";
-import type { AccountsPayable } from "../domain/accounts-payable.entity";
+import type {
+  AccountsPayable,
+  PaymentOrigin,
+} from "../domain/accounts-payable.entity";
 import type { AccountsPayableSummary } from "../domain/accounts-payable-summary.entity";
 
 // Mesmo padrão de join usado em PrismaCashFlowEntryRepository — duplicado
@@ -565,6 +568,47 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return rows.map((row) => ({
       categoryId: row.categoryId,
       amount: (row._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+    }));
+  }
+
+  async listPaidForReport(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<
+    {
+      supplierId: string;
+      supplierName: string;
+      categoryId: string;
+      amount: string;
+      paidAt: Date;
+      paymentOrigin: PaymentOrigin;
+    }[]
+  > {
+    const rows = await prisma.accountsPayable.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        status: "PAID",
+        paidAt: { gte: from, lte: to },
+      },
+      select: {
+        supplierId: true,
+        categoryId: true,
+        amount: true,
+        paidAt: true,
+        paymentOrigin: true,
+        supplier: { select: { name: true } },
+      },
+    });
+
+    return rows.map((row) => ({
+      supplierId: row.supplierId,
+      supplierName: row.supplier.name,
+      categoryId: row.categoryId,
+      amount: row.amount.toFixed(2),
+      paidAt: row.paidAt as Date,
+      paymentOrigin: row.paymentOrigin,
     }));
   }
 
