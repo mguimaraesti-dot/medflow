@@ -17,7 +17,7 @@ const DEFAULT_DESCRIPTION: Record<SafeMovementResponseDTO["type"], string> = {
  * Ajuste) — só "Entrada" (dinheiro entrou no Cofre) ou "Saída"
  * (dinheiro saiu do Cofre), decidido pelo sinal.
  */
-export function signedAmount(movement: SafeMovementResponseDTO): number {
+function signedAmount(movement: SafeMovementResponseDTO): number {
   if (
     movement.type === "FUNDING" ||
     movement.type === "ACCOUNTS_PAYABLE_PAYMENT"
@@ -66,7 +66,7 @@ export function categoryLabel(movement: SafeMovementResponseDTO): string {
   return CATEGORY_FALLBACK[movement.type];
 }
 
-export type MovementDirection = "IN" | "OUT" | "ADJUSTMENT";
+type MovementDirection = "IN" | "OUT" | "ADJUSTMENT";
 
 /** "Ajuste" é uma categoria visual própria (azul) só pro `MANUAL_ADJUSTMENT` positivo — os demais seguem Entrada/Saída pelo sinal. */
 export function movementDirection(

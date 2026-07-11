@@ -14,7 +14,7 @@ export interface CashFlowEntriesFilter {
   pageSize?: number;
 }
 
-export const cashFlowEntriesQueryKey = (filter: CashFlowEntriesFilter) =>
+const cashFlowEntriesQueryKey = (filter: CashFlowEntriesFilter) =>
   ["cash-flow", "entries", filter] as const;
 
 export function useCashFlowEntries(

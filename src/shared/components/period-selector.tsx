@@ -78,7 +78,7 @@ export function computePeriodRange(
   return custom ?? { from: today, to: endOfDayUTC(today) };
 }
 
-export const PERIOD_PRESET_OPTIONS = [
+const PERIOD_PRESET_OPTIONS = [
   { value: "TODAY" as const, label: "Hoje" },
   { value: "WEEK" as const, label: "Esta Semana" },
   { value: "MONTH" as const, label: "Este Mês" },
