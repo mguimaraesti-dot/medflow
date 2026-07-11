@@ -48,13 +48,19 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
         overdueCount={overview.overdueCount}
       />
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
-        <DashboardOverviewCard
-          cashBalance={overview.cashBalance}
-          safeBalance={overview.safeBalance}
-          availableTotal={overview.availableTotal}
-          pendencies={overview.pendencies}
-        />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="flex flex-col gap-4">
+          <DashboardOverviewCard
+            cashBalance={overview.cashBalance}
+            safeBalance={overview.safeBalance}
+            availableTotal={overview.availableTotal}
+            pendencies={overview.pendencies}
+          />
+          <DashboardAgendaCard
+            dueTodayCount={overview.dueTodayCount}
+            overdueCount={overview.overdueCount}
+          />
+        </div>
         <DashboardFinancialFlowCard
           receivedTodayTotal={overview.receivedTodayTotal}
           receivedTodayCash={overview.receivedTodayCash}
@@ -66,13 +72,7 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
           paidTodayCount={overview.paidTodayCount}
           availableTotal={overview.availableTotal}
         />
-        <div className="flex flex-col gap-4">
-          <DashboardTimelineCard events={overview.timeline} />
-          <DashboardAgendaCard
-            dueTodayCount={overview.dueTodayCount}
-            overdueCount={overview.overdueCount}
-          />
-        </div>
+        <DashboardTimelineCard events={overview.timeline} />
       </div>
 
       <DashboardQuickActions permissions={permissions} />

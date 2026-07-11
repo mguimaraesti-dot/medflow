@@ -66,9 +66,9 @@ export function DashboardTimelineCard({
           Ver todas
         </Link>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-1 px-4">
+      <CardContent className="flex flex-1 flex-col justify-center gap-1 px-4">
         {events.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-center text-sm">
             Nenhuma movimentação hoje ainda.
           </p>
         ) : (
