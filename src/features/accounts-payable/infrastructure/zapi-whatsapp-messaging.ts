@@ -3,7 +3,7 @@ import {
   sendButtonListMessage,
   sendButtonCodeMessage,
   sendButtonPixMessage,
-} from "./zapi-client";
+} from "@/core/whatsapp/zapi-client";
 import type {
   WhatsAppMessagingPort,
   WhatsAppPaymentReminderInput,

@@ -360,3 +360,15 @@ export class WhatsAppSendError extends DomainError {
     });
   }
 }
+
+/** Mesma falha externa de `WhatsAppSendError`, mas pro botão "Enviar por WhatsApp" dos relatórios (Central de Relatórios) — não há `accountsPayableId` nesse contexto. */
+export class ReportWhatsAppSendError extends DomainError {
+  readonly code = "REPORT_WHATSAPP_SEND_ERROR";
+  readonly httpStatus = 502;
+
+  constructor(reportId: string) {
+    super("Não foi possível enviar o relatório por WhatsApp agora.", {
+      reportId,
+    });
+  }
+}

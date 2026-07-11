@@ -208,6 +208,22 @@ export async function sendButtonCodeMessage(
   });
 }
 
+export interface SendImageInput {
+  phone: string;
+  /** Data URI base64 (`data:image/png;base64,...`) — a Z-API também aceita URL pública, mas aqui a imagem é gerada on-the-fly (`next/og`) e nunca fica hospedada em lugar nenhum. */
+  image: string;
+  caption?: string;
+}
+
+/** Envia uma imagem (documentado em `/send-image`: `image` aceita URL pública OU base64). Usado pelo botão "Enviar por WhatsApp" dos relatórios (imagem-resumo, não anexo de arquivo). */
+export async function sendImageMessage(input: SendImageInput): Promise<void> {
+  await post("/send-image", {
+    phone: input.phone,
+    image: input.image,
+    caption: input.caption,
+  });
+}
+
 export interface SendButtonPixInput {
   phone: string;
   pixKey: string;

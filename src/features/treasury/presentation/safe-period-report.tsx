@@ -12,6 +12,7 @@ import {
 import { formatCurrencyBRL, formatDateOnlyLocalBR } from "@/shared/lib/format";
 import { EmptyState } from "@/shared/components/empty-state";
 import { ReportExportMenu } from "@/shared/components/report-export-menu";
+import { SendSafePeriodReportWhatsAppButton } from "./send-safe-period-report-whatsapp-button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import {
   Table,
@@ -107,7 +108,11 @@ export function SafePeriodReport({
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <SendSafePeriodReportWhatsAppButton
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+        />
         <ReportExportMenu title={title} columns={columns} rows={items} />
       </div>
 
