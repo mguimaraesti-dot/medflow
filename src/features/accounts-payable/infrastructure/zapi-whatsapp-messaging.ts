@@ -49,12 +49,12 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       buttonLabel: "Pago",
     });
 
-    if (input.digitableLine) {
+    if (input.barcode) {
       await delay(3000);
       await sendButtonCodeMessage({
         phone: input.phone,
         message: "Código de barras da fatura:",
-        code: input.digitableLine,
+        code: input.barcode,
         buttonText: "Copiar código de barras",
       });
     }

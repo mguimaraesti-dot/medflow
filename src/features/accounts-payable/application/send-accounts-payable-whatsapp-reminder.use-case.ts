@@ -56,7 +56,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
 
   logger.info("prestes a chamar Z-API", {
     accountsPayableId: payable.id,
-    hasDigitableLine: Boolean(payable.digitableLine),
+    hasBarcode: Boolean(payable.barcode),
     hasPixKey: Boolean(payable.pixKey),
   });
 
@@ -69,7 +69,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
       description: payable.description,
       amount: formatCurrencyBRL(payable.amount.toString()),
       dueDate: formatDateOnlyBR(payable.dueDate),
-      digitableLine: payable.digitableLine,
+      barcode: payable.barcode,
       pixKey: payable.pixKey,
     });
     messageId = result.messageId;

@@ -26,7 +26,7 @@ function buildPayable(overrides: Record<string, unknown> = {}) {
     amount: new Prisma.Decimal("150.00"),
     description: "Aluguel",
     dueDate: new Date("2026-07-20T00:00:00.000Z"),
-    digitableLine: "12345",
+    barcode: "12345",
     pixKey: "pix-key-1",
     ...overrides,
   };
@@ -165,7 +165,7 @@ describe("sendAccountsPayableWhatsAppReminderUseCase", () => {
         accountsPayableId: "payable-1",
         phone: "11999999999",
         supplierName: "Fornecedor Teste",
-        digitableLine: "12345",
+        barcode: "12345",
         pixKey: "pix-key-1",
       }),
     );
