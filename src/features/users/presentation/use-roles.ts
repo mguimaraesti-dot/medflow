@@ -14,5 +14,8 @@ export function useRoles() {
   return useQuery({
     queryKey: ["roles"],
     queryFn: () => apiFetch<RoleOption[]>("/api/roles"),
+    // A própria rota (`/api/roles`) documenta isso como "cinco linhas
+    // estáticas" — não muda em runtime, não precisa refazer a busca.
+    staleTime: Infinity,
   });
 }
