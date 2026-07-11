@@ -56,4 +56,51 @@ export class PrismaSafeRepository implements SafeRepository {
 
     return creditsSum.plus(adjustmentSum).minus(fundingSum);
   }
+
+  /** Igual a `getBalance()`, só acrescenta `createdAt: { lt: asOf }` em cada agregação. */
+  async getBalanceAsOf(
+    organizationId: string,
+    asOf: Date,
+  ): Promise<Prisma.Decimal> {
+    const safe = await prisma.safe.findUnique({ where: { organizationId } });
+    if (!safe) return new Prisma.Decimal(0);
+
+    const dateFilter = { createdAt: { lt: asOf } };
+
+    const [funding, credits, manualAdjustment] = await Promise.all([
+      prisma.safeMovement.aggregate({
+        where: {
+          safeId: safe.id,
+          status: "CONFIRMED",
+          type: { in: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
+          ...dateFilter,
+        },
+        _sum: { amount: true },
+      }),
+      prisma.safeMovement.aggregate({
+        where: {
+          safeId: safe.id,
+          status: "CONFIRMED",
+          type: { in: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
+          ...dateFilter,
+        },
+        _sum: { amount: true },
+      }),
+      prisma.safeMovement.aggregate({
+        where: {
+          safeId: safe.id,
+          status: "CONFIRMED",
+          type: "MANUAL_ADJUSTMENT",
+          ...dateFilter,
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const fundingSum = funding._sum.amount ?? new Prisma.Decimal(0);
+    const creditsSum = credits._sum.amount ?? new Prisma.Decimal(0);
+    const adjustmentSum = manualAdjustment._sum.amount ?? new Prisma.Decimal(0);
+
+    return creditsSum.plus(adjustmentSum).minus(fundingSum);
+  }
 }
