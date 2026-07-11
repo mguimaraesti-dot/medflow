@@ -227,6 +227,36 @@ export class PrismaSafeMovementRepository implements SafeMovementRepository {
     return { in: inSum.toFixed(2), out: outSum.toFixed(2) };
   }
 
+  /** Igual ao par `adjustmentInResult`/`adjustmentOutResult` acima, mas isolado — usado na linha "Ajustes" do Status Report (nunca combinado com os demais tipos). */
+  async sumAdjustmentsSignedByDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<DateRangeSignedSum> {
+    const base: Prisma.SafeMovementWhereInput = {
+      organizationId,
+      status: "CONFIRMED",
+      type: "MANUAL_ADJUSTMENT",
+      createdAt: { gte: from, lte: to },
+    };
+
+    const [inResult, outResult] = await Promise.all([
+      prisma.safeMovement.aggregate({
+        where: { ...base, amount: { gt: 0 } },
+        _sum: { amount: true },
+      }),
+      prisma.safeMovement.aggregate({
+        where: { ...base, amount: { lt: 0 } },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    return {
+      in: (inResult._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+      out: (outResult._sum.amount ?? new Prisma.Decimal(0)).abs().toFixed(2),
+    };
+  }
+
   async countAndSumPending(organizationId: string): Promise<PendingSummary> {
     const result = await prisma.safeMovement.aggregate({
       where: { organizationId, status: "PENDING" },

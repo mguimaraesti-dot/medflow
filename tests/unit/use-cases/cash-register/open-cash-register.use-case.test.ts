@@ -33,6 +33,7 @@ function makeSafeRepo(balance: string): SafeRepository {
   return {
     findByOrganization: vi.fn(),
     getBalance: vi.fn().mockResolvedValue(new Prisma.Decimal(balance)),
+    getBalanceAsOf: vi.fn().mockResolvedValue(new Prisma.Decimal(balance)),
   };
 }
 
