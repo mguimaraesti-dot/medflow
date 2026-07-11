@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
-  BarChart3,
   Building2,
   Landmark,
   LayoutDashboard,
@@ -86,12 +85,6 @@ const CADASTROS: NavItem[] = [
 ];
 
 const SOLTOS: NavItem[] = [
-  {
-    href: "/reports",
-    label: "Relatórios",
-    icon: BarChart3,
-    isVisible: hasBroaderThanCashRegisterAccess,
-  },
   {
     href: "/settings",
     label: "Configurações",

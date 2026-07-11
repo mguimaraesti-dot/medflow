@@ -59,6 +59,8 @@ Ideias que surgirem durante qualquer Sprint entram aqui primeiro. Só recebem um
 - Assistente Financeiro (IA) — sugerido em mockup de referência do Design Pass; escopo (o que ele faz, que dados acessa) não definido ainda
 - Central de notificações in-app (sino com contador) — distinto de "Notificações push" acima, que é sobre push real
 - Páginas de Relatórios e Configurações dedicadas (hoje não existem como telas)
+- Relatório comparativo mês a mês (Central de Relatórios) — comparar receitas/despesas/saldo do Cofre entre meses lado a lado (ex: colunas Jul/Ago/Set), sugerido durante a reformulação v2 da Central de Relatórios (`prompt-central-relatorios.md`); ainda não escopado (granularidade, quantos meses simultâneos, gráfico x tabela)
+- Relatório simplificado para o Contador (Central de Relatórios) — visão exportável só com o essencial (entradas/saídas/saldo por período, sem o detalhe operacional dos relatórios internos), sugerido no mesmo momento acima; formato exato (PDF único, planilha, quais totais) ainda não definido
 
 ---
 
