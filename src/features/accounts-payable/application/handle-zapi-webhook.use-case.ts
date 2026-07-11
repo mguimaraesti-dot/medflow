@@ -15,88 +15,36 @@ interface Deps {
 }
 
 export interface HandleZapiWebhookInput {
-  /** Telefone de quem enviou a mensagem (pra mandar a confirmação de volta). */
+  /** Telefone de quem clicou (pra mandar a confirmação de volta). */
   phone: string;
-  messageText: string;
-  /** Id da mensagem citada na resposta (reply/quote do WhatsApp) — `null` se não for uma citação. */
-  quotedMessageId: string | null;
-}
-
-/** Remove acentos via `\p{Diacritic}` (Unicode property escape) — mais seguro que digitar a faixa de marcas diacríticas à mão no código-fonte. */
-function normalizeText(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
-    .toLowerCase();
-}
-
-/** Aceita variações comuns: "pago", "paguei", "pago!", "Pago.", etc. */
-function isPaymentConfirmationText(text: string): boolean {
-  return /^pag(o|uei)\b/.test(normalizeText(text));
+  /** Extraído do id do botão "Pago" clicado (`pago_<id>` — ver `route.ts`). */
+  accountsPayableId: string;
 }
 
 /**
- * Confirma o pagamento a partir de uma resposta de texto "PAGO" no
- * WhatsApp — os endpoints de botão interativo da Z-API não entregam
- * de fato nesta instância (ver `zapi-client.ts`), então a confirmação
- * deixou de ser por clique e passou a ser por texto.
- *
- * Desambiguação: o número de WhatsApp é único pra clínica inteira
- * (nunca por conta — `OrganizationSettings.whatsapp`), então o
- * telefone sozinho não diz qual conta confirmar. Tenta, nesta ordem:
- * 1. Casar pelo id da mensagem citada (`quotedMessageId`) — a pessoa
- *    respondeu citando a mensagem do lembrete de uma conta específica.
- * 2. Se não veio citação (ou não achou nada), só confirma quando há
- *    EXATAMENTE 1 conta PENDENTE que já recebeu lembrete — nunca
- *    adivinha entre várias (integridade financeira não é negociável,
- *    ver CLAUDE.md). Com 0 ou 2+ candidatas, ignora e loga um aviso;
- *    a equipe confirma manualmente pelo app (que já funciona).
+ * Confirma o pagamento a partir do clique no botão "Pago" enviado
+ * junto do lembrete — o id da conta vem embutido no próprio id do
+ * botão (`pago_<accountsPayableId>`), então não depende de casar
+ * telefone (único por organização) nem mensagem citada.
  *
  * Idempotente: se a conta encontrada já não está PENDENTE, não faz
- * nada (2ª resposta "PAGO" não tem efeito colateral).
+ * nada (2º clique não tem efeito colateral).
  */
 export async function handleZapiWebhookUseCase(
   input: HandleZapiWebhookInput,
   organizationId: string,
   deps: Deps,
 ): Promise<void> {
-  if (!isPaymentConfirmationText(input.messageText)) {
-    logger.info(
-      "Webhook Z-API ignorado: texto não é confirmação de pagamento",
-      {
-        messageText: input.messageText,
-      },
+  const payable = await deps.accountsPayableRepository.findById(
+    input.accountsPayableId,
+  );
+
+  if (!payable || payable.organizationId !== organizationId) {
+    logger.warn(
+      "Webhook Z-API: conta não encontrada (id do botão) ou de outra organização — ignorado",
+      { accountsPayableId: input.accountsPayableId, organizationId },
     );
     return;
-  }
-
-  let payable = input.quotedMessageId
-    ? await deps.accountsPayableRepository.findByLastReminderMessageId(
-        input.quotedMessageId,
-      )
-    : null;
-
-  if (!payable) {
-    const candidates = (
-      await deps.accountsPayableRepository.listPendingForReminders(
-        organizationId,
-      )
-    ).filter((candidate) => candidate.lastReminderSentAt !== null);
-
-    if (candidates.length === 1) {
-      payable = candidates[0];
-    } else {
-      logger.warn(
-        "Webhook Z-API: não foi possível identificar a conta com confiança (ambíguo ou nenhuma candidata) — ignorado, confirme manualmente pelo app",
-        {
-          organizationId,
-          candidateCount: candidates.length,
-          quotedMessageId: input.quotedMessageId,
-        },
-      );
-      return;
-    }
   }
 
   if (payable.status !== "PENDING") {
@@ -128,7 +76,7 @@ export async function handleZapiWebhookUseCase(
     "WHATSAPP",
   );
 
-  logger.info("Pagamento confirmado via webhook Z-API", {
+  logger.info("Pagamento confirmado via webhook Z-API (clique em Pago)", {
     accountsPayableId: payable.id,
     organizationId: payable.organizationId,
   });

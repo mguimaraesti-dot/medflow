@@ -118,11 +118,6 @@ export interface UpdateManyForSeriesInput {
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;
 
-  /** Usado pelo webhook da Z-API — casa a resposta "PAGO" (citando a mensagem do lembrete) com a conta que gerou aquele `lastReminderMessageId`. */
-  findByLastReminderMessageId(
-    messageId: string,
-  ): Promise<AccountsPayable | null>;
-
   list(
     filter: ListAccountsPayableFilter,
     pagination: Pagination,

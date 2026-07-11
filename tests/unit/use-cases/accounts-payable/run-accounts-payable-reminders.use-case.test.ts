@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { runAccountsPayableRemindersUseCase } from "@/features/accounts-payable/application/run-accounts-payable-reminders.use-case";
 import { sendAccountsPayableWhatsAppReminderUseCase } from "@/features/accounts-payable/application/send-accounts-payable-whatsapp-reminder.use-case";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
+import type { WhatsAppMessagingPort } from "@/features/accounts-payable/domain/whatsapp-messaging.port";
 
 vi.mock(
   "@/features/accounts-payable/application/send-accounts-payable-whatsapp-reminder.use-case",
@@ -20,16 +21,30 @@ function payable(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function buildDeps(candidates: ReturnType<typeof payable>[]) {
+function buildDeps(
+  candidates: ReturnType<typeof payable>[],
+  overrides: { whatsapp?: string | null } = {},
+) {
   const accountsPayableRepository = {
     listPendingForReminders: vi.fn().mockResolvedValue(candidates),
   } as unknown as AccountsPayableRepository;
 
+  const organizationSettingsRepository = {
+    findByOrganization: vi.fn().mockResolvedValue({
+      whatsapp:
+        overrides.whatsapp === undefined ? "11999999999" : overrides.whatsapp,
+    }),
+  } as never;
+
+  const whatsAppMessaging = {
+    sendSeparatorMessage: vi.fn().mockResolvedValue(undefined),
+  } as unknown as WhatsAppMessagingPort;
+
   return {
     accountsPayableRepository,
-    organizationSettingsRepository: {} as never,
+    organizationSettingsRepository,
     supplierRepository: {} as never,
-    whatsAppMessaging: {} as never,
+    whatsAppMessaging,
   };
 }
 
@@ -129,5 +144,56 @@ describe("runAccountsPayableRemindersUseCase", () => {
 
     expect(sendAccountsPayableWhatsAppReminderUseCase).toHaveBeenCalledTimes(2);
     expect(result).toEqual({ sentCount: 1, failedCount: 1 });
+  });
+
+  it("insere separador entre contas do mesmo lote, mas nunca antes da primeira", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const candidates = [
+      payable({ id: "payable-1" }),
+      payable({ id: "payable-2" }),
+      payable({ id: "payable-3" }),
+    ];
+    const deps = buildDeps(candidates);
+
+    await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(deps.whatsAppMessaging.sendSeparatorMessage).toHaveBeenCalledTimes(
+      2,
+    );
+    expect(deps.whatsAppMessaging.sendSeparatorMessage).toHaveBeenCalledWith(
+      "11999999999",
+    );
+  });
+
+  it("não envia separador quando só há 1 conta due no lote", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const deps = buildDeps([payable({ id: "payable-1" })]);
+
+    await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(deps.whatsAppMessaging.sendSeparatorMessage).not.toHaveBeenCalled();
+  });
+
+  it("não quebra quando a organização não tem WhatsApp configurado (cada conta falha por conta própria)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const candidates = [
+      payable({ id: "payable-1" }),
+      payable({ id: "payable-2" }),
+    ];
+    const deps = buildDeps(candidates, { whatsapp: null });
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(deps.whatsAppMessaging.sendSeparatorMessage).not.toHaveBeenCalled();
+    expect(result).toEqual({ sentCount: 2, failedCount: 0 });
   });
 });

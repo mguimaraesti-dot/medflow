@@ -8,14 +8,20 @@ import { logger } from "@/core/logger/logger";
  * Nunca importar este módulo em código "use client": lê `ZAPI_TOKEN` e
  * `ZAPI_CLIENT_TOKEN` (segredos), só existe no servidor.
  *
- * Só usa `/send-text` (mensagem de texto simples) — testamos
- * manualmente os endpoints de botão interativo (`/send-button-list`,
- * `/send-button-otp`, `/send-button-pix`) nesta instância e NENHUM
- * entrega de fato no WhatsApp, mesmo respondendo 200 com
- * zaapId/messageId. Por isso a confirmação de pagamento também deixou
- * de ser por clique de botão e passou a ser por resposta de texto
- * ("PAGO"), citando a mensagem do lembrete — ver
- * `handle-zapi-webhook.use-case.ts`.
+ * HISTÓRICO: os endpoints de botão interativo (`/send-button-list`,
+ * `/send-button-otp`, `/send-button-pix`) inicialmente pareciam não
+ * entregar mensagem nenhuma nesta instância (200 com zaapId/messageId,
+ * nada chegava no WhatsApp de teste). A causa raiz era a opção
+ * "Mensagens de Botões" desativada nas Configurações Beta do painel da
+ * Z-API — com ela ativada, os três tipos de botão foram testados e
+ * confirmados entregando de verdade. Por isso o fluxo voltou a usar
+ * botões nativos (cartão-resumo com botão "Pago", código de barras e
+ * Pix com botão de copiar), com o id da conta embutido no botão
+ * (`pago_<accountsPayableId>`) — a confirmação de pagamento volta a
+ * ser por clique, não mais por resposta de texto "PAGO".
+ *
+ * `/send-text` continua existindo pra mensagens sem interação
+ * (separador entre contas do mesmo lote, agradecimento pós-pagamento).
  *
  * IMPORTANTE: a Z-API às vezes responde HTTP 200 mesmo quando a
  * mensagem não é entregue de verdade (instância desconectada, número
@@ -142,7 +148,7 @@ export interface SendTextInput {
   message: string;
 }
 
-/** Único tipo de mensagem usado hoje — texto simples (ver aviso no topo do arquivo). Devolve o id da mensagem enviada, usado pra casar a resposta "PAGO" (citação) com a conta certa. */
+/** Mensagem de texto simples, sem interação — usada só pro separador entre contas do mesmo lote e pelo agradecimento pós-pagamento (ver `zapi-whatsapp-messaging.ts`). */
 export async function sendTextMessage(
   input: SendTextInput,
 ): Promise<{ messageId: string | null }> {
@@ -155,4 +161,68 @@ export async function sendTextMessage(
     responseBody?.messageId ?? responseBody?.zaapId ?? responseBody?.id;
 
   return { messageId: messageId ?? null };
+}
+
+export interface SendButtonListInput {
+  phone: string;
+  message: string;
+  /** Id do botão — carrega o `accountsPayableId` (prefixado `pago_`), pro webhook identificar exatamente qual conta confirmar sem precisar casar telefone nem mensagem citada. */
+  buttonId: string;
+  buttonLabel: string;
+}
+
+/** Cartão-resumo do lembrete com um único botão de ação (ex: "Pago"). */
+export async function sendButtonListMessage(
+  input: SendButtonListInput,
+): Promise<{ messageId: string | null }> {
+  const responseBody = (await post("/send-button-list", {
+    phone: input.phone,
+    message: input.message,
+    buttonList: {
+      buttons: [{ id: input.buttonId, label: input.buttonLabel }],
+    },
+  })) as ZapiSendTextResponse | undefined;
+
+  const messageId =
+    responseBody?.messageId ?? responseBody?.zaapId ?? responseBody?.id;
+
+  return { messageId: messageId ?? null };
+}
+
+export interface SendButtonCodeInput {
+  phone: string;
+  message: string;
+  code: string;
+  buttonText: string;
+}
+
+/** Mensagem com botão nativo de copiar um código (usado pro código de barras do boleto). */
+export async function sendButtonCodeMessage(
+  input: SendButtonCodeInput,
+): Promise<void> {
+  await post("/send-button-otp", {
+    phone: input.phone,
+    message: input.message,
+    code: input.code,
+    buttonText: input.buttonText,
+  });
+}
+
+export interface SendButtonPixInput {
+  phone: string;
+  pixKey: string;
+  pixKeyType: "CPF" | "CNPJ" | "PHONE" | "EMAIL" | "EVP";
+  merchantName: string;
+}
+
+/** Mensagem com botão nativo de copiar a chave Pix. */
+export async function sendButtonPixMessage(
+  input: SendButtonPixInput,
+): Promise<void> {
+  await post("/send-button-pix", {
+    phone: input.phone,
+    pixKey: input.pixKey,
+    type: input.pixKeyType,
+    merchantName: input.merchantName,
+  });
 }

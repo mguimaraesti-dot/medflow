@@ -63,6 +63,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
   let messageId: string | null;
   try {
     const result = await deps.whatsAppMessaging.sendPaymentReminder({
+      accountsPayableId: payable.id,
       phone: settings.whatsapp,
       supplierName: supplier.name,
       description: payable.description,

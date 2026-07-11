@@ -59,16 +59,6 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return row ? toDomain(row) : null;
   }
 
-  async findByLastReminderMessageId(
-    messageId: string,
-  ): Promise<AccountsPayable | null> {
-    const row = await prisma.accountsPayable.findFirst({
-      where: { lastReminderMessageId: messageId },
-      include: USER_NAMES_INCLUDE,
-    });
-    return row ? toDomain(row) : null;
-  }
-
   async list(
     filter: ListAccountsPayableFilter,
     pagination: Pagination,

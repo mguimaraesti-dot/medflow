@@ -16,20 +16,24 @@ const userRepository = new PrismaUserRepository();
 const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
 /**
- * Recebe a resposta de texto "PAGO" enviada pela Z-API — sem sessão,
+ * Recebe o clique no botão "Pago" enviado pela Z-API — sem sessão,
  * autenticada por um `?secret=` na query string (cadastrado também no
  * painel da Z-API) em vez de `requirePermission`. O painel da Z-API
  * não tem campo de header customizado pra webhook, só permite anexar
  * a URL — por isso o segredo vai na query string, não num header.
  *
- * Confirmação por texto, não por clique de botão — testamos os
- * endpoints de botão interativo desta instância e nenhum entrega de
- * fato no WhatsApp (ver `zapi-client.ts`).
- *
- * O formato exato do payload de mensagem recebida da Z-API não foi
- * validado contra a API de verdade ainda — o `logger.info` abaixo loga
- * o payload bruto de propósito, pra ajustar os campos abaixo
- * (`messageText`, `quotedMessageId`) depois do primeiro teste real.
+ * O id do botão clicado (`pago_<accountsPayableId>`) identifica a
+ * conta exatamente, sem precisar casar telefone (único por
+ * organização) nem mensagem citada — ver `zapi-whatsapp-messaging.ts`.
+ * Como ainda não confirmamos contra a API de verdade o campo exato em
+ * que a Z-API embute o id do botão clicado no payload do callback
+ * (só tínhamos confirmado o formato da resposta de texto, antes de
+ * reverter pra botões — ver histórico em `zapi-client.ts`), a extração
+ * abaixo procura o token "pago_<id>" em qualquer lugar do payload
+ * bruto, em vez de um campo fixo — tolerante ao formato exato, já que
+ * esse prefixo só existe nos ids que o próprio sistema gera. Se o
+ * primeiro teste real mostrar que não bate, ajustar aqui usando os
+ * logs (`body` completo já é logado abaixo).
  */
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
@@ -43,33 +47,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     logger.info("Payload recebido do webhook Z-API", { body });
 
-    // Mensagens enviadas pelo próprio sistema (fromMe) ou eventos que não
-    // são texto (status de entrega, presença etc.) são ignorados.
-    const messageText: unknown = body?.text?.message ?? body?.message?.text;
-    const phone: unknown = body?.phone;
+    const buttonIdMatch = JSON.stringify(body).match(/pago_([\w-]+)/);
+    const accountsPayableId = buttonIdMatch ? buttonIdMatch[1] : null;
 
-    if (
-      typeof messageText !== "string" ||
-      !messageText ||
-      typeof phone !== "string" ||
-      !phone ||
-      body?.fromMe
-    ) {
+    if (!accountsPayableId) {
+      // Não é um clique no botão "Pago" (status de entrega, presença,
+      // outro tipo de evento) — ignora.
       return NextResponse.json({ data: { received: true, ignored: true } });
     }
 
-    // Id da mensagem citada (reply/quote) — nome do campo ainda não
-    // confirmado contra a API de verdade, tentando os caminhos mais
-    // plováveis da documentação da Z-API.
-    const quotedMessageIdRaw: unknown =
-      body?.referenceMessageId ??
-      body?.quotedMsgId ??
-      body?.message?.quotedMsg?.id ??
-      body?.text?.quotedMsg?.id;
-    const quotedMessageId =
-      typeof quotedMessageIdRaw === "string" && quotedMessageIdRaw
-        ? quotedMessageIdRaw
-        : null;
+    const phoneRaw: unknown = body?.phone;
+    const phone = typeof phoneRaw === "string" ? phoneRaw : "";
 
     // MVP mono-organização (CLAUDE.md) — o webhook não tem sessão, então
     // resolve a única organização existente (mesmo padrão do cron).
@@ -80,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     await handleZapiWebhookUseCase(
-      { phone, messageText, quotedMessageId },
+      { phone, accountsPayableId },
       organization.id,
       {
         accountsPayableRepository,

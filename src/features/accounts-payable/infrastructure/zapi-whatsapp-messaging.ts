@@ -1,50 +1,71 @@
-import { sendTextMessage } from "./zapi-client";
+import {
+  sendTextMessage,
+  sendButtonListMessage,
+  sendButtonCodeMessage,
+  sendButtonPixMessage,
+} from "./zapi-client";
 import type {
   WhatsAppMessagingPort,
   WhatsAppPaymentReminderInput,
 } from "../domain/whatsapp-messaging.port";
 
-/** Pequeno intervalo entre as mensagens (evita parecer spam) — curto de propósito: 3 mensagens sequenciais já competem com o limite de tempo da função serverless (ver `maxDuration` nas rotas que chamam este adapter). */
+/** Intervalo entre as mensagens (evita parecer spam e dá tempo da Z-API processar cada botão) — ver `maxDuration` nas rotas que chamam este adapter. */
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Id do botão "Pago" — carrega o `accountsPayableId`, lido direto pelo webhook (ver `handle-zapi-webhook.use-case.ts`). */
+function payButtonId(accountsPayableId: string): string {
+  return `pago_${accountsPayableId}`;
+}
+
 /**
- * Implementa `WhatsAppMessagingPort` sobre a Z-API usando `/send-text`
- * (mensagem de texto simples) — os endpoints de botão interativo desta
- * instância não entregam de fato (ver aviso em `zapi-client.ts`). As
- * mensagens de boleto/Pix só são enviadas quando a conta tem o dado
- * correspondente cadastrado — nem toda conta a pagar tem boleto ou
- * chave Pix.
+ * Implementa `WhatsAppMessagingPort` sobre a Z-API usando botões nativos
+ * (ver histórico em `zapi-client.ts`). As mensagens de boleto/Pix só são
+ * enviadas quando a conta tem o dado correspondente cadastrado — nem
+ * toda conta a pagar tem boleto ou chave Pix.
+ *
+ * O tipo de chave Pix (`CPF`/`CNPJ`/`PHONE`/`EMAIL`/`EVP`) não existe
+ * hoje no cadastro do MedFlow (`AccountsPayable.pixKey` é só a chave,
+ * sem o tipo) — usa sempre `"EVP"` (chave aleatória) como padrão, igual
+ * ao protótipo. Se a clínica cadastrar chaves de outros tipos (CPF,
+ * e-mail, telefone), vale testar se o botão de copiar da Z-API ainda
+ * funciona corretamente com o tipo errado, ou se isso precisa virar um
+ * campo novo no cadastro.
  */
 export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }> {
-    const { messageId } = await sendTextMessage({
+    const { messageId } = await sendButtonListMessage({
       phone: input.phone,
       message:
         `🧾 *Conta a Pagar*\n\n` +
         `Fornecedor: ${input.supplierName}\n` +
         `Descrição: ${input.description}\n` +
         `Valor: ${input.amount}\n` +
-        `Vencimento: ${input.dueDate}\n\n` +
-        `✅ Assim que pagar, responda *esta mensagem* (cite-a) com *PAGO* para darmos baixa automaticamente.`,
+        `Vencimento: ${input.dueDate}`,
+      buttonId: payButtonId(input.accountsPayableId),
+      buttonLabel: "Pago",
     });
 
     if (input.digitableLine) {
-      await delay(1200);
-      await sendTextMessage({
+      await delay(3000);
+      await sendButtonCodeMessage({
         phone: input.phone,
-        message: `📄 Código de barras do boleto:\n${input.digitableLine}`,
+        message: "Código de barras da fatura:",
+        code: input.digitableLine,
+        buttonText: "Copiar código de barras",
       });
     }
 
     if (input.pixKey) {
-      await delay(1200);
-      await sendTextMessage({
+      await delay(3000);
+      await sendButtonPixMessage({
         phone: input.phone,
-        message: `💠 Chave Pix para pagamento:\n${input.pixKey}`,
+        pixKey: input.pixKey,
+        pixKeyType: "EVP",
+        merchantName: input.supplierName,
       });
     }
 
@@ -55,6 +76,13 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     await sendTextMessage({
       phone,
       message: "✅ Pagamento confirmado! Obrigado.",
+    });
+  }
+
+  async sendSeparatorMessage(phone: string): Promise<void> {
+    await sendTextMessage({
+      phone,
+      message: "*".repeat(30),
     });
   }
 }

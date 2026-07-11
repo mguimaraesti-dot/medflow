@@ -18,25 +18,18 @@ function buildPayable(overrides: Record<string, unknown> = {}) {
     id: "payable-1",
     organizationId: "org-1",
     status: "PENDING",
-    lastReminderSentAt: new Date("2026-07-10T10:00:00.000Z"),
     ...overrides,
   };
 }
 
 function buildDeps(overrides: {
-  byMessageId?: Record<string, unknown> | null;
-  candidates?: Record<string, unknown>[];
+  payable?: Record<string, unknown> | null;
   systemUser?: { id: string } | null;
 }) {
+  const payable =
+    overrides.payable === undefined ? buildPayable() : overrides.payable;
   const accountsPayableRepository = {
-    findByLastReminderMessageId: vi
-      .fn()
-      .mockResolvedValue(
-        overrides.byMessageId === undefined ? null : overrides.byMessageId,
-      ),
-    listPendingForReminders: vi
-      .fn()
-      .mockResolvedValue(overrides.candidates ?? [buildPayable()]),
+    findById: vi.fn().mockResolvedValue(payable),
   } as unknown as AccountsPayableRepository;
 
   const systemUser =
@@ -65,87 +58,11 @@ describe("handleZapiWebhookUseCase", () => {
     vi.mocked(payAccountsPayableUseCase).mockReset();
   });
 
-  it("ignora textos que não são confirmação de pagamento", async () => {
-    const deps = buildDeps({});
+  it("ignora quando a conta do id do botão não existe", async () => {
+    const deps = buildDeps({ payable: null });
 
     await handleZapiWebhookUseCase(
-      {
-        phone: "11999999999",
-        messageText: "oi tudo bem?",
-        quotedMessageId: null,
-      },
-      "org-1",
-      deps,
-    );
-
-    expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
-    expect(
-      deps.accountsPayableRepository.findByLastReminderMessageId,
-    ).not.toHaveBeenCalled();
-  });
-
-  it("casa pelo id da mensagem citada quando presente", async () => {
-    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
-      buildPayable({ status: "PAID" }) as never,
-    );
-    const deps = buildDeps({
-      byMessageId: buildPayable({ id: "payable-quoted" }),
-    });
-
-    await handleZapiWebhookUseCase(
-      { phone: "11999999999", messageText: "PAGO", quotedMessageId: "msg-123" },
-      "org-1",
-      deps,
-    );
-
-    expect(
-      deps.accountsPayableRepository.findByLastReminderMessageId,
-    ).toHaveBeenCalledWith("msg-123");
-    expect(payAccountsPayableUseCase).toHaveBeenCalledWith(
-      "payable-quoted",
-      "system-user-1",
-      "org-1",
-      {
-        accountsPayableRepository: deps.accountsPayableRepository,
-        safeRepository: deps.safeRepository,
-      },
-      "WHATSAPP",
-    );
-  });
-
-  it("sem citação e com exatamente 1 candidata: confirma a única pendente com lembrete já enviado", async () => {
-    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
-      buildPayable({ status: "PAID" }) as never,
-    );
-    const deps = buildDeps({
-      candidates: [buildPayable({ id: "payable-unico" })],
-    });
-
-    await handleZapiWebhookUseCase(
-      { phone: "11999999999", messageText: "paguei!", quotedMessageId: null },
-      "org-1",
-      deps,
-    );
-
-    expect(payAccountsPayableUseCase).toHaveBeenCalledWith(
-      "payable-unico",
-      "system-user-1",
-      "org-1",
-      expect.anything(),
-      "WHATSAPP",
-    );
-  });
-
-  it("sem citação e com 2+ candidatas: não adivinha, ignora e não confirma nada", async () => {
-    const deps = buildDeps({
-      candidates: [
-        buildPayable({ id: "payable-a" }),
-        buildPayable({ id: "payable-b" }),
-      ],
-    });
-
-    await handleZapiWebhookUseCase(
-      { phone: "11999999999", messageText: "PAGO", quotedMessageId: null },
+      { phone: "11999999999", accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -153,11 +70,13 @@ describe("handleZapiWebhookUseCase", () => {
     expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
   });
 
-  it("sem citação e sem nenhuma candidata (nenhuma recebeu lembrete ainda): ignora", async () => {
-    const deps = buildDeps({ candidates: [] });
+  it("ignora quando a conta é de outra organização", async () => {
+    const deps = buildDeps({
+      payable: buildPayable({ organizationId: "org-2" }),
+    });
 
     await handleZapiWebhookUseCase(
-      { phone: "11999999999", messageText: "PAGO", quotedMessageId: null },
+      { phone: "11999999999", accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -166,12 +85,10 @@ describe("handleZapiWebhookUseCase", () => {
   });
 
   it("idempotente: não faz nada quando a conta encontrada já não está PENDENTE", async () => {
-    const deps = buildDeps({
-      byMessageId: buildPayable({ status: "PAID" }),
-    });
+    const deps = buildDeps({ payable: buildPayable({ status: "PAID" }) });
 
     await handleZapiWebhookUseCase(
-      { phone: "11999999999", messageText: "PAGO", quotedMessageId: "msg-123" },
+      { phone: "11999999999", accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -179,18 +96,28 @@ describe("handleZapiWebhookUseCase", () => {
     expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
   });
 
-  it("caminho feliz: confirma e manda mensagem de agradecimento de volta", async () => {
+  it("caminho feliz: confirma o pagamento e manda mensagem de agradecimento de volta", async () => {
     vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
       buildPayable({ status: "PAID" }) as never,
     );
-    const deps = buildDeps({ byMessageId: buildPayable() });
+    const deps = buildDeps({});
 
     await handleZapiWebhookUseCase(
-      { phone: "11988887777", messageText: "PAGO", quotedMessageId: "msg-1" },
+      { phone: "11988887777", accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
 
+    expect(payAccountsPayableUseCase).toHaveBeenCalledWith(
+      "payable-1",
+      "system-user-1",
+      "org-1",
+      {
+        accountsPayableRepository: deps.accountsPayableRepository,
+        safeRepository: deps.safeRepository,
+      },
+      "WHATSAPP",
+    );
     expect(
       deps.whatsAppMessaging.sendPaymentConfirmedMessage,
     ).toHaveBeenCalledWith("11988887777");
@@ -200,14 +127,14 @@ describe("handleZapiWebhookUseCase", () => {
     vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
       buildPayable({ status: "PAID" }) as never,
     );
-    const deps = buildDeps({ byMessageId: buildPayable() });
+    const deps = buildDeps({});
     vi.mocked(
       deps.whatsAppMessaging.sendPaymentConfirmedMessage,
     ).mockRejectedValue(new Error("Z-API fora do ar"));
 
     await expect(
       handleZapiWebhookUseCase(
-        { phone: "11988887777", messageText: "PAGO", quotedMessageId: "msg-1" },
+        { phone: "11988887777", accountsPayableId: "payable-1" },
         "org-1",
         deps,
       ),
@@ -217,14 +144,11 @@ describe("handleZapiWebhookUseCase", () => {
 
   it("lança NotFoundError quando o usuário de sistema do WhatsApp não existe", async () => {
     const { NotFoundError } = await import("@/core/errors/domain-error");
-    const deps = buildDeps({
-      byMessageId: buildPayable(),
-      systemUser: null,
-    });
+    const deps = buildDeps({ systemUser: null });
 
     await expect(
       handleZapiWebhookUseCase(
-        { phone: "11999999999", messageText: "PAGO", quotedMessageId: "msg-1" },
+        { phone: "11999999999", accountsPayableId: "payable-1" },
         "org-1",
         deps,
       ),
