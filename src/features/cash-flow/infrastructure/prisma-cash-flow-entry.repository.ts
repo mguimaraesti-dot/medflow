@@ -192,11 +192,25 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
     from: Date,
     to: Date,
   ): Promise<CashFlowEntryProjection[]> {
-    return prisma.cashFlowEntry.findMany({
+    const entries = await prisma.cashFlowEntry.findMany({
       where: { organizationId, occurredAt: { gte: from, lte: to } },
-      select: { type: true, amount: true, occurredAt: true, categoryId: true },
+      select: {
+        type: true,
+        amount: true,
+        occurredAt: true,
+        categoryId: true,
+        paymentMethod: { select: { isCash: true } },
+      },
       orderBy: { occurredAt: "asc" },
     });
+
+    return entries.map((entry) => ({
+      type: entry.type,
+      amount: entry.amount,
+      occurredAt: entry.occurredAt,
+      categoryId: entry.categoryId,
+      isCash: entry.paymentMethod.isCash,
+    }));
   }
 
   async countReversedToday(

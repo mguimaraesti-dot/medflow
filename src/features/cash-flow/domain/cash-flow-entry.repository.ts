@@ -40,6 +40,8 @@ export interface CashFlowEntryProjection {
   amount: Prisma.Decimal;
   occurredAt: Date;
   categoryId: string;
+  /** `paymentMethod.isCash` — usado pelo Relatório de Caixa Recepção pra separar Entradas em Dinheiro x PIX. */
+  isCash: boolean;
 }
 
 /** Projeção usada pelos insights (origem das receitas por categoria + por hora). */

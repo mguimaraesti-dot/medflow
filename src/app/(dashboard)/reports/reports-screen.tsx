@@ -13,6 +13,7 @@ import { CashRegisterDayDetailDrawer } from "@/features/cash-register/presentati
 import { CashRegisterDifferencesReportTable } from "@/features/cash-register/presentation/cash-register-differences-report-table";
 import { CashFlowEntriesReportTable } from "@/features/cash-flow/presentation/cash-flow-entries-report-table";
 import { CashFlowDailyTotalsReport } from "@/features/cash-flow/presentation/cash-flow-daily-totals-report";
+import { CashRegisterPeriodReport } from "@/features/cash-flow/presentation/cash-register-period-report";
 import { SafeMovementsReportTable } from "@/features/treasury/presentation/safe-movements-report-table";
 import { SafePeriodReport } from "@/features/treasury/presentation/safe-period-report";
 import { AccountsPayableReportTable } from "@/features/accounts-payable/presentation/accounts-payable-report-table";
@@ -140,6 +141,13 @@ export function ReportsScreen() {
 
         {selectedReportId === "safe-period-summary" && (
           <SafePeriodReport
+            title={title}
+            dateFrom={range.from}
+            dateTo={range.to}
+          />
+        )}
+        {selectedReportId === "cash-register-summary" && (
+          <CashRegisterPeriodReport
             title={title}
             dateFrom={range.from}
             dateTo={range.to}
