@@ -138,7 +138,7 @@ export const ROLE_PERMISSIONS: Record<
  * têm rótulo aqui de propósito — não aparecem no seletor da tela de
  * Usuários (pedido explícito: "os demais ocultar").
  */
-export const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
   OWNER: "Gerente",
   SECRETARY: "Secretária",

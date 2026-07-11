@@ -3,6 +3,8 @@ import { runAccountsPayableRemindersUseCase } from "@/features/accounts-payable/
 import { sendAccountsPayableWhatsAppReminderUseCase } from "@/features/accounts-payable/application/send-accounts-payable-whatsapp-reminder.use-case";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { WhatsAppMessagingPort } from "@/features/accounts-payable/domain/whatsapp-messaging.port";
+import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
+import type { SupplierRepository } from "@/features/suppliers/domain/supplier.repository";
 
 vi.mock(
   "@/features/accounts-payable/application/send-accounts-payable-whatsapp-reminder.use-case",
@@ -51,14 +53,18 @@ function buildDeps(
           }
         : overrides.settings,
     ),
-  } as never;
+  } as unknown as OrganizationSettingsRepository;
 
   const whatsAppMessaging = {} as unknown as WhatsAppMessagingPort;
+
+  const supplierRepository = {
+    list: vi.fn().mockResolvedValue([]),
+  } as unknown as SupplierRepository;
 
   return {
     accountsPayableRepository,
     organizationSettingsRepository,
-    supplierRepository: {} as never,
+    supplierRepository,
     whatsAppMessaging,
   };
 }
@@ -82,11 +88,14 @@ describe("runAccountsPayableRemindersUseCase", () => {
 
     const result = await runAccountsPayableRemindersUseCase("org-1", deps);
 
+    // O 4º argumento não é `deps` por identidade: o use case passa uma
+    // versão com os repositórios "cacheados" pro lote (evita reconsultar
+    // settings/fornecedor por conta — ver comentário na implementação).
     expect(sendAccountsPayableWhatsAppReminderUseCase).toHaveBeenCalledWith(
       "payable-1",
       "org-1",
       null,
-      deps,
+      expect.any(Object),
     );
     expect(result).toEqual({ sentCount: 1, failedCount: 0 });
   });
@@ -159,6 +168,27 @@ describe("runAccountsPayableRemindersUseCase", () => {
 
     expect(sendAccountsPayableWhatsAppReminderUseCase).toHaveBeenCalledTimes(2);
     expect(result).toEqual({ sentCount: 1, failedCount: 1 });
+  });
+
+  it("busca fornecedores e settings uma única vez por lote, mesmo com várias contas due (evita N+1)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const candidates = [
+      payable({ id: "payable-1" }),
+      payable({ id: "payable-2" }),
+      payable({ id: "payable-3" }),
+    ];
+    const deps = buildDeps(candidates);
+
+    await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(
+      deps.organizationSettingsRepository.findByOrganization,
+    ).toHaveBeenCalledTimes(1);
+    expect(deps.supplierRepository.list).toHaveBeenCalledTimes(1);
+    expect(deps.supplierRepository.list).toHaveBeenCalledWith("org-1");
   });
 
   it("não processa quando a hora atual não bate com reminderSendHour (nem consulta contas pendentes)", async () => {

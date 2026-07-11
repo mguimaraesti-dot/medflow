@@ -10,7 +10,7 @@ import type { PermissionKey } from "./roles-permissions";
  * mesmo quando não há uma permissão específica a checar (ex: GET de
  * dashboard, que qualquer perfil logado pode ver).
  */
-export async function requireAuth(): Promise<SessionUser> {
+async function requireAuth(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) throw new UnauthenticatedError();
   return user;

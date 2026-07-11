@@ -94,19 +94,12 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       dueDateFilter.lte = filter.dueDateTo;
     }
 
-    const paidAtFilter: Prisma.DateTimeFilter = {};
-    if (filter.paidAtFrom) paidAtFilter.gte = filter.paidAtFrom;
-    if (filter.paidAtTo) paidAtFilter.lte = filter.paidAtTo;
-
     const where: Prisma.AccountsPayableWhereInput = {
       organizationId: filter.organizationId,
       deletedAt: filter.deletedOnly ? { not: null } : null,
       ...statusFilter,
       ...(Object.keys(dueDateFilter).length > 0 && {
         dueDate: dueDateFilter,
-      }),
-      ...(Object.keys(paidAtFilter).length > 0 && {
-        paidAt: paidAtFilter,
       }),
       ...(filter.supplierId && { supplierId: filter.supplierId }),
       ...(filter.categoryId && { categoryId: filter.categoryId }),

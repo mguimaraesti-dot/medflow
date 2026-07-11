@@ -373,6 +373,7 @@ model CashFlowEntry {
   reversedByEntry   CashFlowEntry? @relation("EntryReversal")
 
   @@index([organizationId, cashRegisterDayId])
+  @@index([cashRegisterDayId])
   @@index([categoryId])
   @@index([organizationId, occurredAt])
   @@map("cash_flow_entries")
@@ -479,8 +480,10 @@ model AccountsPayable {
 
   @@index([organizationId, status])
   @@index([dueDate])
-  @@index([deletedAt])
+  @@index([organizationId, deletedAt])
   @@index([organizationId, dueDate])
+  @@index([organizationId, status, dueDate])
+  @@index([organizationId, status, paidAt])
   @@index([supplierId])
   @@index([categoryId])
   @@index([recurringBillId])
@@ -635,5 +638,6 @@ model SafeMovement {
   @@index([relatedAccountsPayableId])
   @@index([safeId, type])
   @@index([organizationId, createdAt])
+  @@index([organizationId, confirmedAt])
   @@map("safe_movements")
 }

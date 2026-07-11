@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { logger } from "@/core/logger/logger";
 import { requirePermission } from "@/core/permissions/rbac.middleware";
 import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { handleApiError } from "@/core/errors/error-handler";
@@ -39,12 +38,6 @@ export async function POST(
       );
     }
     const { id } = await params;
-
-    logger.info("handler send-whatsapp-reminder iniciado", {
-      accountsPayableId: id,
-      organizationId: user.organizationId,
-      triggeredByUserId: user.id,
-    });
 
     await sendAccountsPayableWhatsAppReminderUseCase(
       id,

@@ -38,8 +38,8 @@ const SMALL_DIFFERENCE_THRESHOLD = 5;
  * Caixa (só aqui, não durante o expediente — Refinamento PDV), informa
  * o valor contado e o caixa é encerrado imediatamente (`CLOSED`, sem
  * estado intermediário) — a secretária tem autonomia de reabrir depois
- * (com justificativa) se precisar. Componente compartilhado com o
- * Dashboard (via `CashRegisterStatusCard`).
+ * (com justificativa) se precisar. Componente compartilhado com a
+ * Caixa Recepção (via `CashBalanceHeader`).
  */
 export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
   const [open, setOpen] = useState(false);

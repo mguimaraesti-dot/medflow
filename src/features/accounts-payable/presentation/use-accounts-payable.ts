@@ -9,9 +9,6 @@ export interface AccountsPayableFilter {
   status?: "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
   dueDateFrom?: Date;
   dueDateTo?: Date;
-  /** Filtro por data de pagamento (`paidAt`) — usado pelo relatório "Contas Pagas". */
-  paidAtFrom?: Date;
-  paidAtTo?: Date;
   categoryId?: string;
   /** Filtro "Fornecedor" da barra "Mais filtros" — já existe ponta a ponta no backend. */
   supplierId?: string;
@@ -32,9 +29,6 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
   if (filter.dueDateFrom)
     params.set("dueDateFrom", filter.dueDateFrom.toISOString());
   if (filter.dueDateTo) params.set("dueDateTo", filter.dueDateTo.toISOString());
-  if (filter.paidAtFrom)
-    params.set("paidAtFrom", filter.paidAtFrom.toISOString());
-  if (filter.paidAtTo) params.set("paidAtTo", filter.paidAtTo.toISOString());
   if (filter.categoryId) params.set("categoryId", filter.categoryId);
   if (filter.supplierId) params.set("supplierId", filter.supplierId);
   if (filter.recurringBillId)

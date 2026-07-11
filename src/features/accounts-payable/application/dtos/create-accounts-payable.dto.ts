@@ -6,7 +6,7 @@ import {
   shortTextSchema,
 } from "@/shared/lib/validators";
 
-export const recurrenceInputSchema = z.object({
+const recurrenceInputSchema = z.object({
   periodicity: z.enum(["MONTHLY", "BIWEEKLY", "WEEKLY", "YEARLY"]),
   // undefined = sem prazo (o use case decide o tamanho do lote gerado).
   maxOccurrences: z.number().int().positive().max(120).optional(),

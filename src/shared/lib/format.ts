@@ -2,13 +2,20 @@
  * Formatação para exibição na UI — distinto de `money.ts`
  * (`toMoneyString`), que serializa valores monetários na fronteira da
  * API. Aqui a entrada já é a string decimal fixa vinda do backend.
+ *
+ * Instâncias de `Intl.NumberFormat`/`Intl.DateTimeFormat` no escopo do
+ * módulo (em vez de recriadas a cada chamada) — são stateless e a
+ * construção não é gratuita; essas funções rodam por célula em toda
+ * tabela do sistema (Contas a Pagar, Tesouraria, Fluxo de Caixa).
  */
+const CURRENCY_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
 export function formatCurrencyBRL(value: string | number): string {
   const numeric = typeof value === "string" ? Number(value) : value;
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(numeric);
+  return CURRENCY_FORMATTER.format(numeric);
 }
 
 /**
@@ -20,28 +27,39 @@ export function formatCurrencyBRL(value: string | number): string {
  */
 const DISPLAY_TIMEZONE = "America/Sao_Paulo";
 
+const DATE_TIME_BR_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: DISPLAY_TIMEZONE,
+});
+
 /** Datas do backend chegam em ISO 8601 (UTC); exibição sempre dd/MM/yyyy HH:mm no horário de Brasília. */
 export function formatDateTimeBR(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: DISPLAY_TIMEZONE,
-  }).format(date);
+  return DATE_TIME_BR_FORMATTER.format(date);
 }
+
+const TIME_BR_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: DISPLAY_TIMEZONE,
+});
 
 /** Só o horário (HH:mm), no horário de Brasília — usado na Timeline do dia, onde a data já é implícita. */
 export function formatTimeBR(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: DISPLAY_TIMEZONE,
-  }).format(date);
+  return TIME_BR_FORMATTER.format(date);
 }
+
+const DATE_ONLY_UTC_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 /**
  * Datas *sem hora* (ex: `dueDate`, `@db.Date` no schema) chegam como
@@ -51,24 +69,28 @@ export function formatTimeBR(value: string | Date): string {
  */
 export function formatDateOnlyBR(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  return DATE_ONLY_UTC_FORMATTER.format(date);
 }
+
+const DATE_ONLY_LOCAL_BR_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: DISPLAY_TIMEZONE,
+});
 
 /** Diferente de `formatDateOnlyBR`: aqui a entrada é um timestamp de verdade (ex: `closedAt`), não uma data "pura" — formata no horário de Brasília, nunca UTC. */
 export function formatDateOnlyLocalBR(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: DISPLAY_TIMEZONE,
-  }).format(date);
+  return DATE_ONLY_LOCAL_BR_FORMATTER.format(date);
 }
+
+const TODAY_PARTS_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: DISPLAY_TIMEZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 /**
  * "Hoje" no calendário de Brasília, representado como Date à meia-noite
@@ -80,16 +102,17 @@ export function formatDateOnlyLocalBR(value: string | Date): string {
  * real em Brasília. Aqui o dia é lido primeiro no fuso certo.
  */
 export function todayDateOnlyBR(referenceDate: Date = new Date()): Date {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: DISPLAY_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(referenceDate);
+  const parts = TODAY_PARTS_FORMATTER.formatToParts(referenceDate);
   const get = (type: string) =>
     Number(parts.find((p) => p.type === type)?.value);
   return new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
 }
+
+const SMART_DUE_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "short",
+  timeZone: "UTC",
+});
 
 /**
  * Data "inteligente" para a coluna Vencimento (UX spec Contas a Pagar):
@@ -116,11 +139,7 @@ export function formatSmartDueDate(value: string | Date): string {
     return `Há ${days} dia${days > 1 ? "s" : ""}`;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-  }).format(date);
+  return SMART_DUE_DATE_FORMATTER.format(date);
 }
 
 /** "512 B" / "12,4 KB" / "3,1 MB" — usado pela lista de anexos de Contas a Pagar. */

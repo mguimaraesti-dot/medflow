@@ -18,8 +18,6 @@ export async function listAccountsPayableUseCase(
       status: input.status,
       dueDateFrom: input.dueDateFrom,
       dueDateTo: input.dueDateTo,
-      paidAtFrom: input.paidAtFrom,
-      paidAtTo: input.paidAtTo,
       supplierId: input.supplierId,
       categoryId: input.categoryId,
       recurringBillId: input.recurringBillId,

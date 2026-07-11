@@ -7,7 +7,7 @@ import { cn } from "@/shared/lib/utils";
  * opacidade nas barras pra manter a hierarquia visual mesmo em uma cor
  * só); `tone="white"` é a variante pra fundos escuros/cor.
  */
-export function LogoIcon({
+function LogoIcon({
   className,
   tone = "brand",
 }: {
