@@ -41,4 +41,7 @@ export interface WhatsAppMessagingPort {
 
   /** Mensagem de agradecimento enviada depois que o webhook confirma o pagamento (resposta "PAGO"). */
   sendPaymentConfirmedMessage(phone: string): Promise<void>;
+
+  /** Mensagem separadora entre um lembrete e outro, quando o cron dispara mais de uma conta pro mesmo telefone na mesma execução. */
+  sendSeparatorMessage(phone: string): Promise<void>;
 }

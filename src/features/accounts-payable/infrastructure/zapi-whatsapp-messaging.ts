@@ -72,4 +72,11 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       message: "✅ Pagamento confirmado! Obrigado.",
     });
   }
+
+  async sendSeparatorMessage(phone: string): Promise<void> {
+    await sendTextMessage({
+      phone,
+      message: "*".repeat(30),
+    });
+  }
 }

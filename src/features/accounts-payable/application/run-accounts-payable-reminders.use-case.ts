@@ -44,6 +44,12 @@ function reminderWindowStart(dueDate: Date, reminderDaysBefore: number): Date {
  * ainda não recebeu lembrete hoje, e envia — pra cada uma. Uma conta
  * com falha no envio não interrompe as demais (log do erro, segue o
  * lote).
+ *
+ * O telefone é único por organização (`OrganizationSettings.whatsapp`),
+ * então quando o lote tem mais de 1 conta due, todas caem no mesmo
+ * número — insere uma mensagem separadora entre uma conta e outra
+ * (nunca antes da primeira), pra deixar claro no WhatsApp onde termina
+ * um lembrete e começa o próximo.
  */
 export async function runAccountsPayableRemindersUseCase(
   organizationId: string,
@@ -66,11 +72,20 @@ export async function runAccountsPayableRemindersUseCase(
     return inWindow && !alreadySentToday;
   });
 
+  const settings =
+    await deps.organizationSettingsRepository.findByOrganization(
+      organizationId,
+    );
+
   let sentCount = 0;
   let failedCount = 0;
 
-  for (const payable of due) {
+  for (const [index, payable] of due.entries()) {
     try {
+      if (index > 0 && settings?.whatsapp) {
+        await deps.whatsAppMessaging.sendSeparatorMessage(settings.whatsapp);
+      }
+
       await sendAccountsPayableWhatsAppReminderUseCase(
         payable.id,
         organizationId,
