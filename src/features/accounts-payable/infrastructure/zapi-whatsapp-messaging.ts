@@ -16,6 +16,11 @@ function delay(ms: number): Promise<void> {
  * mensagens de boleto/Pix só são enviadas quando a conta tem o dado
  * correspondente cadastrado — nem toda conta a pagar tem boleto ou
  * chave Pix.
+ *
+ * Código de barras e chave Pix vão em duas mensagens cada (rótulo,
+ * depois o valor sozinho em formatação monoespaçada) — assim, ao tocar
+ * e segurar só na mensagem do valor, a opção "Copiar" do WhatsApp
+ * copia exatamente o código/chave, sem texto extra junto.
  */
 export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async sendPaymentReminder(
@@ -36,7 +41,12 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       await delay(1200);
       await sendTextMessage({
         phone: input.phone,
-        message: `📄 Código de barras do boleto:\n${input.digitableLine}`,
+        message: "📄 Código de barras (toque e segure para copiar):",
+      });
+      await delay(1200);
+      await sendTextMessage({
+        phone: input.phone,
+        message: `\`\`\`${input.digitableLine}\`\`\``,
       });
     }
 
@@ -44,7 +54,12 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       await delay(1200);
       await sendTextMessage({
         phone: input.phone,
-        message: `💠 Chave Pix para pagamento:\n${input.pixKey}`,
+        message: "💠 Chave Pix (toque e segure para copiar):",
+      });
+      await delay(1200);
+      await sendTextMessage({
+        phone: input.phone,
+        message: `\`\`\`${input.pixKey}\`\`\``,
       });
     }
 
