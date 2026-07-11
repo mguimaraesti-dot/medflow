@@ -21,8 +21,8 @@ export interface WhatsAppPaymentReminderInput {
   amount: string;
   /** Já formatado (dd/MM/yyyy). */
   dueDate: string;
-  /** `null` = conta sem boleto cadastrado — a 2ª mensagem (código de barras) é pulada. */
-  digitableLine: string | null;
+  /** `null` = conta sem código de barras cadastrado — a 2ª mensagem (código de barras) é pulada. Vem de `AccountsPayable.barcode` — não `digitableLine` (esse fica sempre vazio, nenhum formulário escreve nele hoje). */
+  barcode: string | null;
   /** `null` = conta sem chave Pix cadastrada — a 3ª mensagem (Pix) é pulada. */
   pixKey: string | null;
 }
