@@ -49,46 +49,59 @@
   --brand-accent: #60a5fa;
   --brand-support: #dbeafe;
   --brand-neutral: #64748b;
+
+  /* Sidebar sempre igual ao fundo no tema claro (não pedido, mantém como está) — só o dark ganha um tom próprio. */
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
 }
 
 .dark {
-  /* Fundo/superfícies mais próximos de #09090B/#111113 (near-black premium) */
-  --background: oklch(0.09 0 0);
-  --foreground: oklch(0.985 0 0);
+  /* Dark Theme Premium — azul-ardósia, nunca preto neutro (Proposta de
+     Redesign aprovada). Hierarquia por tonalidade: sidebar (mais escura,
+     recua) < fundo < card < input < hover, sem depender de sombra pesada. */
+  --background: #1b2233;
+  --foreground: #e8edf7;
 
-  --card: oklch(0.135 0 0);
-  --card-foreground: oklch(0.985 0 0);
+  --card: #232b3e;
+  --card-foreground: #e8edf7;
 
-  --popover: oklch(0.135 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --popover: #232b3e;
+  --popover-foreground: #e8edf7;
 
   --primary: #2563eb;
-  --primary-foreground: oklch(0.985 0 0);
+  --primary-foreground: #f8fafc;
 
-  --secondary: oklch(0.19 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary: #2a3348;
+  --secondary-foreground: #e8edf7;
 
-  --muted: oklch(0.19 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted: #232b3e;
+  --muted-foreground: #94a3b8;
 
-  --accent: oklch(0.21 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --accent: #313b52;
+  --accent-foreground: #e8edf7;
 
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
 
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 20%);
-  /* Superfície de campos editáveis (Input/Textarea/Select) — precisa se
-     destacar do card (#0B0B0B/#111113) pra parecer clicável, não só
-     mais uma camada de preto (Refinamento UX/Contraste). */
-  --input-background: #161b22;
-  --ring: #2563eb;
+  --border: #3b4662;
+  --input: #3b4662;
+  /* Superfície de campos editáveis (Input/Textarea/Select) — mais clara
+     que o card, pra parecer clicável (Refinamento UX/Contraste). */
+  --input-background: #2a3348;
+  /* Azul de destaque (mais claro que o --primary da marca) — só pra foco
+     de input e afins no escuro, onde #2563EB sozinho fica meio apagado
+     sobre um fundo tão escuro. */
+  --ring: #3b82f6;
 
-  --success: oklch(0.65 0.15 145);
-  --success-foreground: oklch(0.145 0 0);
-  --warning: oklch(0.8 0.15 75);
-  --warning-foreground: oklch(0.145 0 0);
+  --success: #22c55e;
+  --success-foreground: #052e13;
+  --warning: #f59e0b;
+  --warning-foreground: #1f1300;
+
+  /* Camada mais escura da hierarquia — a sidebar "recua" e vira moldura
+     da aplicação, nunca se confunde com o fundo do conteúdo. */
+  --sidebar: #141926;
+  --sidebar-foreground: #e8edf7;
 }
 
 @theme inline {
@@ -120,6 +133,8 @@
   --color-brand-support: var(--brand-support);
   --color-brand-neutral: var(--brand-neutral);
   --color-warning-foreground: var(--warning-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

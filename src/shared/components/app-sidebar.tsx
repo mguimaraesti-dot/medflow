@@ -323,7 +323,7 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "bg-background relative sticky top-0 hidden h-screen shrink-0 flex-col self-start border-r transition-[width] duration-200 ease-in-out lg:flex",
+        "bg-sidebar text-sidebar-foreground relative sticky top-0 hidden h-screen shrink-0 flex-col self-start border-r transition-[width] duration-200 ease-in-out lg:flex",
         collapsed ? "w-[72px]" : "w-64",
       )}
     >
@@ -339,7 +339,7 @@ export function AppSidebar({
         type="button"
         onClick={toggleCollapsed}
         aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-        className="bg-background text-muted-foreground hover:text-foreground hover:bg-muted absolute top-20 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border shadow-sm transition-colors"
+        className="bg-sidebar text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-accent absolute top-20 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border shadow-sm transition-colors"
       >
         {collapsed ? (
           <PanelLeftOpen className="h-3.5 w-3.5" />
@@ -381,7 +381,10 @@ export function MobileSidebarTrigger({
       </header>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="flex w-64 flex-col p-0">
+        <SheetContent
+          side="left"
+          className="bg-sidebar text-sidebar-foreground flex w-64 flex-col p-0"
+        >
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
           <SidebarLogo />
           <SidebarNav
