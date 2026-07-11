@@ -58,7 +58,7 @@ export function CashBalanceHeader({
 
   return (
     <Card className="rounded-2xl shadow-sm">
-      <CardContent className="flex flex-wrap items-center justify-between gap-6 p-8">
+      <CardContent className="flex flex-wrap items-center justify-between gap-6 p-6">
         <div>
           <p className="text-muted-foreground text-sm">Saldo Atual</p>
           <p className="text-5xl font-bold tracking-tight">

@@ -163,7 +163,7 @@ export const CashFlowEntryForm = forwardRef<
               amountInputRef.current?.focus();
             }
           }}
-          className="space-y-5"
+          className="space-y-4"
           noValidate
         >
           <Controller
@@ -198,13 +198,13 @@ export const CashFlowEntryForm = forwardRef<
             )}
           />
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
               <p className="text-sm font-semibold">Movimentação</p>
               <Separator className="mt-2" />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="amount">
                   Valor
@@ -283,7 +283,7 @@ export const CashFlowEntryForm = forwardRef<
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
               <p className="text-sm font-semibold">Detalhes</p>
               <Separator className="mt-2" />

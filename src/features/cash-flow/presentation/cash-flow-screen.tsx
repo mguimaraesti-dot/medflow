@@ -20,7 +20,7 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const canCreateEntry = isRegisterOpen && can(PERMISSIONS.CASH_FLOW_CREATE);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <CashBalanceHeader
         canOpen={can(PERMISSIONS.CASH_REGISTER_OPEN)}
         canClose={can(PERMISSIONS.CASH_REGISTER_CLOSE)}
@@ -29,8 +29,8 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
         onSelectType={(type) => formRef.current?.selectType(type)}
       />
 
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <CashFlowEntryForm ref={formRef} disabled={!canCreateEntry} />
           </div>

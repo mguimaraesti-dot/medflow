@@ -39,9 +39,11 @@ function MetricTile({
  * tabela de lançamentos, então o React Query reaproveita o cache.
  *
  * Continua visível com o caixa fechado (ou sem nenhum caixa aberto hoje)
- * pra manter a altura do layout ao lado de "Novo Lançamento" — nesse
- * estado os valores aparecem zerados, nunca o resumo de um dia já
- * encerrado.
+ * — nesse estado os valores aparecem zerados, nunca o resumo de um dia
+ * já encerrado. Altura natural do conteúdo (sem `h-full`/`justify-center`)
+ * — ao lado de "Novo Lançamento", que costuma ser mais alto, sobra espaço
+ * na coluna à direita, mas o card em si não precisa esticar pra
+ * preenchê-lo (Refinamento compactação Caixa Recepção).
  */
 export function DailySummaryPanel({
   today,
@@ -61,11 +63,11 @@ export function DailySummaryPanel({
   const entriesCount = data?.total ?? 0;
 
   return (
-    <Card className="flex h-full flex-col rounded-2xl shadow-sm">
+    <Card className="rounded-2xl shadow-sm">
       <CardHeader>
         <CardTitle>Resumo do Dia</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-center gap-3">
+      <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <MetricTile
             label="Saldo Inicial"
