@@ -1,8 +1,9 @@
 import type { OrganizationSettings } from "./organization-settings.entity";
 
-/** Só o WhatsApp é editável por enquanto — timezone/horários de funcionamento continuam sem UI de edição. */
+/** Só WhatsApp e horário de envio dos lembretes são editáveis por enquanto — timezone/horários de funcionamento continuam sem UI de edição. */
 export interface UpdateOrganizationSettingsInput {
   whatsapp: string | null;
+  reminderSendHour: number;
 }
 
 export interface OrganizationSettingsRepository {

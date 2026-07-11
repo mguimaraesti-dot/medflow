@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,15 @@ import { useUpdateOrganizationSettings } from "./use-update-organization-setting
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+
+const REMINDER_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
 
 export function OrganizationSettingsForm() {
   const { data: settings, isLoading } = useOrganizationSettings();
@@ -22,14 +31,20 @@ export function OrganizationSettingsForm() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<UpdateOrganizationSettingsInput>({
     resolver: zodResolver(updateOrganizationSettingsSchema),
-    defaultValues: { whatsapp: "" },
+    defaultValues: { whatsapp: "", reminderSendHour: 7 },
   });
 
   useEffect(() => {
-    if (settings) reset({ whatsapp: settings.whatsapp ?? "" });
+    if (settings) {
+      reset({
+        whatsapp: settings.whatsapp ?? "",
+        reminderSendHour: settings.reminderSendHour,
+      });
+    }
   }, [settings, reset]);
 
   async function onSubmit(values: UpdateOrganizationSettingsInput) {
@@ -61,6 +76,42 @@ export function OrganizationSettingsForm() {
         </p>
         {errors.whatsapp && (
           <p className="text-destructive text-sm">{errors.whatsapp.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="reminderSendHour">
+          Horário de envio dos lembretes de cobrança
+        </Label>
+        <Controller
+          name="reminderSendHour"
+          control={control}
+          render={({ field }) => (
+            <Select
+              value={String(field.value)}
+              onValueChange={(value) => field.onChange(Number(value))}
+            >
+              <SelectTrigger id="reminderSendHour" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REMINDER_HOUR_OPTIONS.map((hour) => (
+                  <SelectItem key={hour} value={String(hour)}>
+                    {String(hour).padStart(2, "0")}:00
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <p className="text-muted-foreground text-sm">
+          Hora do dia (fuso da clínica) em que os lembretes de contas a vencer
+          são enviados.
+        </p>
+        {errors.reminderSendHour && (
+          <p className="text-destructive text-sm">
+            {errors.reminderSendHour.message}
+          </p>
         )}
       </div>
 

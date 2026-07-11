@@ -25,10 +25,17 @@ const whatsAppMessaging = new ZapiWhatsAppMessaging();
 export const maxDuration = 60;
 
 /**
- * Chamada 1x por dia pela Vercel Cron (`vercel.json`) — sem sessão,
- * autenticada pelo header `Authorization: Bearer $CRON_SECRET` que a
- * própria Vercel envia. Primeira rota do projeto sem `requirePermission`
- * (não há usuário logado num cron job).
+ * Chamada por um serviço de cron EXTERNO (ex: cron-job.org), não pelo
+ * `crons` nativo da Vercel — o plano Hobby só permite cron nativo 1x/dia,
+ * com schedule fixo no `vercel.json` (sem configuração dinâmica, exige
+ * redeploy pra mudar o horário). O serviço externo pode chamar essa rota
+ * com qualquer frequência (ex: de hora em hora); é a checagem de hora
+ * dentro de `runAccountsPayableRemindersUseCase` (comparando com
+ * `OrganizationSettings.reminderSendHour`, configurável na tela de
+ * Configurações) que garante que o envio de verdade só acontece uma vez
+ * por dia, na hora escolhida pelo usuário. Configure o serviço externo
+ * pra enviar o header `Authorization: Bearer $CRON_SECRET` manualmente —
+ * sem sessão, não há usuário logado num cron job.
  */
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();

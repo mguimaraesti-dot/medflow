@@ -10,6 +10,10 @@ vi.mock(
 );
 
 const TODAY = new Date("2026-07-20T00:00:00.000Z");
+// Meia-noite UTC = 21h do dia anterior em America/Sao_Paulo (UTC-3, sem
+// DST atualmente) — usado como reminderSendHour "de fábrica" nos testes
+// que esperam que o envio de fato aconteça.
+const CURRENT_HOUR_SP = 21;
 
 function payable(overrides: Record<string, unknown> = {}) {
   return {
@@ -23,17 +27,30 @@ function payable(overrides: Record<string, unknown> = {}) {
 
 function buildDeps(
   candidates: ReturnType<typeof payable>[],
-  overrides: { whatsapp?: string | null } = {},
+  overrides: {
+    whatsapp?: string | null;
+    reminderSendHour?: number;
+    timezone?: string;
+    settings?: Record<string, unknown> | null;
+  } = {},
 ) {
   const accountsPayableRepository = {
     listPendingForReminders: vi.fn().mockResolvedValue(candidates),
   } as unknown as AccountsPayableRepository;
 
   const organizationSettingsRepository = {
-    findByOrganization: vi.fn().mockResolvedValue({
-      whatsapp:
-        overrides.whatsapp === undefined ? "11999999999" : overrides.whatsapp,
-    }),
+    findByOrganization: vi.fn().mockResolvedValue(
+      overrides.settings === undefined
+        ? {
+            whatsapp:
+              overrides.whatsapp === undefined
+                ? "11999999999"
+                : overrides.whatsapp,
+            timezone: overrides.timezone ?? "America/Sao_Paulo",
+            reminderSendHour: overrides.reminderSendHour ?? CURRENT_HOUR_SP,
+          }
+        : overrides.settings,
+    ),
   } as never;
 
   const whatsAppMessaging = {
@@ -178,6 +195,52 @@ describe("runAccountsPayableRemindersUseCase", () => {
     await runAccountsPayableRemindersUseCase("org-1", deps);
 
     expect(deps.whatsAppMessaging.sendSeparatorMessage).not.toHaveBeenCalled();
+  });
+
+  it("não processa quando a hora atual não bate com reminderSendHour (nem consulta contas pendentes)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+
+    const deps = buildDeps([payable()], {
+      reminderSendHour: CURRENT_HOUR_SP + 1,
+    });
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(
+      deps.accountsPayableRepository.listPendingForReminders,
+    ).not.toHaveBeenCalled();
+    expect(sendAccountsPayableWhatsAppReminderUseCase).not.toHaveBeenCalled();
+    expect(result).toEqual({ sentCount: 0, failedCount: 0 });
+  });
+
+  it("processa quando a hora atual bate com reminderSendHour, no timezone configurado", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const deps = buildDeps([payable()], {
+      reminderSendHour: CURRENT_HOUR_SP,
+      timezone: "America/Sao_Paulo",
+    });
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(result).toEqual({ sentCount: 1, failedCount: 0 });
+  });
+
+  it("não quebra quando a organização não tem OrganizationSettings (nem consulta contas pendentes)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+
+    const deps = buildDeps([payable()], { settings: null });
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(
+      deps.accountsPayableRepository.listPendingForReminders,
+    ).not.toHaveBeenCalled();
+    expect(result).toEqual({ sentCount: 0, failedCount: 0 });
   });
 
   it("não quebra quando a organização não tem WhatsApp configurado (cada conta falha por conta própria)", async () => {

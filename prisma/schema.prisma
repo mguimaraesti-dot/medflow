@@ -59,6 +59,12 @@ model OrganizationSettings {
   openingTime String @default("08:00") // usado no alerta "caixa não aberto"
   closingTime String @default("18:00") // usado no alerta "caixa não fechado"
 
+  // Hora (0-23, no timezone acima) em que o cron de lembretes de Contas a
+  // Pagar dispara — checado a cada chamada da rota, não um schedule do
+  // Vercel (plano Hobby só permite cron nativo 1x/dia, sem configuração
+  // dinâmica; ver /api/cron/accounts-payable-reminders).
+  reminderSendHour Int @default(7)
+
   logoUrl      String?
   primaryColor String  @default("#0F172A")
   theme        String  @default("system") // "light" | "dark" | "system"

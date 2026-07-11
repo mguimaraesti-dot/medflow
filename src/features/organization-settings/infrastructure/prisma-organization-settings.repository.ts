@@ -20,7 +20,10 @@ export class PrismaOrganizationSettingsRepository implements OrganizationSetting
   ): Promise<OrganizationSettings> {
     return prisma.organizationSettings.update({
       where: { organizationId },
-      data: { whatsapp: data.whatsapp },
+      data: {
+        whatsapp: data.whatsapp,
+        reminderSendHour: data.reminderSendHour,
+      },
     });
   }
 }

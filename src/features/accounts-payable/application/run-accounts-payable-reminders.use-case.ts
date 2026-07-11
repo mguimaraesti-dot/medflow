@@ -26,6 +26,23 @@ function isSameUTCDate(a: Date, b: Date): boolean {
 }
 
 /**
+ * Hora atual (0-23) no timezone informado — usada pra comparar com
+ * `OrganizationSettings.reminderSendHour`. A rota do cron não tem mais
+ * um `schedule` do Vercel disparando 1x/dia (Hobby só permite cron
+ * nativo diário, sem configuração dinâmica — ver comentário na rota);
+ * um serviço externo chama a rota com frequência maior, e é essa
+ * checagem que decide se é a hora certa de processar os lembretes.
+ */
+function currentHourInTimezone(timezone: string): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "numeric",
+    hourCycle: "h23",
+  });
+  return Number(formatter.format(new Date()));
+}
+
+/**
  * `dueDate` já é meia-noite UTC (campo `@db.Date`) — subtrair dias em
  * UTC preserva isso, sem risco do fuso deslocar o dia (mesmo cuidado
  * de `formatDateOnlyBR`/`toAccountsPayableResponseDTO`).
@@ -37,13 +54,18 @@ function reminderWindowStart(dueDate: Date, reminderDaysBefore: number): Date {
 }
 
 /**
- * Núcleo do cron diário (`app/api/cron/accounts-payable-reminders/route.ts`):
- * busca as contas pendentes da organização, filtra em código (mesmo
- * padrão de agregação em código já usado no projeto) quem já entrou na
- * janela de antecedência (`hoje >= dueDate - reminderDaysBefore`) e
- * ainda não recebeu lembrete hoje, e envia — pra cada uma. Uma conta
- * com falha no envio não interrompe as demais (log do erro, segue o
- * lote).
+ * Núcleo do cron de lembretes (`app/api/cron/accounts-payable-reminders/route.ts`):
+ * só processa quando a hora atual (no timezone da organização) bate com
+ * `OrganizationSettings.reminderSendHour` — a rota pode ser chamada com
+ * qualquer frequência (ex: de hora em hora, por um serviço de cron
+ * externo), essa checagem que garante que o disparo real só acontece
+ * uma vez por dia, na hora configurada. Depois disso, busca as contas
+ * pendentes da organização, filtra em código (mesmo padrão de agregação
+ * já usado no projeto) quem já entrou na janela de antecedência (`hoje
+ * >= dueDate - reminderDaysBefore`) e ainda não recebeu lembrete hoje —
+ * essa segunda checagem é o que torna seguro chamar a rota várias vezes
+ * dentro da mesma hora sem duplicar o envio. Uma conta com falha no
+ * envio não interrompe as demais (log do erro, segue o lote).
  *
  * O telefone é único por organização (`OrganizationSettings.whatsapp`),
  * então quando o lote tem mais de 1 conta due, todas caem no mesmo
@@ -55,6 +77,23 @@ export async function runAccountsPayableRemindersUseCase(
   organizationId: string,
   deps: Deps,
 ): Promise<RunAccountsPayableRemindersResult> {
+  const settings =
+    await deps.organizationSettingsRepository.findByOrganization(
+      organizationId,
+    );
+
+  // Sem settings, cai no default (7h) já embutido no schema — mas sem
+  // registro nenhum de OrganizationSettings a organização não tem nem
+  // WhatsApp configurado, então não há pra quem enviar de qualquer jeito.
+  if (!settings) {
+    return { sentCount: 0, failedCount: 0 };
+  }
+
+  const currentHour = currentHourInTimezone(settings.timezone);
+  if (currentHour !== settings.reminderSendHour) {
+    return { sentCount: 0, failedCount: 0 };
+  }
+
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
@@ -72,17 +111,12 @@ export async function runAccountsPayableRemindersUseCase(
     return inWindow && !alreadySentToday;
   });
 
-  const settings =
-    await deps.organizationSettingsRepository.findByOrganization(
-      organizationId,
-    );
-
   let sentCount = 0;
   let failedCount = 0;
 
   for (const [index, payable] of due.entries()) {
     try {
-      if (index > 0 && settings?.whatsapp) {
+      if (index > 0 && settings.whatsapp) {
         await deps.whatsAppMessaging.sendSeparatorMessage(settings.whatsapp);
       }
 
