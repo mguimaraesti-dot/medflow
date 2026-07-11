@@ -26,10 +26,14 @@ const whatsAppMessaging = new ZapiWhatsAppMessaging();
  * endpoints de botão interativo desta instância e nenhum entrega de
  * fato no WhatsApp (ver `zapi-client.ts`).
  *
- * O formato exato do payload de mensagem recebida da Z-API não foi
- * validado contra a API de verdade ainda — o `logger.info` abaixo loga
- * o payload bruto de propósito, pra ajustar os campos abaixo
- * (`messageText`, `quotedMessageId`) depois do primeiro teste real.
+ * Testado contra a API de verdade (2 eventos reais): o campo que
+ * distingue "mensagem que o próprio sistema mandou" (o lembrete, que
+ * também dispara este webhook) de "resposta digitada por uma pessoa"
+ * é `fromApi`, não `fromMe` — `fromMe` vem `true` mesmo pra respostas
+ * humanas quando o WhatsApp usa o identificador mascarado `@lid` no
+ * `phone`. `referenceMessageId` (citação da mensagem do lembrete) bate
+ * exatamente com o `lastReminderMessageId` salvo — confirmado nos
+ * logs reais, é o campo certo pra casar a conta.
  */
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
@@ -43,8 +47,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     logger.info("Payload recebido do webhook Z-API", { body });
 
-    // Mensagens enviadas pelo próprio sistema (fromMe) ou eventos que não
-    // são texto (status de entrega, presença etc.) são ignorados.
+    // Mensagens enviadas pelo próprio sistema (o lembrete, `fromApi:
+    // true`) ou eventos que não são texto (status de entrega, presença
+    // etc.) são ignorados. NÃO usar `fromMe` — ele vem `true` mesmo pra
+    // respostas humanas quando o WhatsApp usa o identificador mascarado
+    // `@lid` no `phone` (confirmado testando com um número diferente
+    // do conectado na instância).
     const messageText: unknown = body?.text?.message ?? body?.message?.text;
     const phone: unknown = body?.phone;
 
@@ -53,19 +61,15 @@ export async function POST(request: NextRequest) {
       !messageText ||
       typeof phone !== "string" ||
       !phone ||
-      body?.fromMe
+      body?.fromApi
     ) {
       return NextResponse.json({ data: { received: true, ignored: true } });
     }
 
-    // Id da mensagem citada (reply/quote) — nome do campo ainda não
-    // confirmado contra a API de verdade, tentando os caminhos mais
-    // plováveis da documentação da Z-API.
-    const quotedMessageIdRaw: unknown =
-      body?.referenceMessageId ??
-      body?.quotedMsgId ??
-      body?.message?.quotedMsg?.id ??
-      body?.text?.quotedMsg?.id;
+    // Id da mensagem citada (reply/quote) — confirmado contra a API de
+    // verdade: `referenceMessageId` bate com o `lastReminderMessageId`
+    // salvo quando a pessoa responde citando a mensagem do lembrete.
+    const quotedMessageIdRaw: unknown = body?.referenceMessageId;
     const quotedMessageId =
       typeof quotedMessageIdRaw === "string" && quotedMessageIdRaw
         ? quotedMessageIdRaw
