@@ -88,6 +88,24 @@ export function Logo({
   );
 }
 
+/** Lockup vertical (ícone em cima, "MedFlow" e a tagline embaixo, tudo centralizado) — variante "Vertical (Colorida)" do manual da marca; usado em espaços estreitos e altos, ex: painel lateral da Caixa Recepção. */
+export function LogoVertical({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn("flex flex-col items-center gap-2 text-center", className)}
+    >
+      <LogoIcon className="h-10 w-auto" />
+      <span className="text-lg leading-none font-bold tracking-tight">
+        <span className="text-foreground">Med</span>
+        <span className="text-primary">Flow</span>
+      </span>
+      <span className="text-muted-foreground text-xs">
+        Gestão financeira inteligente para clínicas
+      </span>
+    </div>
+  );
+}
+
 /** Emblema quadrado (ícone branco sobre fundo primário) — variante "Branco" do manual. */
 export function LogoBadge({ className }: { className?: string }) {
   return (

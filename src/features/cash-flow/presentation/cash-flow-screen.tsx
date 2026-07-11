@@ -10,7 +10,7 @@ import {
 } from "./cash-flow-entry-form";
 import { CashFlowEntriesTable } from "./cash-flow-entries-table";
 import { DailySummaryPanel } from "./daily-summary-panel";
-import { ClinicLogoPanel } from "./clinic-logo-panel";
+import { BrandLogoPanel } from "./brand-logo-panel";
 
 export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const { data: today } = useCashRegisterToday();
@@ -37,7 +37,7 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
           </div>
           <div className="flex flex-col gap-4">
             <DailySummaryPanel today={today} />
-            <ClinicLogoPanel />
+            <BrandLogoPanel />
           </div>
         </div>
         <CashFlowEntriesTable
