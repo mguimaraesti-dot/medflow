@@ -5,13 +5,14 @@
  * provedor de WhatsApp no futuro vira só uma nova implementação desta
  * interface, sem tocar em domain/application.
  *
- * Mensagens de texto simples, não botões interativos — testamos os
- * endpoints de botão desta instância da Z-API e nenhum entrega de fato
- * no WhatsApp (200 de sucesso, mensagem nunca chega). A confirmação de
- * pagamento passou a ser por resposta de texto ("PAGO"), citando a
- * mensagem do lembrete — ver `handle-zapi-webhook.use-case.ts`.
+ * Botões interativos nativos (cartão-resumo com botão "Pago", código
+ * de barras/Pix com botão de copiar) — ver histórico em
+ * `zapi-client.ts`. A confirmação de pagamento é por clique no botão
+ * "Pago", que carrega o id da conta — ver `handle-zapi-webhook.use-case.ts`.
  */
 export interface WhatsAppPaymentReminderInput {
+  /** Usado como id do botão "Pago" (`pago_<accountsPayableId>`) — o webhook lê esse id direto do payload do clique, sem precisar casar telefone nem mensagem. */
+  accountsPayableId: string;
   /** Telefone da clínica (`OrganizationSettings.whatsapp`) que recebe o lembrete — dono do caixa, não o fornecedor. */
   phone: string;
   supplierName: string;
@@ -28,18 +29,17 @@ export interface WhatsAppPaymentReminderInput {
 
 export interface WhatsAppMessagingPort {
   /**
-   * Dispara as 3 mensagens do lembrete (cartão-resumo, código de
-   * barras, chave Pix) — as duas últimas só quando o dado
-   * correspondente existe. Devolve o id da 1ª mensagem (cartão-resumo)
-   * — é a que a pessoa deve citar ao responder "PAGO", pra o webhook
-   * saber exatamente qual conta confirmar (o telefone é único pra
-   * clínica inteira, nunca desambigua sozinho).
+   * Dispara o lembrete (cartão-resumo com botão "Pago", código de
+   * barras e/ou chave Pix com botão de copiar — os 2 últimos só quando
+   * o dado correspondente existe). Devolve o id da mensagem do
+   * cartão-resumo — só auditoria/depuração, a confirmação em si casa
+   * pelo id da conta embutido no próprio botão clicado.
    */
   sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }>;
 
-  /** Mensagem de agradecimento enviada depois que o webhook confirma o pagamento (resposta "PAGO"). */
+  /** Mensagem de agradecimento enviada depois que o webhook confirma o pagamento (clique no botão "Pago"). */
   sendPaymentConfirmedMessage(phone: string): Promise<void>;
 
   /** Mensagem separadora entre um lembrete e outro, quando o cron dispara mais de uma conta pro mesmo telefone na mesma execução. */

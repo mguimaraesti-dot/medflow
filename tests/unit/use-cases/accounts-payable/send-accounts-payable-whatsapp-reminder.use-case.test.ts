@@ -162,6 +162,7 @@ describe("sendAccountsPayableWhatsAppReminderUseCase", () => {
 
     expect(deps.whatsAppMessaging.sendPaymentReminder).toHaveBeenCalledWith(
       expect.objectContaining({
+        accountsPayableId: "payable-1",
         phone: "11999999999",
         supplierName: "Fornecedor Teste",
         digitableLine: "12345",

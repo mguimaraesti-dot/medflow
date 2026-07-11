@@ -17,11 +17,11 @@ const organizationSettingsRepository =
 const supplierRepository = new PrismaSupplierRepository();
 const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
-// Até 5 mensagens sequenciais (cartão + rótulo/valor do boleto +
-// rótulo/valor do Pix), com 4 intervalos de 1.2s entre elas (ver
-// zapi-whatsapp-messaging.ts) — ~4.8s de espera garantida, ainda bem
-// abaixo do timeout padrão de 10s da Vercel. 30s dá folga de sobra sem
-// exigir plano Pro.
+// Até 3 mensagens sequenciais (cartão com botão "Pago" + código de
+// barras + Pix, cada uma com botão nativo), com 2 intervalos de 3s
+// entre elas (ver zapi-whatsapp-messaging.ts) — ~6s de espera
+// garantida, ainda bem abaixo do timeout padrão de 10s da Vercel. 30s
+// dá folga de sobra sem exigir plano Pro.
 export const maxDuration = 30;
 
 /** Botão "Enviar WhatsApp agora" no cadastro da conta — dispara o lembrete na hora, independente da janela de antecedência do cron. */

@@ -15,13 +15,12 @@ const organizationSettingsRepository =
 const supplierRepository = new PrismaSupplierRepository();
 const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
-// Processa cada conta pendente em sequência — até 5 mensagens por
-// conta agora (cartão + rótulo/valor do boleto + rótulo/valor do Pix),
-// ~4.8s de intervalos garantidos cada uma (ver
-// zapi-whatsapp-messaging.ts). 60s já é o teto do plano Hobby da
-// Vercel — dá pra um lote pequeno/médio, mas com esse aumento de 3
-// para 5 mensagens por conta, o lote máximo antes de estourar o
-// timeout ficou menor; se o volume de lembretes crescer, isso precisa
+// Processa cada conta pendente em sequência — até 3 mensagens por
+// conta (cartão com botão "Pago" + código de barras + Pix), ~6s de
+// intervalos garantidos cada uma (ver zapi-whatsapp-messaging.ts),
+// mais 1 separador (texto, sem delay extra) entre contas do mesmo
+// lote. 60s já é o teto do plano Hobby da Vercel — dá pra um lote
+// pequeno/médio; se o volume de lembretes crescer muito, isso precisa
 // virar processamento em lote/paralelo de verdade (ou plano Pro).
 export const maxDuration = 60;
 
