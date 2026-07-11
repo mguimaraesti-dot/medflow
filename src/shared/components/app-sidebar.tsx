@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
+  BarChart3,
   Building2,
   Landmark,
   LayoutDashboard,
@@ -64,6 +65,12 @@ const FINANCEIRO: NavItem[] = [
     label: "Tesouraria",
     icon: Landmark,
     isVisible: hasTreasuryAccess,
+  },
+  {
+    href: "/reports",
+    label: "Relatórios",
+    icon: BarChart3,
+    isVisible: (p) => p.includes(PERMISSIONS.DASHBOARD_READ),
   },
 ];
 

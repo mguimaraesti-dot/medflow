@@ -34,12 +34,13 @@ export interface CashFlowEntrySums {
   totalOut: string;
 }
 
-/** Projeção mínima usada pelo Dashboard para agregar em código (sem SQL raw). */
+/** Projeção mínima usada pelo Dashboard/Status Report para agregar em código (sem SQL raw). */
 export interface CashFlowEntryProjection {
   type: CashFlowEntryType;
   amount: Prisma.Decimal;
   occurredAt: Date;
   categoryId: string;
+  paymentMethodId: string;
 }
 
 /** Projeção usada pelos insights (origem das receitas por categoria + por hora). */
@@ -80,7 +81,7 @@ export interface CashFlowEntryRepository {
     cashRegisterDayId: string,
   ): Promise<CashFlowEntrySums>;
 
-  /** Projeção mínima (type/amount/occurredAt) para o Dashboard agregar em código — evita SQL raw. */
+  /** Projeção mínima (type/amount/occurredAt/categoryId/paymentMethodId) para o Dashboard/Status Report agregar em código — evita SQL raw. */
   listByDateRange(
     organizationId: string,
     from: Date,

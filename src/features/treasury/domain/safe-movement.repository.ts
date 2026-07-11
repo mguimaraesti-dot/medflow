@@ -84,6 +84,13 @@ export interface SafeMovementRepository {
     status: SafeMovementStatus,
   ): Promise<DateRangeSignedSum>;
 
+  /** Só `MANUAL_ADJUSTMENT` `CONFIRMED`, separado por sinal — usado na linha "Ajustes" do Status Report. */
+  sumAdjustmentsSignedByDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<DateRangeSignedSum>;
+
   /** Contagem + soma de movimentações `PENDING` — card "Pendentes de Confirmação". */
   countAndSumPending(organizationId: string): Promise<PendingSummary>;
 

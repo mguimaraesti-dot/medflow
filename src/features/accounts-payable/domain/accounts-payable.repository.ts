@@ -207,6 +207,13 @@ export interface AccountsPayableRepository {
     to: Date,
   ): Promise<AccountsPayableSummaryBucket>;
 
+  /** Mesma soma de `sumPaidByDateRange`, mas particionada por `categoryId` — usado pelo Status Report (linhas Despesas Operacionais/Salários). */
+  sumPaidByCategoryAndDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ categoryId: string; amount: string }[]>;
+
   /**
    * Candidatas ao lembrete de WhatsApp (cron diário) — só PENDENTES e
    * não excluídas. O filtro de janela (`hoje >= dueDate -

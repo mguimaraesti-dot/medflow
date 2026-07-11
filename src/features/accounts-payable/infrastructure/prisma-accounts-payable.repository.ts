@@ -553,6 +553,28 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     };
   }
 
+  async sumPaidByCategoryAndDateRange(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ categoryId: string; amount: string }[]> {
+    const rows = await prisma.accountsPayable.groupBy({
+      by: ["categoryId"],
+      where: {
+        organizationId,
+        deletedAt: null,
+        status: "PAID",
+        paidAt: { gte: from, lte: to },
+      },
+      _sum: { amount: true },
+    });
+
+    return rows.map((row) => ({
+      categoryId: row.categoryId,
+      amount: (row._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+    }));
+  }
+
   async listPendingForReminders(
     organizationId: string,
   ): Promise<AccountsPayable[]> {
