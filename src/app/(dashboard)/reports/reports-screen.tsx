@@ -18,6 +18,7 @@ import { SafeMovementsReportTable } from "@/features/treasury/presentation/safe-
 import { SafePeriodReport } from "@/features/treasury/presentation/safe-period-report";
 import { AccountsPayableReportTable } from "@/features/accounts-payable/presentation/accounts-payable-report-table";
 import { AccountsPayableByCategoryReport } from "@/features/accounts-payable/presentation/accounts-payable-by-category-report";
+import { AccountsPayableConsolidatedReport } from "@/features/accounts-payable/presentation/accounts-payable-consolidated-report";
 import {
   PeriodSelector,
   computePeriodRange,
@@ -148,6 +149,13 @@ export function ReportsScreen() {
         )}
         {selectedReportId === "cash-register-summary" && (
           <CashRegisterPeriodReport
+            title={title}
+            dateFrom={range.from}
+            dateTo={range.to}
+          />
+        )}
+        {selectedReportId === "payable-consolidated" && (
+          <AccountsPayableConsolidatedReport
             title={title}
             dateFrom={range.from}
             dateTo={range.to}
