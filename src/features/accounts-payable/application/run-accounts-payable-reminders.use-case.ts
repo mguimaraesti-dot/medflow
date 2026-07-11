@@ -109,8 +109,46 @@ export async function runAccountsPayableRemindersUseCase(
     return inWindow && !alreadySentToday;
   });
 
+  if (due.length === 0) {
+    logger.info("Cron de lembretes de WhatsApp concluído", {
+      organizationId,
+      candidateCount: candidates.length,
+      sentCount: 0,
+      failedCount: 0,
+    });
+    return { sentCount: 0, failedCount: 0 };
+  }
+
   let sentCount = 0;
   let failedCount = 0;
+
+  // Evita reconsultar, pra cada conta do lote, dados que o cron já tem
+  // em mãos (settings) ou que são baratos de buscar uma vez só
+  // (fornecedores da organização) — sem isso,
+  // sendAccountsPayableWhatsAppReminderUseCase repetiria essas 3
+  // buscas a cada iteração. O contrato da função não muda (mesmos
+  // métodos, mesmas assinaturas), só a origem do dado dentro do lote.
+  const payableById = new Map(due.map((payable) => [payable.id, payable]));
+  const suppliers = await deps.supplierRepository.list(organizationId);
+  const supplierById = new Map(
+    suppliers.map((supplier) => [supplier.id, supplier]),
+  );
+
+  const batchDeps: Deps = {
+    ...deps,
+    accountsPayableRepository: {
+      ...deps.accountsPayableRepository,
+      findById: async (id) => payableById.get(id) ?? null,
+    },
+    organizationSettingsRepository: {
+      ...deps.organizationSettingsRepository,
+      findByOrganization: async () => settings,
+    },
+    supplierRepository: {
+      ...deps.supplierRepository,
+      findById: async (id) => supplierById.get(id) ?? null,
+    },
+  };
 
   for (const payable of due) {
     try {
@@ -118,7 +156,7 @@ export async function runAccountsPayableRemindersUseCase(
         payable.id,
         organizationId,
         null,
-        deps,
+        batchDeps,
       );
       sentCount += 1;
     } catch (error) {
