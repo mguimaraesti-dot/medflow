@@ -40,11 +40,11 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     const { messageId } = await sendButtonListMessage({
       phone: input.phone,
       message:
-        `🧾 *Conta a Pagar*\n\n` +
-        `Fornecedor: ${input.supplierName}\n` +
-        `Descrição: ${input.description}\n` +
-        `Valor: ${input.amount}\n` +
-        `Vencimento: ${input.dueDate}`,
+        `⚠️ *Conta a Pagar*\n\n` +
+        `Fornecedor: *${input.supplierName}*\n` +
+        `Descrição: *${input.description}*\n` +
+        `Valor: *${input.amount}*\n` +
+        `Vencimento: *${input.dueDate}*`,
       buttonId: payButtonId(input.accountsPayableId),
       buttonLabel: "Pago",
     });
@@ -70,13 +70,6 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     }
 
     return { messageId };
-  }
-
-  async sendPaymentConfirmedMessage(phone: string): Promise<void> {
-    await sendTextMessage({
-      phone,
-      message: "✅ Pagamento confirmado! Obrigado.",
-    });
   }
 
   async sendSeparatorMessage(phone: string): Promise<void> {
