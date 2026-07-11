@@ -36,8 +36,9 @@ import type { CashRegisterDayResponseDTO } from "@/features/cash-register/applic
  */
 export function ReportsScreen() {
   const [catalogSearch, setCatalogSearch] = useState("");
-  const [selectedReportId, setSelectedReportId] =
-    useState<ReportId>("cash-closing");
+  const [selectedReportId, setSelectedReportId] = useState<ReportId>(
+    "safe-period-summary",
+  );
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("MONTH");
   const [periodCustom, setPeriodCustom] = useState<PeriodRange | undefined>();
   const [viewingDay, setViewingDay] =
@@ -46,16 +47,30 @@ export function ReportsScreen() {
   const range = computePeriodRange(periodPreset, periodCustom);
   const title = findReportLabel(selectedReportId);
 
+  // Reformulação v2 (Central de Relatórios): só os relatórios com
+  // `active` !== false aparecem — os antigos continuam no catálogo
+  // (código/rotas intactos) só ocultos da navegação.
+  const activeCatalog = useMemo(
+    () =>
+      REPORT_CATALOG.map((category) => ({
+        ...category,
+        items: category.items.filter((item) => item.active !== false),
+      })).filter((category) => category.items.length > 0),
+    [],
+  );
+
   const filteredCatalog = useMemo(() => {
     const query = catalogSearch.trim().toLowerCase();
-    if (!query) return REPORT_CATALOG;
-    return REPORT_CATALOG.map((category) => ({
-      ...category,
-      items: category.items.filter((item) =>
-        item.label.toLowerCase().includes(query),
-      ),
-    })).filter((category) => category.items.length > 0);
-  }, [catalogSearch]);
+    if (!query) return activeCatalog;
+    return activeCatalog
+      .map((category) => ({
+        ...category,
+        items: category.items.filter((item) =>
+          item.label.toLowerCase().includes(query),
+        ),
+      }))
+      .filter((category) => category.items.length > 0);
+  }, [catalogSearch, activeCatalog]);
 
   return (
     <div className="space-y-6">
