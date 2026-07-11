@@ -216,7 +216,18 @@ export interface SendButtonPixInput {
   merchantName: string;
 }
 
-/** Mensagem com botão nativo de copiar a chave Pix. */
+/**
+ * Mensagem com botão nativo de copiar a chave Pix.
+ *
+ * LIMITAÇÃO CONFIRMADA (developer.z-api.io/message/send-button-pix, pt e en):
+ * o corpo aceita só `phone`, `pixKey`, `type` (CPF/CNPJ/PHONE/EMAIL/EVP) e
+ * `merchantName` (título do botão). Não existe campo pra customizar o rótulo
+ * do "tipo de chave" — o texto exibido pro WhatsApp (ex: "Chave aleatória"
+ * quando `type: "EVP"`) é renderizado nativamente pelo card de Pix do
+ * WhatsApp Business a partir do `type`, sem controle via API. Não há como
+ * trocar esse texto para "Chave PIX" (ou qualquer outro) sem mudar o valor
+ * de `type` em si — o que mudaria o rótulo errado (ex: para "Chave CPF").
+ */
 export async function sendButtonPixMessage(
   input: SendButtonPixInput,
 ): Promise<void> {
