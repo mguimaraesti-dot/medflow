@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { CalendarDays, Download } from "lucide-react";
 import { formatDateOnlyLocalBR } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -70,7 +70,9 @@ export function DashboardHeader({
         </StatusPill>
         <StatusPill dot={pendingConfirmationCount > 0 ? "yellow" : "green"}>
           {pendingConfirmationCount > 0
-            ? "Confirmação pendente"
+            ? pendingConfirmationCount === 1
+              ? "1 Confirmação pendente"
+              : `${pendingConfirmationCount} Confirmações pendentes`
             : "Cofre Conferido"}
         </StatusPill>
         {overdueCount > 0 && (
@@ -80,7 +82,8 @@ export function DashboardHeader({
               : `${overdueCount} Contas Vencidas`}
           </StatusPill>
         )}
-        <span className="text-muted-foreground hidden text-xs sm:inline">
+        <span className="text-muted-foreground hidden items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium sm:inline-flex">
+          <CalendarDays className="h-3.5 w-3.5" />
           {formatDateOnlyLocalBR(new Date())}
         </span>
         <Button

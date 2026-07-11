@@ -2,10 +2,9 @@
 
 import { DashboardHeader } from "./dashboard-header";
 import { DashboardKpiRow } from "./dashboard-kpi-row";
-import { DashboardPendenciesCard } from "./dashboard-pendencies-card";
+import { DashboardOverviewCard } from "./dashboard-overview-card";
 import { DashboardFinancialFlowCard } from "./dashboard-financial-flow-card";
 import { DashboardAgendaCard } from "./dashboard-agenda-card";
-import { DashboardAvailabilityCard } from "./dashboard-availability-card";
 import { DashboardTimelineCard } from "./dashboard-timeline-card";
 import { DashboardQuickActions } from "./dashboard-quick-actions";
 import { useDashboardOverview } from "./use-dashboard-overview";
@@ -49,8 +48,13 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
         overdueCount={overview.overdueCount}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <DashboardPendenciesCard pendencies={overview.pendencies} />
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+        <DashboardOverviewCard
+          cashBalance={overview.cashBalance}
+          safeBalance={overview.safeBalance}
+          availableTotal={overview.availableTotal}
+          pendencies={overview.pendencies}
+        />
         <DashboardFinancialFlowCard
           receivedTodayTotal={overview.receivedTodayTotal}
           receivedTodayCash={overview.receivedTodayCash}
@@ -62,19 +66,13 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
           paidTodayCount={overview.paidTodayCount}
           availableTotal={overview.availableTotal}
         />
-        <DashboardAgendaCard
-          dueTodayCount={overview.dueTodayCount}
-          overdueCount={overview.overdueCount}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.4fr)]">
-        <DashboardAvailabilityCard
-          cashBalance={overview.cashBalance}
-          safeBalance={overview.safeBalance}
-          availableTotal={overview.availableTotal}
-        />
-        <DashboardTimelineCard events={overview.timeline} />
+        <div className="flex flex-col gap-4">
+          <DashboardTimelineCard events={overview.timeline} />
+          <DashboardAgendaCard
+            dueTodayCount={overview.dueTodayCount}
+            overdueCount={overview.overdueCount}
+          />
+        </div>
       </div>
 
       <DashboardQuickActions permissions={permissions} />

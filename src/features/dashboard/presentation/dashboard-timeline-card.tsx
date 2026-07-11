@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -54,10 +55,16 @@ export function DashboardTimelineCard({
 }) {
   return (
     <Card className="flex flex-col gap-4 py-4">
-      <CardHeader className="px-4">
+      <CardHeader className="flex-row items-center justify-between px-4">
         <CardTitle className="text-sm font-semibold">
           Últimas Movimentações
         </CardTitle>
+        <Link
+          href="/cash-flow"
+          className="text-primary text-xs font-semibold hover:underline"
+        >
+          Ver todas
+        </Link>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-1 px-4">
         {events.length === 0 ? (
