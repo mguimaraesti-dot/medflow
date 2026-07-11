@@ -112,8 +112,17 @@ export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
           Fechar Caixa
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      {/* max-h + flex-col com o corpo em overflow-y-auto: em telas
+          menores (notebooks) o conteúdo (Resumo do Caixa + contado +
+          diferença + observação) não cabe de uma vez — sem isso, o
+          rodapé com o botão "Confirmar Fechamento" ficava fora da área
+          visível e sem como rolar até ele. */}
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+          className="flex min-h-0 flex-1 flex-col"
+        >
           <DialogHeader>
             <DialogTitle>Fechar Caixa</DialogTitle>
             <DialogDescription>
@@ -121,7 +130,7 @@ export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
             <div className="space-y-3">
               <p className="text-sm font-medium">Resumo do Caixa</p>
               <div className="grid grid-cols-2 gap-3">
