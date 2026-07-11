@@ -45,10 +45,28 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    logger.info("Payload recebido do webhook Z-API", { body });
 
     const buttonIdMatch = JSON.stringify(body).match(/pago_([\w-]+)/);
     const accountsPayableId = buttonIdMatch ? buttonIdMatch[1] : null;
+
+    // Diagnóstico: a Z-API manda TIPOS diferentes de evento pro mesmo
+    // endpoint (clique de botão, mensagem de texto, status de entrega
+    // "DELIVERED"/lida "READ", presença, etc.) — campos como `type`,
+    // `status`, `fromApi`, `fromMe`, `isStatusReply` costumam ser os
+    // discriminadores. Logando esses candidatos + o resultado da busca
+    // por "pago_" separado do body inteiro, pra ficar fácil de ler nos
+    // logs da Vercel qual evento exatamente disparou o webhook.
+    logger.info("Payload recebido do webhook Z-API", {
+      body,
+      type: (body as Record<string, unknown> | null)?.type,
+      status: (body as Record<string, unknown> | null)?.status,
+      fromApi: (body as Record<string, unknown> | null)?.fromApi,
+      fromMe: (body as Record<string, unknown> | null)?.fromMe,
+      isStatusReply: (body as Record<string, unknown> | null)?.isStatusReply,
+      buttonIdFoundInPayload: accountsPayableId
+        ? `pago_${accountsPayableId}`
+        : null,
+    });
 
     if (!accountsPayableId) {
       // Não é um clique no botão "Pago" (status de entrega, presença,
