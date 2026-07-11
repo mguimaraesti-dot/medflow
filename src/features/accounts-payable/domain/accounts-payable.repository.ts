@@ -51,6 +51,10 @@ export interface ListAccountsPayableFilter {
    * (soft delete), usado exclusivamente pela tela "Contas Excluídas".
    */
   deletedOnly?: boolean;
+  /** "Dr. Flávio" (BANCO) ou "Cofre" — usado pelo Relatório de Contas a Pagar consolidado. */
+  paymentOrigin?: PaymentOrigin;
+  /** Combinado com `status` omitido, pra listar Pagas+Pendentes+Vencidas juntas sem trazer Canceladas — usado pelo Relatório de Contas a Pagar consolidado. */
+  excludeCancelled?: boolean;
 }
 
 /**

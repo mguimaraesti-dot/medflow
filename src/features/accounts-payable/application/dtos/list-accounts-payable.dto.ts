@@ -17,6 +17,10 @@ export const listAccountsPayableSchema = paginationSchema.extend({
   search: z.string().trim().min(1).max(200).optional(),
   /** `true` só na tela "Contas Excluídas" — nunca combinado com o filtro padrão. */
   deletedOnly: z.coerce.boolean().optional(),
+  /** "Dr. Flávio" (BANCO) ou "Cofre" — usado pelo Relatório de Contas a Pagar consolidado. */
+  paymentOrigin: z.enum(["BANCO", "COFRE"]).optional(),
+  /** Combinado com `status` omitido, pra listar Pagas+Pendentes+Vencidas juntas sem trazer Canceladas — usado pelo Relatório de Contas a Pagar consolidado. */
+  excludeCancelled: z.coerce.boolean().optional(),
 });
 
 export type ListAccountsPayableInput = z.infer<
