@@ -10,6 +10,7 @@ import {
 } from "./cash-flow-entry-form";
 import { CashFlowEntriesTable } from "./cash-flow-entries-table";
 import { DailySummaryPanel } from "./daily-summary-panel";
+import { ClinicLogoPanel } from "./clinic-logo-panel";
 
 export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const { data: today } = useCashRegisterToday();
@@ -30,11 +31,14 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
       />
 
       <div className="space-y-4">
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <CashFlowEntryForm ref={formRef} disabled={!canCreateEntry} />
           </div>
-          <DailySummaryPanel today={today} />
+          <div className="flex flex-col gap-4">
+            <DailySummaryPanel today={today} />
+            <ClinicLogoPanel />
+          </div>
         </div>
         <CashFlowEntriesTable
           cashRegisterDayId={isRegisterOpen ? today?.id : undefined}
