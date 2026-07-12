@@ -145,7 +145,7 @@ export const ROLE_PERMISSIONS: Record<
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
   OWNER: "Gerente",
-  SECRETARY: "Secretária",
+  SECRETARY: "Recepcionista",
 };
 
 export function getRoleLabel(roleName: string): string {
