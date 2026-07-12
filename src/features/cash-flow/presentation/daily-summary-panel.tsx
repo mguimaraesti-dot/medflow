@@ -16,7 +16,7 @@ function MetricTile({
   tone?: "positive" | "negative" | "primary";
 }) {
   return (
-    <div className="bg-muted/30 flex flex-1 flex-col justify-center rounded-xl border px-4 py-5">
+    <div className="bg-muted/30 flex flex-col justify-center rounded-xl border px-4 py-5">
       <p className="text-muted-foreground text-sm">{label}</p>
       <p
         className={cn(
@@ -40,10 +40,10 @@ function MetricTile({
  *
  * Continua visível com o caixa fechado (ou sem nenhum caixa aberto hoje)
  * — nesse estado os valores aparecem zerados, nunca o resumo de um dia
- * já encerrado. Os 5 mini-cards (incluindo Lançamentos Hoje) ficam em
- * pilha vertical com `flex-1` cada — ocupam toda a altura do painel,
- * ao lado do logo empilhado em cima (Refinamento de layout v2 Caixa
- * Recepção), sem sobrar área vazia embaixo.
+ * já encerrado. `h-full` + `justify-between` (em vez de `flex-1` por
+ * card) distribui o espaço vertical sobrando nos gaps entre os 5
+ * mini-cards, que mantêm altura natural — mesma técnica do protótipo
+ * de referência (Ajuste de layout Novo Lançamento/Resumo do Dia).
  */
 export function DailySummaryPanel({
   today,
@@ -63,11 +63,13 @@ export function DailySummaryPanel({
   const entriesCount = data?.total ?? 0;
 
   return (
-    <Card className="flex flex-1 flex-col rounded-2xl shadow-sm">
+    <Card className="flex h-full flex-col rounded-2xl shadow-sm">
       <CardHeader>
-        <CardTitle>Resumo do Dia</CardTitle>
+        <CardTitle className="text-lg whitespace-nowrap">
+          Resumo do Dia
+        </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3">
+      <CardContent className="flex flex-1 flex-col justify-between">
         <MetricTile
           label="Saldo Inicial"
           value={formatCurrencyBRL(openingBalance)}

@@ -148,7 +148,7 @@ export const CashFlowEntryForm = forwardRef<
   }
 
   return (
-    <Card ref={containerRef} className="rounded-2xl shadow-sm">
+    <Card ref={containerRef} className="h-full rounded-2xl shadow-sm">
       <CardHeader>
         <CardTitle>Novo Lançamento</CardTitle>
       </CardHeader>
