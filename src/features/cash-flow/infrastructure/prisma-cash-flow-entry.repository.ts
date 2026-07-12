@@ -7,7 +7,6 @@ import type {
   CreateCashFlowEntryInput,
   ListCashFlowEntriesFilter,
   CashFlowEntrySums,
-  CashFlowEntryProjection,
   CashFlowEntryInsightProjection,
 } from "../domain/cash-flow-entry.repository";
 import type { CashFlowEntry } from "../domain/cash-flow-entry.entity";
@@ -185,24 +184,6 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
       totalIn: (inSum._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
       totalOut: (outSum._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
     };
-  }
-
-  async listByDateRange(
-    organizationId: string,
-    from: Date,
-    to: Date,
-  ): Promise<CashFlowEntryProjection[]> {
-    return prisma.cashFlowEntry.findMany({
-      where: { organizationId, occurredAt: { gte: from, lte: to } },
-      select: {
-        type: true,
-        amount: true,
-        occurredAt: true,
-        categoryId: true,
-        paymentMethodId: true,
-      },
-      orderBy: { occurredAt: "asc" },
-    });
   }
 
   async countReversedToday(
