@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/shared/ui/card";
  */
 export function BrandLogoPanel() {
   return (
-    <Card className="flex shrink-0 items-center rounded-2xl shadow-sm">
+    <Card className="flex shrink-0 items-start rounded-2xl shadow-sm">
       <CardContent className="flex items-center p-6">
         <LogoPrincipal />
       </CardContent>
