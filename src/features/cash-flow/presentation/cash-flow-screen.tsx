@@ -22,25 +22,23 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col items-stretch gap-4 sm:flex-row">
-        <div className="flex-1">
-          <CashBalanceHeader
-            canOpen={can(PERMISSIONS.CASH_REGISTER_OPEN)}
-            canClose={can(PERMISSIONS.CASH_REGISTER_CLOSE)}
-            canReopen={can(PERMISSIONS.CASH_REGISTER_REOPEN)}
-            canCreateEntry={canCreateEntry}
-            onSelectType={(type) => formRef.current?.selectType(type)}
-          />
-        </div>
-        <BrandLogoPanel />
-      </div>
+      <CashBalanceHeader
+        canOpen={can(PERMISSIONS.CASH_REGISTER_OPEN)}
+        canClose={can(PERMISSIONS.CASH_REGISTER_CLOSE)}
+        canReopen={can(PERMISSIONS.CASH_REGISTER_REOPEN)}
+        canCreateEntry={canCreateEntry}
+        onSelectType={(type) => formRef.current?.selectType(type)}
+      />
 
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <CashFlowEntryForm ref={formRef} disabled={!canCreateEntry} />
           </div>
-          <DailySummaryPanel today={today} />
+          <div className="flex flex-col gap-4">
+            <BrandLogoPanel />
+            <DailySummaryPanel today={today} />
+          </div>
         </div>
         <CashFlowEntriesTable
           cashRegisterDayId={isRegisterOpen ? today?.id : undefined}

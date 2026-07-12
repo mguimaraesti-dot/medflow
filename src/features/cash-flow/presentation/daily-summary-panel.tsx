@@ -16,7 +16,7 @@ function MetricTile({
   tone?: "positive" | "negative" | "primary";
 }) {
   return (
-    <div className="bg-muted/30 flex flex-col justify-center rounded-xl border px-4 py-5">
+    <div className="bg-muted/30 flex flex-1 flex-col justify-center rounded-xl border px-4 py-5">
       <p className="text-muted-foreground text-sm">{label}</p>
       <p
         className={cn(
@@ -40,10 +40,10 @@ function MetricTile({
  *
  * Continua visível com o caixa fechado (ou sem nenhum caixa aberto hoje)
  * — nesse estado os valores aparecem zerados, nunca o resumo de um dia
- * já encerrado. Mini-cards com padding e fonte maiores (Refinamento de
- * layout Caixa Recepção) — ocupam melhor o espaço vertical da coluna ao
- * lado de "Novo Lançamento", que costuma ser mais alto, em vez de sobrar
- * área vazia embaixo.
+ * já encerrado. Os 5 mini-cards (incluindo Lançamentos Hoje) ficam em
+ * pilha vertical com `flex-1` cada — ocupam toda a altura do painel,
+ * ao lado do logo empilhado em cima (Refinamento de layout v2 Caixa
+ * Recepção), sem sobrar área vazia embaixo.
  */
 export function DailySummaryPanel({
   today,
@@ -63,38 +63,31 @@ export function DailySummaryPanel({
   const entriesCount = data?.total ?? 0;
 
   return (
-    <Card className="rounded-2xl shadow-sm">
+    <Card className="flex flex-1 flex-col rounded-2xl shadow-sm">
       <CardHeader>
         <CardTitle>Resumo do Dia</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <MetricTile
-            label="Saldo Inicial"
-            value={formatCurrencyBRL(openingBalance)}
-          />
-          <MetricTile
-            label="Saldo Atual"
-            value={formatCurrencyBRL(currentBalance)}
-            tone="primary"
-          />
-          <MetricTile
-            label="Entradas"
-            value={formatCurrencyBRL(totalIn)}
-            tone="positive"
-          />
-          <MetricTile
-            label="Saídas"
-            value={`-${formatCurrencyBRL(totalOut)}`}
-            tone="negative"
-          />
-        </div>
-        <div className="bg-muted/30 flex items-center justify-between rounded-xl border px-3 py-2.5">
-          <span className="text-muted-foreground text-sm">
-            Lançamentos Hoje
-          </span>
-          <span className="font-semibold tabular-nums">{entriesCount}</span>
-        </div>
+      <CardContent className="flex flex-1 flex-col gap-3">
+        <MetricTile
+          label="Saldo Inicial"
+          value={formatCurrencyBRL(openingBalance)}
+        />
+        <MetricTile
+          label="Saldo Atual"
+          value={formatCurrencyBRL(currentBalance)}
+          tone="primary"
+        />
+        <MetricTile
+          label="Entradas"
+          value={formatCurrencyBRL(totalIn)}
+          tone="positive"
+        />
+        <MetricTile
+          label="Saídas"
+          value={`-${formatCurrencyBRL(totalOut)}`}
+          tone="negative"
+        />
+        <MetricTile label="Lançamentos Hoje" value={String(entriesCount)} />
       </CardContent>
     </Card>
   );

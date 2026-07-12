@@ -1,19 +1,16 @@
 import { LogoPrincipal } from "@/shared/components/logo";
-import { Card, CardContent } from "@/shared/ui/card";
 
 /**
- * Card compacto com a marca MedFlow, encostado ao lado do Saldo Atual
- * (mesma linha, mesma altura) — Refinamento de layout Caixa Recepção.
- * `shrink-0` porque quem deve ocupar a largura disponível é o card de
- * Saldo Atual, não este. Usa o Logo Principal (Horizontal Colorida) do
- * manual da marca, com a tagline empilhada junto ao wordmark.
+ * Card do logo empilhado sobre o "Resumo do Dia" (Refinamento de layout
+ * v2 Caixa Recepção). Fundo branco explícito (não usa o `Card` do tema)
+ * porque o Logo Principal é a variante "Colorida" do manual, desenhada
+ * pra fundo claro — precisa continuar branco mesmo com o app em tema
+ * escuro.
  */
 export function BrandLogoPanel() {
   return (
-    <Card className="flex shrink-0 items-start rounded-2xl shadow-sm">
-      <CardContent className="flex items-center p-6">
-        <LogoPrincipal />
-      </CardContent>
-    </Card>
+    <div className="flex items-center rounded-2xl bg-white p-5 shadow-sm">
+      <LogoPrincipal />
+    </div>
   );
 }
