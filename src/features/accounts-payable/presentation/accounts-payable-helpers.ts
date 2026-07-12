@@ -28,22 +28,26 @@ import type {
 import type { AccountsPayableAuditLogEntry } from "./use-accounts-payable-audit-log";
 
 /**
- * Cabeçalho formatado pra colar manualmente num grupo do WhatsApp (a
- * integração automática ainda não existe — ver `publicToken` na
- * entidade). Asteriscos são negrito no WhatsApp; nunca escapar. Só os
- * dados básicos — código de barras e chave PIX já têm seus próprios
- * botões de cópia, não entram aqui.
+ * Texto formatado pra colar manualmente num grupo do WhatsApp — mesmo
+ * formato do lembrete automático (`zapi-whatsapp-messaging.ts`), pra
+ * quem prefere enviar na mão em vez de esperar o lembrete agendado.
+ * Asteriscos são negrito no WhatsApp; nunca escapar. Só os dados
+ * básicos — código de barras e chave PIX já têm seus próprios botões
+ * de cópia, não entram aqui.
  */
 export function buildWhatsAppMessage(input: {
   supplierName: string;
+  description: string;
   amount: string;
   dueDate: string | Date;
 }): string {
   return [
     "⚠️ *Conta a Pagar*",
-    `*Nome:* ${input.supplierName}`,
-    `*Vencimento:* ${formatDateOnlyBR(input.dueDate)}`,
-    `*Valor:* ${formatCurrencyBRL(input.amount)}`,
+    "",
+    `Fornecedor: *${input.supplierName}*`,
+    `Descrição: *${input.description}*`,
+    `Valor: *${formatCurrencyBRL(input.amount)}*`,
+    `Vencimento: *${formatDateOnlyBR(input.dueDate)}*`,
   ].join("\n");
 }
 

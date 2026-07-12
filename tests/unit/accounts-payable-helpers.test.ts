@@ -3,9 +3,10 @@ import { buildWhatsAppMessage } from "@/features/accounts-payable/presentation/a
 import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
 
 describe("buildWhatsAppMessage", () => {
-  it("monta o cabeçalho com Nome, Vencimento e Valor, sem código de barras nem PIX", () => {
+  it("monta o texto com Fornecedor, Descrição, Valor e Vencimento, sem código de barras nem PIX", () => {
     const message = buildWhatsAppMessage({
       supplierName: "Imobiliária Central",
+      description: "Aluguel julho",
       amount: "1234.56",
       dueDate: "2026-07-20T00:00:00.000Z",
     });
@@ -13,9 +14,11 @@ describe("buildWhatsAppMessage", () => {
     expect(message).toBe(
       [
         "⚠️ *Conta a Pagar*",
-        "*Nome:* Imobiliária Central",
-        `*Vencimento:* ${formatDateOnlyBR("2026-07-20T00:00:00.000Z")}`,
-        `*Valor:* ${formatCurrencyBRL("1234.56")}`,
+        "",
+        "Fornecedor: *Imobiliária Central*",
+        "Descrição: *Aluguel julho*",
+        `Valor: *${formatCurrencyBRL("1234.56")}*`,
+        `Vencimento: *${formatDateOnlyBR("2026-07-20T00:00:00.000Z")}*`,
       ].join("\n"),
     );
     expect(message).not.toContain("Código de Barras");
