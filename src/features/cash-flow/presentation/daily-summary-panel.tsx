@@ -16,12 +16,12 @@ function MetricTile({
   tone?: "positive" | "negative" | "primary";
 }) {
   return (
-    <div className="bg-muted/30 rounded-xl border px-3 py-2.5">
-      <p className="text-muted-foreground text-xs">{label}</p>
+    <div className="bg-muted/30 flex flex-col justify-center rounded-xl border px-4 py-5">
+      <p className="text-muted-foreground text-sm">{label}</p>
       <p
         className={cn(
           "font-semibold tabular-nums",
-          tone === "primary" ? "text-primary text-lg" : "text-base",
+          tone === "primary" ? "text-primary text-2xl" : "text-xl",
           tone === "positive" && "text-green-600 dark:text-green-500",
           tone === "negative" && "text-destructive",
         )}
@@ -40,10 +40,10 @@ function MetricTile({
  *
  * Continua visível com o caixa fechado (ou sem nenhum caixa aberto hoje)
  * — nesse estado os valores aparecem zerados, nunca o resumo de um dia
- * já encerrado. Altura natural do conteúdo (sem `h-full`/`justify-center`)
- * — ao lado de "Novo Lançamento", que costuma ser mais alto, sobra espaço
- * na coluna à direita, mas o card em si não precisa esticar pra
- * preenchê-lo (Refinamento compactação Caixa Recepção).
+ * já encerrado. Mini-cards com padding e fonte maiores (Refinamento de
+ * layout Caixa Recepção) — ocupam melhor o espaço vertical da coluna ao
+ * lado de "Novo Lançamento", que costuma ser mais alto, em vez de sobrar
+ * área vazia embaixo.
  */
 export function DailySummaryPanel({
   today,

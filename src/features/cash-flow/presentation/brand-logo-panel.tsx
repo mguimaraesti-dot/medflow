@@ -1,16 +1,18 @@
-import { LogoVertical } from "@/shared/components/logo";
+import { Logo } from "@/shared/components/logo";
+import { Card, CardContent } from "@/shared/ui/card";
 
 /**
- * Preenche o espaço vertical que sobra abaixo do "Resumo do Dia" (o card
- * não estica pra acompanhar a coluna do formulário, de propósito — ver
- * daily-summary-panel.tsx). Usa o lockup vertical da marca MedFlow (SVG,
- * escala bem em qualquer tamanho) — a foto da logo da Clínica MAE ficava
- * ruim reduzida a um espaço estreito como esse.
+ * Card compacto com a marca MedFlow, encostado ao lado do Saldo Atual
+ * (mesma linha, mesma altura) — Refinamento de layout Caixa Recepção.
+ * `shrink-0` porque quem deve ocupar a largura disponível é o card de
+ * Saldo Atual, não este.
  */
 export function BrandLogoPanel() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-6">
-      <LogoVertical />
-    </div>
+    <Card className="flex shrink-0 items-center rounded-2xl shadow-sm">
+      <CardContent className="flex items-center p-6">
+        <Logo />
+      </CardContent>
+    </Card>
   );
 }
