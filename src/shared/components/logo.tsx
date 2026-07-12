@@ -88,6 +88,24 @@ export function Logo({
   );
 }
 
+/** Logo principal (ícone à esquerda; "MedFlow" e a tagline empilhados à direita) — variante "Horizontal (Colorida)", a primeira do manual da marca. Usado onde há largura sobrando mas pouca altura, ex: card ao lado do Saldo Atual na Caixa Recepção. */
+export function LogoPrincipal({ className }: { className?: string }) {
+  return (
+    <div className={cn("inline-flex items-center gap-3", className)}>
+      <LogoIcon className="h-10 w-auto" />
+      <div className="flex flex-col leading-tight">
+        <span className="text-lg leading-none font-bold tracking-tight">
+          <span className="text-foreground">Med</span>
+          <span className="text-primary">Flow</span>
+        </span>
+        <span className="text-muted-foreground text-xs whitespace-nowrap">
+          Gestão financeira inteligente para clínicas
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /** Lockup vertical (ícone em cima, "MedFlow" e a tagline embaixo, tudo centralizado) — variante "Vertical (Colorida)" do manual da marca; usado em espaços estreitos e altos, ex: painel lateral da Caixa Recepção. */
 export function LogoVertical({ className }: { className?: string }) {
   return (
