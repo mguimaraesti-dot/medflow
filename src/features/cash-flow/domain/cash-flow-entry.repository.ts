@@ -34,15 +34,6 @@ export interface CashFlowEntrySums {
   totalOut: string;
 }
 
-/** Projeção mínima usada pelo Dashboard/Status Report para agregar em código (sem SQL raw). */
-export interface CashFlowEntryProjection {
-  type: CashFlowEntryType;
-  amount: Prisma.Decimal;
-  occurredAt: Date;
-  categoryId: string;
-  paymentMethodId: string;
-}
-
 /** Projeção usada pelo Status Report do Cofre — precisa saber se a forma de pagamento é dinheiro (`isCash`), já que reversões trocam o `type` mas preservam a forma de pagamento original (uma reversão de PIX vira OUT+PIX, não Dinheiro). */
 export interface CashFlowEntryCofreReportRow {
   type: CashFlowEntryType;
@@ -88,13 +79,6 @@ export interface CashFlowEntryRepository {
   sumCashOnlyByCashRegisterDay(
     cashRegisterDayId: string,
   ): Promise<CashFlowEntrySums>;
-
-  /** Projeção mínima (type/amount/occurredAt/categoryId/paymentMethodId) para o Dashboard/Status Report agregar em código — evita SQL raw. */
-  listByDateRange(
-    organizationId: string,
-    from: Date,
-    to: Date,
-  ): Promise<CashFlowEntryProjection[]>;
 
   /** Contagem de lançamentos estornados no período — usada pelo alerta de estornos do dia. */
   countReversedToday(

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileBarChart, Receipt, Vault, type LucideIcon } from "lucide-react";
+import { Receipt, Vault, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/shared/ui/card";
 
 interface ReportCatalogItem {
@@ -13,13 +13,6 @@ interface ReportCatalogItem {
 
 /** Vitrine de relatórios (cards clicáveis), pronta pra crescer sem precisar reestruturar quando novos relatórios chegarem. */
 const REPORTS: ReportCatalogItem[] = [
-  {
-    href: "/reports/status-report",
-    title: "Status Report",
-    description:
-      "Resumo financeiro do período em imagem — pronto pra baixar ou enviar por WhatsApp.",
-    icon: FileBarChart,
-  },
   {
     href: "/reports/status-report-contas-pagas",
     title: "Status Report: Contas Pagas",
