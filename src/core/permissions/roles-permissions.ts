@@ -58,7 +58,10 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
  * - Proprietário (Gerente, na Gestão de Acessos) também gerencia
  *   usuários — mapeamento explícito do pedido de Gestão de Acessos:
  *   "Gerente" cria/edita usuários e vê relatórios, sem as funções de
- *   manutenção do sistema que só o Admin tem.
+ *   manutenção do sistema que só o Admin tem. Também tem
+ *   TREASURY_MANUAL_ADJUSTMENT (Retirada do Cofre e Ajuste Manual na
+ *   Tesouraria) — decisão explícita: só Admin tinha essa permissão
+ *   antes, deixando Gerente sem ver esses dois botões por engano.
  */
 export const ROLE_PERMISSIONS: Record<
   "ADMIN" | "OWNER" | "SECRETARY" | "FINANCE" | "ACCOUNTANT",
@@ -94,6 +97,7 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.PAYABLE_PAY,
     PERMISSIONS.PAYABLE_READ,
     PERMISSIONS.TREASURY_SANGRIA,
+    PERMISSIONS.TREASURY_MANUAL_ADJUSTMENT,
     PERMISSIONS.TREASURY_CONFIRM_MOVEMENT,
     PERMISSIONS.USERS_MANAGE,
     PERMISSIONS.DASHBOARD_READ,

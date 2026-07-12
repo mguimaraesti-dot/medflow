@@ -39,15 +39,17 @@ describe("ROLE_PERMISSIONS", () => {
     }
   });
 
-  // Motor de Tesouraria (docs/decisions/adr-tesouraria.md, Seção 5, Q4): só Admin.
-  it("só ADMIN tem permissão de ajuste manual do Cofre", () => {
+  // Motor de Tesouraria (docs/decisions/adr-tesouraria.md, Seção 5, Q4):
+  // originalmente só Admin; revisado para incluir OWNER (Gerente) também —
+  // ver adenda na Seção 5 do ADR.
+  it("ADMIN e OWNER têm permissão de ajuste manual do Cofre, mais ninguém", () => {
     const rolesWithManualAdjustment = Object.entries(ROLE_PERMISSIONS)
       .filter(([, perms]) =>
         perms.includes(PERMISSIONS.TREASURY_MANUAL_ADJUSTMENT),
       )
       .map(([role]) => role);
 
-    expect(rolesWithManualAdjustment).toEqual(["ADMIN"]);
+    expect(rolesWithManualAdjustment).toEqual(["ADMIN", "OWNER"]);
   });
 
   it("ADMIN, OWNER e FINANCE podem solicitar sangria, mas não Secretária nem Contador", () => {

@@ -190,7 +190,7 @@ Menu novo, mostrando: saldo atual do Cofre, últimas sangrias, últimos abasteci
 1. **Saídas só em dinheiro (`isCash = true`)** — ✅ confirmado. Hoje na prática é 100% das saídas, mas o campo já existe para quando isso mudar.
 2. **`PENDING_CONFERENCE` é reabilitável antes do handoff?** — ✅ sim, via "Rejeitar Conferência" (gerente/Admin, motivo obrigatório), distinta da Reabertura (Admin, só a partir de `CLOSED`).
 3. **Quem confirma o handoff?** — ✅ permissão nova (`treasury:confirm-handoff`), não perfil novo. Owner/Admin certamente; Finance como opcional, a decidir na hora de popular `roles-permissions.ts`. Secretária nunca.
-4. **Ajuste manual do Cofre** — ✅ só Admin, motivo obrigatório, sempre via `SafeMovement` (nunca altera saldo direto).
+4. **Ajuste manual do Cofre** — ✅ só Admin, motivo obrigatório, sempre via `SafeMovement` (nunca altera saldo direto). **Revisado depois do MVP**: Gerente (`OWNER`) também recebeu `treasury:manual-adjustment` — o perfil não enxergava "Retirada do Cofre" nem "Ajuste Manual" na Tesouraria, e o dono do produto confirmou que deveria ter acesso, junto com Admin.
 5. **Conta Bancária** — ✅ não criar tabela agora, só manter documentado no Roadmap.
 
 ---
