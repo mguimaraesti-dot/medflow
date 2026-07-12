@@ -49,10 +49,15 @@ function SectionTitle({
 }) {
   return (
     <div
-      style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 12,
+      }}
     >
-      <Icon path={iconPath} color={DARK_TEXT} size={22} />
-      <div style={{ display: "flex", fontSize: 20, fontWeight: 800 }}>
+      <Icon path={iconPath} color={DARK_TEXT} size={26} />
+      <div style={{ display: "flex", fontSize: 24, fontWeight: 800 }}>
         {title}
       </div>
     </div>
@@ -70,7 +75,7 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <ReportCard style={{ padding: "12px 26px" }}>
+    <ReportCard style={{ padding: "14px 32px" }}>
       <SectionTitle title={title} iconPath={iconPath} />
       {children}
     </ReportCard>
@@ -139,8 +144,8 @@ function KpiCard({
       style={{
         flex: 1,
         alignItems: "center",
-        gap: 6,
-        padding: "18px 18px",
+        gap: 10,
+        padding: "22px 24px",
       }}
     >
       <div
@@ -148,18 +153,18 @@ function KpiCard({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 42,
-          height: 42,
+          width: 56,
+          height: 56,
           borderRadius: 999,
           backgroundColor: `${BLUE}1A`,
         }}
       >
-        <Icon path={iconPath} color={BLUE} size={22} />
+        <Icon path={iconPath} color={BLUE} size={28} />
       </div>
-      <div style={{ display: "flex", fontSize: 16, color: MUTED_TEXT }}>
+      <div style={{ display: "flex", fontSize: 18, color: MUTED_TEXT }}>
         {label}
       </div>
-      <div style={{ display: "flex", fontSize: 30, fontWeight: 800 }}>
+      <div style={{ display: "flex", fontSize: 38, fontWeight: 800 }}>
         {value}
       </div>
       {trend}
@@ -285,7 +290,7 @@ function DonutChart({
   );
 }
 
-const BAR_TRACK_WIDTH = 380;
+const BAR_TRACK_WIDTH = 420;
 const AXIS_TICKS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
 /** Barra horizontal proporcional (0-100%) com bolinha colorida + nome à esquerda, valor + percentual à direita. */
@@ -301,21 +306,21 @@ function CategoryBarRow({
   percentage: number;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          width: 220,
+          gap: 12,
+          width: 230,
           minWidth: 0,
         }}
       >
         <div
           style={{
             display: "flex",
-            width: 14,
-            height: 14,
+            width: 16,
+            height: 16,
             borderRadius: 999,
             backgroundColor: color,
           }}
@@ -323,7 +328,7 @@ function CategoryBarRow({
         <div
           style={{
             display: "flex",
-            fontSize: 17,
+            fontSize: 19,
             fontWeight: 600,
             color: DARK_TEXT,
           }}
@@ -335,7 +340,7 @@ function CategoryBarRow({
         style={{
           display: "flex",
           width: BAR_TRACK_WIDTH,
-          height: 20,
+          height: 24,
           backgroundColor: "#F1F5F9",
           borderRadius: 999,
         }}
@@ -344,7 +349,7 @@ function CategoryBarRow({
           style={{
             display: "flex",
             width: Math.max((percentage / 100) * BAR_TRACK_WIDTH, 4),
-            height: 20,
+            height: 24,
             backgroundColor: color,
             borderRadius: 999,
           }}
@@ -355,7 +360,7 @@ function CategoryBarRow({
           display: "flex",
           flex: 1,
           justifyContent: "flex-end",
-          fontSize: 17,
+          fontSize: 19,
           fontWeight: 700,
           color: DARK_TEXT,
         }}
@@ -365,9 +370,9 @@ function CategoryBarRow({
       <div
         style={{
           display: "flex",
-          width: 60,
+          width: 66,
           justifyContent: "flex-end",
-          fontSize: 15,
+          fontSize: 16,
           color: MUTED_TEXT,
         }}
       >
@@ -377,11 +382,11 @@ function CategoryBarRow({
   );
 }
 
-/** Eixo 0%–100% alinhado com a largura fixa das trilhas de `CategoryBarRow` (`220` do bloco nome + `BAR_TRACK_WIDTH` da trilha). */
+/** Eixo 0%–100% alinhado com a largura fixa das trilhas de `CategoryBarRow` (`230` do bloco nome + `BAR_TRACK_WIDTH` da trilha). */
 function PercentAxis() {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-      <div style={{ display: "flex", width: 220 }} />
+    <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+      <div style={{ display: "flex", width: 230 }} />
       <div
         style={{
           display: "flex",
@@ -392,14 +397,14 @@ function PercentAxis() {
         {AXIS_TICKS.map((tick) => (
           <div
             key={tick}
-            style={{ display: "flex", fontSize: 12, color: MUTED_TEXT }}
+            style={{ display: "flex", fontSize: 13, color: MUTED_TEXT }}
           >
             {tick}%
           </div>
         ))}
       </div>
       <div style={{ display: "flex", flex: 1 }} />
-      <div style={{ display: "flex", width: 60 }} />
+      <div style={{ display: "flex", width: 66 }} />
     </div>
   );
 }
@@ -420,8 +425,8 @@ function BeneficiaryRow({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 16,
-        padding: "7px 0",
+        gap: 18,
+        padding: "11px 0",
         borderTop: position === 1 ? "none" : `1px solid ${BORDER}`,
       }}
     >
@@ -430,11 +435,11 @@ function BeneficiaryRow({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
           borderRadius: 999,
           backgroundColor: "#F1F5F9",
-          fontSize: 16,
+          fontSize: 17,
           fontWeight: 800,
           color: DARK_TEXT,
         }}
@@ -446,13 +451,13 @@ function BeneficiaryRow({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 36,
-          height: 36,
+          width: 42,
+          height: 42,
           borderRadius: 999,
           backgroundColor: `${BLUE}1A`,
         }}
       >
-        <Icon path={ICON_PATHS.user} color={BLUE} size={18} />
+        <Icon path={ICON_PATHS.user} color={BLUE} size={20} />
       </div>
       <div
         style={{
@@ -465,21 +470,21 @@ function BeneficiaryRow({
         <div
           style={{
             display: "flex",
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
             color: DARK_TEXT,
           }}
         >
           {name}
         </div>
-        <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
+        <div style={{ display: "flex", fontSize: 15, color: MUTED_TEXT }}>
           {paymentsCount} pagamento{paymentsCount === 1 ? "" : "s"}
         </div>
       </div>
       <div
         style={{
           display: "flex",
-          fontSize: 20,
+          fontSize: 22,
           fontWeight: 800,
           color: DARK_TEXT,
         }}
@@ -490,7 +495,7 @@ function BeneficiaryRow({
   );
 }
 
-const WEEK_CHART_HEIGHT = 100;
+const WEEK_CHART_HEIGHT = 110;
 
 function WeeklyColumnChart({
   weeks,
@@ -499,7 +504,7 @@ function WeeklyColumnChart({
 }) {
   const max = Math.max(...weeks.map((week) => Number(week.amount)), 1);
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 20 }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 24 }}>
       {weeks.map((week) => {
         const heightPx = Math.max(
           (Number(week.amount) / max) * WEEK_CHART_HEIGHT,
@@ -513,13 +518,13 @@ function WeeklyColumnChart({
               flexDirection: "column",
               alignItems: "center",
               flex: 1,
-              gap: 8,
+              gap: 10,
             }}
           >
             <div
               style={{
                 display: "flex",
-                fontSize: 15,
+                fontSize: 17,
                 fontWeight: 700,
                 color: DARK_TEXT,
               }}
@@ -547,7 +552,7 @@ function WeeklyColumnChart({
             <div
               style={{
                 display: "flex",
-                fontSize: 13,
+                fontSize: 14,
                 color: MUTED_TEXT,
                 textAlign: "center",
               }}
@@ -582,31 +587,31 @@ function OriginBlock({
         display: "flex",
         flexDirection: "column",
         alignItems: align,
-        gap: 4,
+        gap: 6,
         flex: 1,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div
           style={{
             display: "flex",
-            width: 12,
-            height: 12,
+            width: 14,
+            height: 14,
             borderRadius: 999,
             backgroundColor: color,
           }}
         />
-        <div style={{ display: "flex", fontSize: 18, fontWeight: 700 }}>
+        <div style={{ display: "flex", fontSize: 20, fontWeight: 700 }}>
           {label}
         </div>
       </div>
-      <div style={{ display: "flex", fontSize: 28, fontWeight: 800 }}>
+      <div style={{ display: "flex", fontSize: 34, fontWeight: 800 }}>
         {formatCurrencyBRL(amount)}
       </div>
       <div
         style={{
           display: "flex",
-          fontSize: 14,
+          fontSize: 16,
           color: MUTED_TEXT,
           gap: 6,
         }}
@@ -644,12 +649,12 @@ export async function renderStatusReportContasPagasImage(
         backgroundColor: PAGE_BG,
         fontFamily: "sans-serif",
         color: DARK_TEXT,
-        padding: "24px 44px",
-        gap: 9,
+        padding: "24px 52px",
+        gap: 14,
       }}
     >
       {/* Cabeçalho */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div
           style={{
             display: "flex",
@@ -657,19 +662,19 @@ export async function renderStatusReportContasPagasImage(
             alignItems: "center",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={logoDataUri}
-              width={72}
-              height={45}
+              width={152}
+              height={95}
               alt={input.organizationName}
             />
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", fontSize: 18, fontWeight: 800 }}>
+              <div style={{ display: "flex", fontSize: 22, fontWeight: 800 }}>
                 Clínica MAE
               </div>
-              <div style={{ display: "flex", fontSize: 12, color: MUTED_TEXT }}>
+              <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
                 Diagnóstico e Tratamento em Gastroenterologia
               </div>
             </div>
@@ -681,10 +686,10 @@ export async function renderStatusReportContasPagasImage(
               alignItems: "flex-end",
             }}
           >
-            <div style={{ display: "flex", fontSize: 12, color: MUTED_TEXT }}>
+            <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
               Gerado em
             </div>
-            <div style={{ display: "flex", fontSize: 14, fontWeight: 700 }}>
+            <div style={{ display: "flex", fontSize: 16, fontWeight: 700 }}>
               {formatDateOnlyBR(input.generatedAt)} às{" "}
               {String(input.generatedAt.getUTCHours()).padStart(2, "0")}:
               {String(input.generatedAt.getUTCMinutes()).padStart(2, "0")}
@@ -697,23 +702,23 @@ export async function renderStatusReportContasPagasImage(
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 2,
+            gap: 4,
           }}
         >
           <div
             style={{
               display: "flex",
-              fontSize: 28,
+              fontSize: 34,
               fontWeight: 800,
               color: BLUE,
             }}
           >
             STATUS REPORT
           </div>
-          <div style={{ display: "flex", fontSize: 21, fontWeight: 700 }}>
+          <div style={{ display: "flex", fontSize: 24, fontWeight: 700 }}>
             Contas Pagas
           </div>
-          <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
+          <div style={{ display: "flex", fontSize: 16, color: MUTED_TEXT }}>
             Período: {formatDateOnlyBR(input.dateFrom)} até{" "}
             {formatDateOnlyBR(input.dateTo)}
           </div>
@@ -751,18 +756,18 @@ export async function renderStatusReportContasPagasImage(
       </div>
 
       {/* Card maior — Origem do Pagamento */}
-      <ReportCard style={{ padding: "18px 28px" }}>
+      <ReportCard style={{ padding: "20px 36px" }}>
         <div
           style={{
             display: "flex",
-            fontSize: 17,
+            fontSize: 19,
             fontWeight: 700,
-            marginBottom: 10,
+            marginBottom: 12,
           }}
         >
           Origem do Pagamento
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
           {bancoOrigin && (
             <OriginBlock
               label={bancoOrigin.label}
@@ -781,9 +786,9 @@ export async function renderStatusReportContasPagasImage(
             }))}
             centerLabel=""
             centerValue=""
-            size={130}
-            radius={50}
-            stroke={20}
+            size={150}
+            radius={58}
+            stroke={24}
           />
           {cofreOrigin && (
             <OriginBlock
@@ -803,7 +808,7 @@ export async function renderStatusReportContasPagasImage(
         title="Onde o dinheiro foi gasto"
         iconPath={ICON_PATHS.barChart}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {input.categories.map((category) => (
             <CategoryBarRow
               key={category.categoryId ?? "outros"}
@@ -814,65 +819,6 @@ export async function renderStatusReportContasPagasImage(
             />
           ))}
           <PercentAxis />
-        </div>
-      </ChartCard>
-
-      {/* Distribuição por categoria */}
-      <ChartCard
-        title="Distribuição por categoria"
-        iconPath={ICON_PATHS.shield}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <DonutChart
-            segments={input.categories.map((category) => ({
-              amount: Number(category.amount),
-              color: category.color,
-              percentage: category.percentage,
-            }))}
-            centerLabel="Total Pago"
-            centerValue={formatCurrencyBRL(input.totalPaid)}
-            labelRadiusOffset={9}
-          />
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              flex: 1,
-            }}
-          >
-            {input.categories.map((category) => (
-              <div
-                key={category.categoryId ?? "outros"}
-                style={{ display: "flex", alignItems: "center", gap: 10 }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    width: 14,
-                    height: 14,
-                    borderRadius: 999,
-                    backgroundColor: category.color,
-                  }}
-                />
-                <div
-                  style={{ display: "flex", flexDirection: "column", flex: 1 }}
-                >
-                  <div
-                    style={{ display: "flex", fontSize: 16, fontWeight: 700 }}
-                  >
-                    {category.label}
-                  </div>
-                  <div
-                    style={{ display: "flex", fontSize: 13, color: MUTED_TEXT }}
-                  >
-                    {formatCurrencyBRL(category.amount)} (
-                    {category.percentage.toFixed(1)}%)
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </ChartCard>
 
@@ -902,7 +848,7 @@ export async function renderStatusReportContasPagasImage(
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          paddingTop: 20,
+          paddingTop: 28,
           borderTop: `1px solid ${BORDER}`,
           marginTop: 4,
         }}
@@ -912,20 +858,20 @@ export async function renderStatusReportContasPagasImage(
             display: "flex",
             alignItems: "baseline",
             gap: 6,
-            fontSize: 16,
+            fontSize: 18,
             color: MUTED_TEXT,
           }}
         >
           <span>Relatório gerado automaticamente pelo</span>
           <span style={{ color: BLUE, fontWeight: 700 }}>MedFlow</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <MedFlowIcon />
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", fontSize: 16, fontWeight: 800 }}>
+            <div style={{ display: "flex", fontSize: 18, fontWeight: 800 }}>
               MedFlow
             </div>
-            <div style={{ display: "flex", fontSize: 13, color: MUTED_TEXT }}>
+            <div style={{ display: "flex", fontSize: 15, color: MUTED_TEXT }}>
               Gestão financeira inteligente para clínicas
             </div>
           </div>
