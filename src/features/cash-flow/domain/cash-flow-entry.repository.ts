@@ -34,6 +34,14 @@ export interface CashFlowEntrySums {
   totalOut: string;
 }
 
+/** Projeção usada pelo Status Report do Cofre — precisa saber se a forma de pagamento é dinheiro (`isCash`), já que reversões trocam o `type` mas preservam a forma de pagamento original (uma reversão de PIX vira OUT+PIX, não Dinheiro). */
+export interface CashFlowEntryCofreReportRow {
+  type: CashFlowEntryType;
+  amount: Prisma.Decimal;
+  categoryId: string;
+  paymentMethodIsCash: boolean;
+}
+
 /** Projeção usada pelos insights (origem das receitas por categoria + por hora). */
 export interface CashFlowEntryInsightProjection {
   type: CashFlowEntryType;
@@ -83,4 +91,11 @@ export interface CashFlowEntryRepository {
   listByCashRegisterDay(
     cashRegisterDayId: string,
   ): Promise<CashFlowEntryInsightProjection[]>;
+
+  /** Projeção (type/amount/categoryId/paymentMethodIsCash) para o Status Report do Cofre agregar em código. */
+  listForCofreReport(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<CashFlowEntryCofreReportRow[]>;
 }

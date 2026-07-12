@@ -1,0 +1,70 @@
+import { logger } from "@/core/logger/logger";
+import {
+  ReportWhatsAppSendError,
+  WhatsAppNotConfiguredError,
+} from "@/core/errors/domain-error";
+import { formatDateOnlyBR } from "@/shared/lib/format";
+import { getStatusReportCofreUseCase } from "./get-status-report-cofre.use-case";
+import { renderStatusReportCofreImage } from "../infrastructure/status-report-cofre-image";
+import { sendImageMessage } from "@/core/whatsapp/zapi-client";
+import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
+import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
+import type { CategoryRepository } from "@/features/categories/domain/category.repository";
+import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
+
+interface Deps {
+  cashFlowEntryRepository: CashFlowEntryRepository;
+  accountsPayableRepository: AccountsPayableRepository;
+  categoryRepository: CategoryRepository;
+  safeRepository: SafeRepository;
+  organizationSettingsRepository: OrganizationSettingsRepository;
+}
+
+/**
+ * Gera a imagem do Status Report do Cofre e envia por WhatsApp via
+ * Z-API `/send-image` — mesmo padrão dos outros Status Reports. Não
+ * persiste nada.
+ */
+export async function sendStatusReportCofreWhatsAppUseCase(
+  organizationId: string,
+  dateFrom: Date,
+  dateTo: Date,
+  deps: Deps,
+): Promise<void> {
+  const settings =
+    await deps.organizationSettingsRepository.findByOrganization(
+      organizationId,
+    );
+  if (!settings?.whatsapp) {
+    throw new WhatsAppNotConfiguredError(organizationId);
+  }
+
+  const summary = await getStatusReportCofreUseCase(
+    organizationId,
+    dateFrom,
+    dateTo,
+    deps,
+  );
+
+  const imageBuffer = await renderStatusReportCofreImage(summary);
+  const base64Image = `data:image/png;base64,${Buffer.from(imageBuffer).toString("base64")}`;
+
+  try {
+    await sendImageMessage({
+      phone: settings.whatsapp,
+      image: base64Image,
+      caption: `Status Report: Cofre — ${formatDateOnlyBR(dateFrom)} a ${formatDateOnlyBR(dateTo)}`,
+    });
+  } catch (error) {
+    logger.error("Falha ao enviar Status Report do Cofre por WhatsApp", {
+      organizationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new ReportWhatsAppSendError("status-report-cofre");
+  }
+
+  logger.info("Status Report do Cofre enviado por WhatsApp", {
+    organizationId,
+  });
+}
