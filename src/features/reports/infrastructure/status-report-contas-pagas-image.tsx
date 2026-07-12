@@ -1,5 +1,9 @@
 import { ImageResponse } from "next/og";
-import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyBR,
+  formatTimeBR,
+} from "@/shared/lib/format";
 import type { StatusReportContasPagasSummary } from "../domain/status-report-contas-pagas.entity";
 import {
   BLUE,
@@ -691,8 +695,7 @@ export async function renderStatusReportContasPagasImage(
             </div>
             <div style={{ display: "flex", fontSize: 16, fontWeight: 700 }}>
               {formatDateOnlyBR(input.generatedAt)} às{" "}
-              {String(input.generatedAt.getUTCHours()).padStart(2, "0")}:
-              {String(input.generatedAt.getUTCMinutes()).padStart(2, "0")}
+              {formatTimeBR(input.generatedAt)}
             </div>
           </div>
         </div>
