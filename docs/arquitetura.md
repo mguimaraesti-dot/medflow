@@ -59,6 +59,10 @@ em imagem, desenhados à mão dentro do `next/og` — ver seção 4.
 - Rotas protegidas: prefixo `/dashboard`. Prefixo `/login` redireciona se já autenticado.
 - Um trigger em `auth.users` (`handle_new_auth_user`, migration dedicada) provisiona automaticamente uma linha em `public.users` com `status: PENDING` no primeiro login (convite de Admin ou primeiro login via Google) — sem `roleId` até alguém atribuir um perfil na tela de Gestão de Acessos.
 - RBAC próprio (`Role`/`Permission`, tabelas `roles`/`permissions`/`_PermissionToRole`), 5 perfis: `ADMIN`, `OWNER`, `SECRETARY`, `FINANCE`, `ACCOUNTANT`. Autorização decidida sempre no backend (`requirePermission`); frontend só reflete visualmente.
+- **Convite de novo usuário** (Gestão de Acessos → "Novo Usuário") chama `supabaseAdmin.auth.admin.inviteUserByEmail` (`create-user.use-case.ts`), que dispara o e-mail de convite pelo próprio Supabase Auth.
+  - O envio desse e-mail passa por **SMTP customizado configurado no painel do Supabase** (Authentication → Emails → SMTP Settings), usando **Resend** (`smtp.resend.com`, porta 465) como provedor — o serviço de e-mail embutido do Supabase é fortemente limitado por hora e não serve para uso real.
+  - Sender atual: `onboarding@resend.dev` (domínio de teste do Resend) — só entrega para o e-mail da própria conta Resend; para convidar qualquer usuário real da clínica, é necessário verificar um domínio próprio no Resend e trocar o sender para um endereço desse domínio.
+  - Essa configuração vive só no painel do Supabase (fora do repositório) — não há variável de ambiente do projeto Next.js para isso.
 
 ### 1.3 Hospedagem
 
@@ -154,7 +158,8 @@ Implementado — dois relatórios até o momento, mesma técnica para os dois:
 | Serviço | Para que serve | Quem inicia | Variáveis de ambiente envolvidas |
 |---|---|---|---|
 | Supabase (Postgres) | Banco de dados principal | Nosso sistema chama (Prisma) | `DATABASE_URL`, `DIRECT_URL` |
-| Supabase Auth | Login (e-mail/senha + Google OAuth), sessão | Nosso sistema chama; navegador redireciona pro Google e volta | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
+| Supabase Auth | Login (e-mail/senha + Google OAuth), sessão, convite de novo usuário | Nosso sistema chama; navegador redireciona pro Google e volta | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
+| Resend (SMTP) | Envio dos e-mails de convite/recuperação de senha do Supabase Auth | Supabase Auth chama (configurado no painel do Supabase, fora do repositório) | Nenhuma no projeto Next.js — credenciais SMTP ficam só no painel do Supabase |
 | Google Drive (OAuth2) | Armazenamento de anexos de Contas a Pagar | Nosso sistema chama | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN`, `GOOGLE_DRIVE_FOLDER_ID` |
 | Z-API (WhatsApp) — envio | Lembrete de cobrança (botões), imagem de relatório | Nosso sistema chama | `ZAPI_INSTANCE_ID`, `ZAPI_TOKEN`, `ZAPI_CLIENT_TOKEN` |
 | Z-API (WhatsApp) — webhook | Confirmação de pagamento (clique no botão "Pago") | **Z-API chama a gente** | `ZAPI_WEBHOOK_SECRET` (via query string `?secret=`) |
@@ -184,6 +189,7 @@ flowchart TB
     ZAPI["Z-API<br/>(WhatsApp)"]
     CronExt["Cron externo<br/>(ex: cron-job.org)"]
     Google["Google OAuth"]
+    Resend["Resend<br/>(SMTP customizado)"]
 
     UI <--> NextApp
     NextApp <--> Auth
@@ -194,6 +200,7 @@ flowchart TB
     CronExt -->|GET /api/cron/... Bearer CRON_SECRET| NextApp
     UI -.->|signInWithOAuth| Google
     Google -.->|/api/auth/callback| NextApp
+    Auth -->|e-mail de convite/recuperacao| Resend
 ```
 
 ### 6.2 Sequência — lembrete de cobrança até confirmação de pagamento
