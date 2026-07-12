@@ -212,6 +212,29 @@ export interface AccountsPayableRepository {
   ): Promise<{ categoryId: string; amount: string }[]>;
 
   /**
+   * Linhas mínimas das contas pagas no período (`paidAt` dentro do
+   * intervalo) — usado pelo Status Report: Contas Pagas pra derivar em
+   * código (mesmo padrão de agregação já usado no projeto) o
+   * detalhamento por origem, por categoria, top beneficiários e
+   * totais semanais, sem precisar de uma query dedicada pra cada
+   * quebra.
+   */
+  listPaidForReport(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<
+    {
+      supplierId: string;
+      supplierName: string;
+      categoryId: string;
+      amount: string;
+      paidAt: Date;
+      paymentOrigin: PaymentOrigin;
+    }[]
+  >;
+
+  /**
    * Candidatas ao lembrete de WhatsApp (cron diário) — só PENDENTES e
    * não excluídas. O filtro de janela (`hoje >= dueDate -
    * reminderDaysBefore`) e "já lembrado hoje" acontece em código no
