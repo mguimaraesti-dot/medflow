@@ -1,5 +1,9 @@
 import { ImageResponse } from "next/og";
-import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyBR,
+  formatTimeBR,
+} from "@/shared/lib/format";
 import type {
   StatusReportCofreCategoryRow,
   StatusReportCofreSummary,
@@ -113,9 +117,7 @@ function PeriodBox({
           Emitido em
         </div>
         <div style={{ display: "flex", fontSize: 22, fontWeight: 800 }}>
-          {formatDateOnlyBR(generatedAt)} às{" "}
-          {String(generatedAt.getUTCHours()).padStart(2, "0")}:
-          {String(generatedAt.getUTCMinutes()).padStart(2, "0")}
+          {formatDateOnlyBR(generatedAt)} às {formatTimeBR(generatedAt)}
         </div>
       </div>
     </ReportCard>
