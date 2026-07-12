@@ -1,0 +1,172 @@
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/core/database/prisma.client";
+import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
+import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
+import type { CategoryRepository } from "@/features/categories/domain/category.repository";
+import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type {
+  StatusReportCofreCategoryRow,
+  StatusReportCofreSummary,
+} from "../domain/status-report-cofre.entity";
+
+interface Deps {
+  cashFlowEntryRepository: CashFlowEntryRepository;
+  accountsPayableRepository: AccountsPayableRepository;
+  categoryRepository: CategoryRepository;
+  safeRepository: SafeRepository;
+}
+
+const RETIRADA_LABEL = "Retirada de Caixa (secretária)";
+
+function sumDecimals(values: (string | Prisma.Decimal)[]): Prisma.Decimal {
+  return values.reduce(
+    (total: Prisma.Decimal, value) => total.plus(value),
+    new Prisma.Decimal(0),
+  );
+}
+
+/** Agrupa por categoria, garantindo que TODA categoria ativa apareça (mesmo com 0 lançamentos) — reflete o cadastro atual, nunca uma lista mockada (Coding Standards do relatório). */
+function groupByCategory(
+  rows: { categoryId: string; amount: Prisma.Decimal }[],
+  categories: { id: string; name: string }[],
+): StatusReportCofreCategoryRow[] {
+  const totals = new Map<string, { count: number; amount: Prisma.Decimal }>();
+  for (const row of rows) {
+    const current = totals.get(row.categoryId) ?? {
+      count: 0,
+      amount: new Prisma.Decimal(0),
+    };
+    totals.set(row.categoryId, {
+      count: current.count + 1,
+      amount: current.amount.plus(row.amount),
+    });
+  }
+
+  return categories.map((category) => {
+    const current = totals.get(category.id) ?? {
+      count: 0,
+      amount: new Prisma.Decimal(0),
+    };
+    return {
+      categoryId: category.id,
+      label: category.name,
+      count: current.count,
+      amount: current.amount.toFixed(2),
+    };
+  });
+}
+
+/**
+ * Status Report do Cofre — imagem 1080x1920 (`infrastructure/status-report-cofre-image.tsx`).
+ * Reaproveita a mesma separação Dinheiro/PIX do Fluxo Financeiro do Dia
+ * (`get-dashboard-overview.use-case.ts`: "PIX não fica em caixa") e a
+ * mesma lógica de saldo do Cofre já usada na Tesouraria
+ * (`safeRepository.getBalanceAsOf`) — nenhum cálculo paralelo novo.
+ *
+ * Saída (Dinheiro) combina duas fontes, por regra de negócio explícita:
+ * retiradas feitas pela secretária no Caixa Recepção (`CashFlowEntry`
+ * type OUT, sempre em dinheiro — o formulário só permite isso) e contas
+ * pagas usando o Cofre como origem (`AccountsPayable.paymentOrigin ===
+ * "COFRE"`). Pagamentos com origem "Banco" nunca entram aqui — não
+ * afetam o saldo físico do Cofre.
+ */
+export async function getStatusReportCofreUseCase(
+  organizationId: string,
+  dateFrom: Date,
+  dateTo: Date,
+  deps: Deps,
+): Promise<StatusReportCofreSummary> {
+  const [
+    organization,
+    openingBalance,
+    cashFlowRows,
+    paidPayableRows,
+    incomeCategories,
+    outcomeCategories,
+  ] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true },
+    }),
+    deps.safeRepository.getBalanceAsOf(organizationId, dateFrom),
+    deps.cashFlowEntryRepository.listForCofreReport(
+      organizationId,
+      dateFrom,
+      dateTo,
+    ),
+    deps.accountsPayableRepository.listPaidForReport(
+      organizationId,
+      dateFrom,
+      dateTo,
+    ),
+    deps.categoryRepository.listActive(organizationId, "IN"),
+    deps.categoryRepository.listActive(organizationId, "OUT"),
+  ]);
+
+  // Reversão preserva a forma de pagamento original (uma reversão de PIX
+  // vira OUT+PIX, não Dinheiro) — por isso o filtro é sempre por
+  // `paymentMethodIsCash`, nunca só por `type` (ver docstring do
+  // repositório, `listForCofreReport`).
+  const cashIncomeRows = cashFlowRows.filter(
+    (row) => row.type === "IN" && row.paymentMethodIsCash,
+  );
+  const pixIncomeRows = cashFlowRows.filter(
+    (row) => row.type === "IN" && !row.paymentMethodIsCash,
+  );
+  const cashOutcomeRows = cashFlowRows.filter(
+    (row) => row.type === "OUT" && row.paymentMethodIsCash,
+  );
+
+  const cofrePaidPayableRows = paidPayableRows.filter(
+    (row) => row.paymentOrigin === "COFRE",
+  );
+
+  const cashIncomeByCategory = groupByCategory(
+    cashIncomeRows,
+    incomeCategories,
+  );
+  const pixIncomeByCategory = groupByCategory(pixIncomeRows, incomeCategories);
+
+  const cofrePayableByCategory = groupByCategory(
+    cofrePaidPayableRows.map((row) => ({
+      categoryId: row.categoryId,
+      amount: new Prisma.Decimal(row.amount),
+    })),
+    outcomeCategories,
+  );
+  const retiradaRow: StatusReportCofreCategoryRow = {
+    categoryId: null,
+    label: RETIRADA_LABEL,
+    count: cashOutcomeRows.length,
+    amount: sumDecimals(cashOutcomeRows.map((row) => row.amount)).toFixed(2),
+  };
+  const cashOutcomeByCategory = [...cofrePayableByCategory, retiradaRow];
+
+  const cashIncomeTotal = sumDecimals(cashIncomeRows.map((row) => row.amount));
+  const pixIncomeTotal = sumDecimals(pixIncomeRows.map((row) => row.amount));
+  const cashOutcomeTotal = sumDecimals(
+    cashOutcomeRows.map((row) => row.amount),
+  ).plus(sumDecimals(cofrePaidPayableRows.map((row) => row.amount)));
+  const finalBalance = openingBalance
+    .plus(cashIncomeTotal)
+    .minus(cashOutcomeTotal);
+
+  return {
+    organizationName: organization?.name ?? "MedFlow",
+    dateFrom,
+    dateTo,
+    generatedAt: new Date(),
+    openingBalance: openingBalance.toFixed(2),
+    cashIncomeTotal: cashIncomeTotal.toFixed(2),
+    cashIncomeCount: cashIncomeRows.length,
+    pixIncomeTotal: pixIncomeTotal.toFixed(2),
+    pixIncomeCount: pixIncomeRows.length,
+    cashOutcomeTotal: cashOutcomeTotal.toFixed(2),
+    cashOutcomeCount: cashOutcomeRows.length + cofrePaidPayableRows.length,
+    finalBalance: finalBalance.toFixed(2),
+    isSurplus: finalBalance.greaterThanOrEqualTo(0),
+    cashIncomeByCategory,
+    pixIncomeByCategory,
+    cashOutcomeByCategory,
+  };
+}

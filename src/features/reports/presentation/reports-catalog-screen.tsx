@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileBarChart, Receipt, type LucideIcon } from "lucide-react";
+import { FileBarChart, Receipt, Vault, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/shared/ui/card";
 
 interface ReportCatalogItem {
@@ -26,6 +26,13 @@ const REPORTS: ReportCatalogItem[] = [
     description:
       "Contas pagas do período — origem, categorias, beneficiários e semanas em imagem.",
     icon: Receipt,
+  },
+  {
+    href: "/reports/status-report-cofre",
+    title: "Status Report: Cofre",
+    description:
+      "Saldo do Cofre do período — entradas em dinheiro/PIX e saídas, em imagem.",
+    icon: Vault,
   },
 ];
 

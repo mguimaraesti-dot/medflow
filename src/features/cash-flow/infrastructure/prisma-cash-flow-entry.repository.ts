@@ -8,6 +8,7 @@ import type {
   ListCashFlowEntriesFilter,
   CashFlowEntrySums,
   CashFlowEntryProjection,
+  CashFlowEntryCofreReportRow,
   CashFlowEntryInsightProjection,
 } from "../domain/cash-flow-entry.repository";
 import type { CashFlowEntry } from "../domain/cash-flow-entry.entity";
@@ -227,5 +228,28 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
       select: { type: true, amount: true, occurredAt: true, categoryId: true },
       orderBy: { occurredAt: "asc" },
     });
+  }
+
+  async listForCofreReport(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<CashFlowEntryCofreReportRow[]> {
+    const rows = await prisma.cashFlowEntry.findMany({
+      where: { organizationId, occurredAt: { gte: from, lte: to } },
+      select: {
+        type: true,
+        amount: true,
+        categoryId: true,
+        paymentMethod: { select: { isCash: true } },
+      },
+    });
+
+    return rows.map((row) => ({
+      type: row.type,
+      amount: row.amount,
+      categoryId: row.categoryId,
+      paymentMethodIsCash: row.paymentMethod.isCash,
+    }));
   }
 }
