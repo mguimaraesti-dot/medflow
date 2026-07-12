@@ -89,27 +89,67 @@ export function Logo({
 }
 
 /**
- * Logo principal (ícone à esquerda; "MedFlow" e a tagline empilhados à
- * direita) — variante "Horizontal (Colorida)" do manual da marca em
- * fundo claro, e equivalente à "Branca" em fundo escuro. Usa tokens de
- * tema (`text-foreground`/`text-primary`/`text-muted-foreground`) em
- * vez de cores fixas — precisam contrastar com o `Card` (`bg-card`) que
- * o envolve, que já é branco no tema claro e escuro no tema escuro.
+ * Logo principal (SVG único: ícone + "MedFlow" + tagline) — asset de
+ * marca pronto, colorido no tema claro e branco no tema escuro via
+ * `dark:fill-*` direto nas formas do SVG, sem depender de token de
+ * `Card`/tema por fora. Usado no card ao lado do Resumo do Dia na
+ * Caixa Recepção.
  */
 export function LogoPrincipal({ className }: { className?: string }) {
   return (
-    <div className={cn("inline-flex items-center gap-3", className)}>
-      <LogoIcon className="h-11 w-auto" />
-      <div className="flex flex-col leading-tight">
-        <span className="text-xl leading-none font-bold tracking-tight">
-          <span className="text-foreground">Med</span>
-          <span className="text-primary">Flow</span>
-        </span>
-        <span className="text-muted-foreground mt-1.5 text-xs whitespace-nowrap">
-          Gestão financeira inteligente para clínicas
-        </span>
-      </div>
-    </div>
+    <svg
+      viewBox="0 0 500 140"
+      className={cn("h-11 w-auto", className)}
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="MedFlow — Gestão financeira inteligente para clínicas"
+    >
+      <rect
+        x="15"
+        y="90"
+        width="22"
+        height="45"
+        rx="8"
+        className="fill-[#93C5FD] dark:fill-white"
+      />
+      <rect
+        x="44"
+        y="65"
+        width="22"
+        height="70"
+        rx="8"
+        className="fill-[#60A5FA] dark:fill-white"
+      />
+      <rect
+        x="73"
+        y="40"
+        width="22"
+        height="95"
+        rx="8"
+        className="fill-[#3B82F6] dark:fill-white"
+      />
+      <rect
+        x="102"
+        y="15"
+        width="22"
+        height="120"
+        rx="8"
+        className="fill-[#2563EB] dark:fill-white"
+      />
+
+      <text x="145" y="98" className="font-sans text-[70px] font-bold">
+        <tspan className="fill-[#1E3A8A] dark:fill-white">Med</tspan>
+        <tspan className="fill-[#2563EB] dark:fill-white">Flow</tspan>
+      </text>
+
+      <text
+        x="147"
+        y="126"
+        className="fill-[#64748B] font-sans text-[15px] dark:fill-slate-300"
+      >
+        Gestão financeira inteligente para clínicas
+      </text>
+    </svg>
   );
 }
 
