@@ -34,9 +34,9 @@ function DashboardKpiCard({
   tone: KpiTone;
 }) {
   return (
-    <Card className="py-4">
-      <CardContent className="flex flex-col gap-3 px-4">
-        <div className="flex items-center gap-2.5">
+    <Card className="py-3">
+      <CardContent className="flex flex-col gap-2 px-3">
+        <div className="flex items-center gap-2">
           <span
             className={cn(
               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
@@ -57,7 +57,7 @@ function DashboardKpiCard({
         </div>
         <p
           className={cn(
-            "text-2xl font-semibold tracking-tight tabular-nums",
+            "text-xl font-semibold tracking-tight tabular-nums",
             TONE_VALUE_CLASSES[tone],
           )}
         >
@@ -85,7 +85,7 @@ export function DashboardKpiRow({
   overdueCount: number;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <DashboardKpiCard
         label="Saldo Caixa"
         caption="dinheiro"

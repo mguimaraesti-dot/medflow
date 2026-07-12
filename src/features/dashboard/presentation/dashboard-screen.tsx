@@ -15,16 +15,16 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
 
   if (isLoading || !overview) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-3">
         <Skeleton className="h-14 w-full" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
+            <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
           {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-80 w-full" />
+            <Skeleton key={i} className="h-72 w-full" />
           ))}
         </div>
       </div>
@@ -32,7 +32,7 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <DashboardHeader
         cashRegisterStatus={overview.cashRegisterStatus}
         overdueCount={overview.overdueCount}
@@ -48,8 +48,8 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
         overdueCount={overview.overdueCount}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+        <div className="flex flex-col gap-3">
           <DashboardOverviewCard
             cashBalance={overview.cashBalance}
             safeBalance={overview.safeBalance}

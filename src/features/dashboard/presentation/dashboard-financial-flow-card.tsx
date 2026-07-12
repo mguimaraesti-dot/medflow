@@ -46,7 +46,7 @@ function FlowNode({
   return (
     <div
       className={cn(
-        "bg-muted/40 flex w-full items-center gap-3 rounded-lg border p-3",
+        "bg-muted/40 flex w-full items-center gap-2.5 rounded-lg border p-2.5",
         TONE_BORDER_CLASSES[tone],
       )}
     >
@@ -79,8 +79,8 @@ function FlowNode({
 
 function FlowArrow() {
   return (
-    <div className="text-muted-foreground flex justify-center py-0.5">
-      <ArrowDown className="h-4 w-4" />
+    <div className="text-muted-foreground flex justify-center">
+      <ArrowDown className="h-3.5 w-3.5" />
     </div>
   );
 }
@@ -107,13 +107,13 @@ export function DashboardFinancialFlowCard({
   availableTotal: string;
 }) {
   return (
-    <Card className="flex flex-col gap-4 py-4">
-      <CardHeader className="px-4">
+    <Card className="flex flex-col gap-3 py-3">
+      <CardHeader className="px-3">
         <CardTitle className="text-sm font-semibold">
           Fluxo Financeiro do Dia
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-center gap-0 px-4">
+      <CardContent className="flex flex-1 flex-col justify-center gap-0 px-3">
         <FlowNode
           icon={Unlock}
           label="Recebimentos"

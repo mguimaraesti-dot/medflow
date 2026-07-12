@@ -46,7 +46,7 @@ function AgendaList({
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between gap-2 py-2 text-sm"
+            className="flex items-center justify-between gap-2 py-1.5 text-sm"
           >
             <div className="min-w-0">
               <p className="truncate font-medium">
@@ -62,7 +62,7 @@ function AgendaList({
           </div>
         ))}
       </div>
-      <div className="mt-2 flex items-center justify-between border-t pt-2">
+      <div className="mt-1.5 flex items-center justify-between border-t pt-1.5">
         <span className="text-muted-foreground text-xs font-semibold">
           Total
         </span>
@@ -95,8 +95,8 @@ export function DashboardAgendaCard({
   }, [suppliers]);
 
   return (
-    <Card className="flex flex-col gap-4 py-4">
-      <CardHeader className="flex-row items-center justify-between px-4">
+    <Card className="flex flex-col gap-3 py-3">
+      <CardHeader className="flex-row items-center justify-between px-3">
         <CardTitle className="text-sm font-semibold">
           Agenda Financeira
         </CardTitle>
@@ -107,7 +107,7 @@ export function DashboardAgendaCard({
           Ver todas
         </Link>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col px-4">
+      <CardContent className="flex flex-1 flex-col px-3">
         <Tabs
           value={tab}
           onValueChange={setTab}

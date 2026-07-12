@@ -29,7 +29,7 @@ function QuickActionButton({
   return (
     <Link
       href={href}
-      className="hover:bg-muted/60 flex flex-1 items-center justify-center gap-2 rounded-lg border p-3.5 text-sm font-semibold transition-colors"
+      className="hover:bg-muted/60 flex flex-1 items-center justify-center gap-2 rounded-lg border p-2.5 text-sm font-semibold transition-colors"
     >
       <Icon className={cn("h-4 w-4", TONE_ICON_CLASSES[tone])} />
       {label}
@@ -85,7 +85,7 @@ export function DashboardQuickActions({
   if (visibleActions.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-2">
       {visibleActions.map((action) => (
         <QuickActionButton key={action.label} {...action} />
       ))}

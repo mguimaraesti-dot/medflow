@@ -54,8 +54,8 @@ export function DashboardTimelineCard({
   events: DashboardTimelineEventResponseDTO[];
 }) {
   return (
-    <Card className="flex flex-col gap-4 py-4">
-      <CardHeader className="flex-row items-center justify-between px-4">
+    <Card className="flex flex-col gap-3 py-3">
+      <CardHeader className="flex-row items-center justify-between px-3">
         <CardTitle className="text-sm font-semibold">
           Últimas Movimentações
         </CardTitle>
@@ -66,7 +66,7 @@ export function DashboardTimelineCard({
           Ver todas
         </Link>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-center gap-1 px-4">
+      <CardContent className="flex flex-1 flex-col justify-center gap-1 px-3">
         {events.length === 0 ? (
           <p className="text-muted-foreground text-center text-sm">
             Nenhuma movimentação hoje ainda.
@@ -75,7 +75,7 @@ export function DashboardTimelineCard({
           events.map((event) => {
             const Icon = eventIcon(event);
             return (
-              <div key={event.id} className="flex items-start gap-3 py-1.5">
+              <div key={event.id} className="flex items-start gap-3 py-1">
                 <span className="text-muted-foreground w-11 shrink-0 pt-1 text-xs tabular-nums">
                   {formatTimeBR(event.occurredAt)}
                 </span>

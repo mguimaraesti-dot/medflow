@@ -56,13 +56,13 @@ export function DashboardOverviewCard({
   pendencies: DashboardPendencyResponseDTO[];
 }) {
   return (
-    <Card className="flex flex-col gap-4 py-4">
-      <CardHeader className="px-4">
+    <Card className="flex flex-col gap-3 py-3">
+      <CardHeader className="px-3">
         <CardTitle className="text-sm font-semibold">Visão Geral</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-5 px-4">
+      <CardContent className="flex flex-1 flex-col gap-3 px-3">
         <div>
-          <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs font-semibold">
+          <p className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs font-semibold">
             Disponibilidade Financeira
             <Tooltip>
               <TooltipTrigger asChild>
@@ -103,11 +103,11 @@ export function DashboardOverviewCard({
             <span className="text-muted-foreground pb-6 text-xl font-light">
               =
             </span>
-            <div className="flex min-w-[130px] flex-col items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2.5">
+            <div className="flex min-w-[130px] flex-col items-center gap-1.5 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2">
               <span className="text-xs font-semibold text-green-600 dark:text-green-500">
                 Total Disponível
               </span>
-              <span className="text-xl font-bold text-green-600 tabular-nums dark:text-green-500">
+              <span className="text-lg font-bold text-green-600 tabular-nums dark:text-green-500">
                 {formatCurrencyBRL(availableTotal)}
               </span>
             </div>
@@ -115,7 +115,7 @@ export function DashboardOverviewCard({
         </div>
 
         <div>
-          <p className="text-muted-foreground mb-2 text-xs font-semibold">
+          <p className="text-muted-foreground mb-1.5 text-xs font-semibold">
             Tendências e Alertas
           </p>
           {pendencies.length === 0 ? (
@@ -123,11 +123,11 @@ export function DashboardOverviewCard({
               Nenhuma pendência no momento.
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {pendencies.map((pendency) => (
                 <div
                   key={pendency.code}
-                  className="bg-muted/40 flex items-center gap-3 rounded-lg border p-3"
+                  className="bg-muted/40 flex items-center gap-3 rounded-lg border p-2.5"
                 >
                   <span
                     className={cn(
