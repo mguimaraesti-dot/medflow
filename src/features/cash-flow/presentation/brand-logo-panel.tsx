@@ -1,16 +1,18 @@
 import { LogoPrincipal } from "@/shared/components/logo";
+import { Card, CardContent } from "@/shared/ui/card";
 
 /**
  * Card do logo empilhado sobre o "Resumo do Dia" (Refinamento de layout
- * v2 Caixa Recepção). Fundo branco explícito (não usa o `Card` do tema)
- * porque o Logo Principal é a variante "Colorida" do manual, desenhada
- * pra fundo claro — precisa continuar branco mesmo com o app em tema
- * escuro.
+ * v2 Caixa Recepção). Usa o `Card` do tema (branco no claro, escuro no
+ * escuro) em vez de fundo fixo — acompanha o tema como os outros
+ * painéis da tela.
  */
 export function BrandLogoPanel() {
   return (
-    <div className="flex items-center rounded-2xl bg-white p-5 shadow-sm">
-      <LogoPrincipal />
-    </div>
+    <Card className="rounded-2xl shadow-sm">
+      <CardContent className="flex items-center p-5">
+        <LogoPrincipal />
+      </CardContent>
+    </Card>
   );
 }

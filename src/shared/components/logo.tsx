@@ -90,12 +90,11 @@ export function Logo({
 
 /**
  * Logo principal (ícone à esquerda; "MedFlow" e a tagline empilhados à
- * direita) — variante "Horizontal (Colorida)", a primeira do manual da
- * marca. Cores fixas (não usa `text-foreground`/`text-primary`) porque
- * essa variante é desenhada pra fundo claro — usada sempre dentro de um
- * card branco explícito, mesmo com o app em tema escuro (ex: card do
- * logo na Caixa Recepção); tokens de tema deixariam o texto branco
- * sobre fundo branco no dark mode.
+ * direita) — variante "Horizontal (Colorida)" do manual da marca em
+ * fundo claro, e equivalente à "Branca" em fundo escuro. Usa tokens de
+ * tema (`text-foreground`/`text-primary`/`text-muted-foreground`) em
+ * vez de cores fixas — precisam contrastar com o `Card` (`bg-card`) que
+ * o envolve, que já é branco no tema claro e escuro no tema escuro.
  */
 export function LogoPrincipal({ className }: { className?: string }) {
   return (
@@ -103,10 +102,10 @@ export function LogoPrincipal({ className }: { className?: string }) {
       <LogoIcon className="h-11 w-auto" />
       <div className="flex flex-col leading-tight">
         <span className="text-xl leading-none font-bold tracking-tight">
-          <span className="text-slate-900">Med</span>
-          <span className="text-blue-600">Flow</span>
+          <span className="text-foreground">Med</span>
+          <span className="text-primary">Flow</span>
         </span>
-        <span className="mt-1.5 text-xs whitespace-nowrap text-slate-500">
+        <span className="text-muted-foreground mt-1.5 text-xs whitespace-nowrap">
           Gestão financeira inteligente para clínicas
         </span>
       </div>
