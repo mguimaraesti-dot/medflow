@@ -25,6 +25,35 @@ function sumDecimals(values: (string | Prisma.Decimal)[]): Prisma.Decimal {
   );
 }
 
+const EMPTY_SECTION_LABEL = "Sem movimentação no período";
+
+/**
+ * Filtra pra exibição só as categorias com movimentação real no período —
+ * `groupByCategory` inclui todo o catálogo (mesmo 0 lançamentos) de
+ * propósito, pra alimentar os totais corretamente; aqui só decidimos o
+ * que aparece nas linhas da imagem, sem tocar em nenhuma soma. A linha
+ * sintética "Retirada de Caixa" (`categoryId: null`) nunca é removida —
+ * é um resumo agregado, não uma categoria do catálogo. Se não sobrar
+ * nenhuma linha real (nenhuma movimentação no período), mostra um
+ * placeholder em vez de uma tabela vazia.
+ */
+function filterVisibleRows(
+  rows: StatusReportCofreCategoryRow[],
+): StatusReportCofreCategoryRow[] {
+  const visible = rows.filter(
+    (row) => row.categoryId === null || row.count > 0,
+  );
+  if (visible.length > 0) return visible;
+  return [
+    {
+      categoryId: null,
+      label: EMPTY_SECTION_LABEL,
+      count: 0,
+      amount: "0.00",
+    },
+  ];
+}
+
 /** Agrupa por categoria, garantindo que TODA categoria ativa apareça (mesmo com 0 lançamentos) — reflete o cadastro atual, nunca uma lista mockada (Coding Standards do relatório). */
 function groupByCategory(
   rows: { categoryId: string; amount: Prisma.Decimal }[],
@@ -165,8 +194,8 @@ export async function getStatusReportCofreUseCase(
     cashOutcomeCount: cashOutcomeRows.length + cofrePaidPayableRows.length,
     finalBalance: finalBalance.toFixed(2),
     isSurplus: finalBalance.greaterThanOrEqualTo(0),
-    cashIncomeByCategory,
-    pixIncomeByCategory,
-    cashOutcomeByCategory,
+    cashIncomeByCategory: filterVisibleRows(cashIncomeByCategory),
+    pixIncomeByCategory: filterVisibleRows(pixIncomeByCategory),
+    cashOutcomeByCategory: filterVisibleRows(cashOutcomeByCategory),
   };
 }
