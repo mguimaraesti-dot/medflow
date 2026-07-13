@@ -164,9 +164,55 @@ describe("getStatusReportCofreUseCase", () => {
     expect(result.cashOutcomeCount).toBe(3);
     expect(result.finalBalance).toBe("200.00");
     expect(result.isSurplus).toBe(true);
+
+    // Só categorias com movimentação real aparecem nas linhas — Convênios
+    // (sem nenhum lançamento) some de Entradas Dinheiro e Entradas PIX,
+    // mas os totais acima continuam somando todo mundo (fonte separada).
+    expect(result.cashIncomeByCategory).toEqual([
+      {
+        categoryId: KIT_CATEGORY.id,
+        label: "KIT 2 - Rio Preto",
+        count: 1,
+        amount: "1000.00",
+      },
+    ]);
+    expect(result.pixIncomeByCategory).toEqual([
+      {
+        categoryId: KIT_CATEGORY.id,
+        label: "KIT 2 - Rio Preto",
+        count: 1,
+        amount: "2000.00",
+      },
+      {
+        categoryId: PARTICULAR_CATEGORY.id,
+        label: "Particular",
+        count: 1,
+        amount: "280.00",
+      },
+    ]);
+    expect(result.cashOutcomeByCategory).toEqual([
+      {
+        categoryId: CONTAS_A_PAGAR_CATEGORY.id,
+        label: "Contas a Pagar",
+        count: 1,
+        amount: "80.00",
+      },
+      {
+        categoryId: DESPESAS_CATEGORY.id,
+        label: "Despesas Operacionais",
+        count: 1,
+        amount: "570.00",
+      },
+      {
+        categoryId: null,
+        label: "Retirada de Caixa (secretária)",
+        count: 1,
+        amount: "150.00",
+      },
+    ]);
   });
 
-  it("zera-padroniza categorias ativas sem lançamento no período (nunca omite nem mocka)", async () => {
+  it("esconde categorias sem movimentação no período; sem nenhuma entrada/saída, todas as 3 seções mostram o placeholder — inclusive Saídas, já que a Retirada de Caixa zerada some igual às demais", async () => {
     const deps = buildDeps({ cashFlowRows: [], payableRows: [] });
 
     const result = await getStatusReportCofreUseCase(
@@ -176,45 +222,50 @@ describe("getStatusReportCofreUseCase", () => {
       deps,
     );
 
-    expect(result.cashIncomeByCategory).toEqual([
+    const placeholder = [
       {
-        categoryId: KIT_CATEGORY.id,
-        label: "KIT 2 - Rio Preto",
+        categoryId: null,
+        label: "Sem movimentação no período",
         count: 0,
         amount: "0.00",
       },
-      {
-        categoryId: CONVENIO_CATEGORY.id,
-        label: "Convênios",
-        count: 0,
-        amount: "0.00",
-      },
-      {
-        categoryId: PARTICULAR_CATEGORY.id,
-        label: "Particular",
-        count: 0,
-        amount: "0.00",
-      },
-    ]);
-    // Saídas sempre inclui a linha sintética de Retirada, mesmo com 0 lançamentos.
+    ];
+    expect(result.cashIncomeByCategory).toEqual(placeholder);
+    expect(result.pixIncomeByCategory).toEqual(placeholder);
+    // Sem nenhuma retirada nem pagamento via Cofre, a Retirada de Caixa
+    // (count 0) segue a mesma regra das categorias reais e some — Saídas
+    // cai no mesmo placeholder das outras seções, não fica com uma linha
+    // zerada sozinha.
+    expect(result.cashOutcomeByCategory).toEqual(placeholder);
+  });
+
+  it("Retirada de Caixa com valor > 0 continua aparecendo normalmente, mesmo sem nenhum pagamento via Cofre", async () => {
+    const deps = buildDeps({
+      cashFlowRows: [
+        {
+          type: "OUT",
+          amount: new Prisma.Decimal("90.00"),
+          categoryId: "irrelevante-para-retirada",
+          paymentMethodIsCash: true,
+        },
+      ],
+      payableRows: [],
+    });
+
+    const result = await getStatusReportCofreUseCase(
+      "org-1",
+      DATE_FROM,
+      DATE_TO,
+      deps,
+    );
+
+    expect(result.cashOutcomeTotal).toBe("90.00");
     expect(result.cashOutcomeByCategory).toEqual([
-      {
-        categoryId: CONTAS_A_PAGAR_CATEGORY.id,
-        label: "Contas a Pagar",
-        count: 0,
-        amount: "0.00",
-      },
-      {
-        categoryId: DESPESAS_CATEGORY.id,
-        label: "Despesas Operacionais",
-        count: 0,
-        amount: "0.00",
-      },
       {
         categoryId: null,
         label: "Retirada de Caixa (secretária)",
-        count: 0,
-        amount: "0.00",
+        count: 1,
+        amount: "90.00",
       },
     ]);
   });
