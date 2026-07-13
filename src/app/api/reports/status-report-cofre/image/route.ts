@@ -10,10 +10,12 @@ import { renderStatusReportCofreImage } from "@/features/reports/infrastructure/
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
 import { PrismaCategoryRepository } from "@/features/categories/infrastructure/prisma-category.repository";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
+import { PrismaSafeMovementRepository } from "@/features/treasury/infrastructure/prisma-safe-movement.repository";
 
 const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
 const categoryRepository = new PrismaCategoryRepository();
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
+const safeMovementRepository = new PrismaSafeMovementRepository();
 
 /** Serve o Status Report do Cofre como PNG (1080x1920) — mesmo padrão dos outros Status Reports (preview + download na mesma URL). */
 export async function GET(request: NextRequest) {
@@ -41,6 +43,7 @@ export async function GET(request: NextRequest) {
         cashFlowEntryRepository,
         categoryRepository,
         cashRegisterDayRepository,
+        safeMovementRepository,
       },
     );
 

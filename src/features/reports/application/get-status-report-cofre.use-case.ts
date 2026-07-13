@@ -3,6 +3,7 @@ import { prisma } from "@/core/database/prisma.client";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
+import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
 import type {
   StatusReportCofreCategoryRow,
   StatusReportCofreSummary,
@@ -12,6 +13,7 @@ interface Deps {
   cashFlowEntryRepository: CashFlowEntryRepository;
   categoryRepository: CategoryRepository;
   cashRegisterDayRepository: CashRegisterDayRepository;
+  safeMovementRepository: SafeMovementRepository;
 }
 
 /**
@@ -43,6 +45,38 @@ async function findPeriodOpeningBalance(
 }
 
 const RETIRADA_LABEL = "Retirada de Caixa (secretária)";
+const SANGRIA_LABEL = "Sangria (retirada pontual)";
+
+/**
+ * Sangria = pagamento pontual em dinheiro feito direto da recepção
+ * (motoboy, prestador, despesa avulsa) — dinheiro que saiu de fato da
+ * clínica, por isso entra na Saída (Dinheiro). É um `SafeMovement`
+ * tipo `SANGRIA` (`request-sangria.use-case.ts`), sempre `CONFIRMED`.
+ * Isso é DIFERENTE da devolução ao Cofre no fechamento de caixa, que
+ * usa outro tipo de enum inteiramente (`CASH_REGISTER_HANDOFF`,
+ * `prisma-cash-register-day.repository.ts`) — nunca incluída aqui.
+ */
+async function findSangriaForPeriod(
+  organizationId: string,
+  dateFrom: Date,
+  dateTo: Date,
+  safeMovementRepository: SafeMovementRepository,
+): Promise<{ count: number; amount: Prisma.Decimal }> {
+  const { items } = await safeMovementRepository.list(
+    {
+      organizationId,
+      types: ["SANGRIA"],
+      status: "CONFIRMED",
+      createdAtFrom: dateFrom,
+      createdAtTo: dateTo,
+    },
+    { page: 1, pageSize: 1000 },
+  );
+  return {
+    count: items.length,
+    amount: sumDecimals(items.map((m) => m.amount)),
+  };
+}
 
 function sumDecimals(values: (string | Prisma.Decimal)[]): Prisma.Decimal {
   return values.reduce(
@@ -119,12 +153,15 @@ function groupByCategory(
  * (`findPeriodOpeningBalance`), não do saldo do Cofre — este relatório
  * reflete só a recepção, não o Cofre consolidado.
  *
- * Saída (Dinheiro) é só o que sai de dinheiro da recepção: retiradas
- * feitas pela secretária no Caixa Recepção (`CashFlowEntry` type OUT,
- * sempre em dinheiro — o formulário só permite isso). Contas pagas
- * usando o Cofre como origem (`AccountsPayable.paymentOrigin ===
- * "COFRE"`) não passam pela recepção e não entram aqui — são saída do
- * Cofre, não do caixa da recepção.
+ * Saída (Dinheiro) é o que sai de dinheiro de fato da recepção:
+ * retiradas feitas pela secretária no Caixa Recepção (`CashFlowEntry`
+ * type OUT, sempre em dinheiro — o formulário só permite isso) e
+ * sangria (pagamento pontual em dinheiro — ver `findSangriaForPeriod`).
+ * Contas pagas usando o Cofre como origem
+ * (`AccountsPayable.paymentOrigin === "COFRE"`) não passam pela
+ * recepção e não entram aqui — são saída do Cofre. A devolução ao
+ * Cofre no fechamento de caixa (`CASH_REGISTER_HANDOFF`) também nunca
+ * entra — é transferência interna (troca de bolso), não saída real.
  */
 export async function getStatusReportCofreUseCase(
   organizationId: string,
@@ -132,25 +169,36 @@ export async function getStatusReportCofreUseCase(
   dateTo: Date,
   deps: Deps,
 ): Promise<StatusReportCofreSummary> {
-  const [organization, openingBalance, cashFlowRows, incomeCategories] =
-    await Promise.all([
-      prisma.organization.findUnique({
-        where: { id: organizationId },
-        select: { name: true },
-      }),
-      findPeriodOpeningBalance(
-        organizationId,
-        dateFrom,
-        dateTo,
-        deps.cashRegisterDayRepository,
-      ),
-      deps.cashFlowEntryRepository.listForCofreReport(
-        organizationId,
-        dateFrom,
-        dateTo,
-      ),
-      deps.categoryRepository.listActive(organizationId, "IN"),
-    ]);
+  const [
+    organization,
+    openingBalance,
+    cashFlowRows,
+    incomeCategories,
+    sangria,
+  ] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true },
+    }),
+    findPeriodOpeningBalance(
+      organizationId,
+      dateFrom,
+      dateTo,
+      deps.cashRegisterDayRepository,
+    ),
+    deps.cashFlowEntryRepository.listForCofreReport(
+      organizationId,
+      dateFrom,
+      dateTo,
+    ),
+    deps.categoryRepository.listActive(organizationId, "IN"),
+    findSangriaForPeriod(
+      organizationId,
+      dateFrom,
+      dateTo,
+      deps.safeMovementRepository,
+    ),
+  ]);
 
   // Reversão preserva a forma de pagamento original (uma reversão de PIX
   // vira OUT+PIX, não Dinheiro) — por isso o filtro é sempre por
@@ -178,13 +226,19 @@ export async function getStatusReportCofreUseCase(
     count: cashOutcomeRows.length,
     amount: sumDecimals(cashOutcomeRows.map((row) => row.amount)).toFixed(2),
   };
-  const cashOutcomeByCategory = [retiradaRow];
+  const sangriaRow: StatusReportCofreCategoryRow = {
+    categoryId: null,
+    label: SANGRIA_LABEL,
+    count: sangria.count,
+    amount: sangria.amount.toFixed(2),
+  };
+  const cashOutcomeByCategory = [retiradaRow, sangriaRow];
 
   const cashIncomeTotal = sumDecimals(cashIncomeRows.map((row) => row.amount));
   const pixIncomeTotal = sumDecimals(pixIncomeRows.map((row) => row.amount));
   const cashOutcomeTotal = sumDecimals(
     cashOutcomeRows.map((row) => row.amount),
-  );
+  ).plus(sangria.amount);
   const finalBalance = openingBalance
     .plus(cashIncomeTotal)
     .minus(cashOutcomeTotal);
@@ -200,7 +254,7 @@ export async function getStatusReportCofreUseCase(
     pixIncomeTotal: pixIncomeTotal.toFixed(2),
     pixIncomeCount: pixIncomeRows.length,
     cashOutcomeTotal: cashOutcomeTotal.toFixed(2),
-    cashOutcomeCount: cashOutcomeRows.length,
+    cashOutcomeCount: cashOutcomeRows.length + sangria.count,
     finalBalance: finalBalance.toFixed(2),
     isSurplus: finalBalance.greaterThanOrEqualTo(0),
     cashIncomeByCategory: filterVisibleRows(cashIncomeByCategory),

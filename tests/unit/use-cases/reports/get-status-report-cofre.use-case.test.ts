@@ -4,6 +4,7 @@ import { getStatusReportCofreUseCase } from "@/features/reports/application/get-
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
+import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: {
@@ -32,6 +33,7 @@ function buildDeps(
     cashFlowRows?: CashFlowRow[];
     openingBalance?: Prisma.Decimal;
     incomeCategories?: { id: string; name: string }[];
+    sangriaAmounts?: Prisma.Decimal[];
   } = {},
 ) {
   const cashFlowRows = overrides.cashFlowRows ?? [];
@@ -41,6 +43,7 @@ function buildDeps(
     CONVENIO_CATEGORY,
     PARTICULAR_CATEGORY,
   ];
+  const sangriaAmounts = overrides.sangriaAmounts ?? [];
 
   const cashFlowEntryRepository = {
     listForCofreReport: vi.fn().mockResolvedValue(cashFlowRows),
@@ -65,10 +68,21 @@ function buildDeps(
     }),
   } as unknown as CashRegisterDayRepository;
 
+  const safeMovementRepository = {
+    list: vi.fn().mockResolvedValue({
+      items: sangriaAmounts.map((amount) => ({ amount })),
+      page: 1,
+      pageSize: 1000,
+      total: sangriaAmounts.length,
+      totalPages: 1,
+    }),
+  } as unknown as SafeMovementRepository;
+
   return {
     cashFlowEntryRepository,
     categoryRepository,
     cashRegisterDayRepository,
+    safeMovementRepository,
   };
 }
 
@@ -205,6 +219,50 @@ describe("getStatusReportCofreUseCase", () => {
         label: "Retirada de Caixa (secretária)",
         count: 1,
         amount: "90.00",
+      },
+    ]);
+  });
+
+  it("sangria (retirada pontual da recepção) soma nas Saídas, ao lado da Retirada de Caixa", async () => {
+    const deps = buildDeps({
+      openingBalance: new Prisma.Decimal("50.00"),
+      cashFlowRows: [
+        {
+          type: "OUT",
+          amount: new Prisma.Decimal("40.00"),
+          categoryId: "irrelevante-para-retirada",
+          paymentMethodIsCash: true,
+        },
+      ],
+      sangriaAmounts: [
+        new Prisma.Decimal("60.00"),
+        new Prisma.Decimal("25.00"),
+      ],
+    });
+
+    const result = await getStatusReportCofreUseCase(
+      "org-1",
+      DATE_FROM,
+      DATE_TO,
+      deps,
+    );
+
+    // 40 (retirada) + 60 + 25 (sangria) = 125
+    expect(result.cashOutcomeTotal).toBe("125.00");
+    expect(result.cashOutcomeCount).toBe(3);
+    expect(result.finalBalance).toBe("-75.00");
+    expect(result.cashOutcomeByCategory).toEqual([
+      {
+        categoryId: null,
+        label: "Retirada de Caixa (secretária)",
+        count: 1,
+        amount: "40.00",
+      },
+      {
+        categoryId: null,
+        label: "Sangria (retirada pontual)",
+        count: 2,
+        amount: "85.00",
       },
     ]);
   });
