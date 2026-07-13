@@ -7,19 +7,19 @@ import { generateRequestId } from "@/core/utils/request-id";
 import { getStatusReportCofreSchema } from "@/features/reports/application/dtos/get-status-report-cofre.dto";
 import { sendStatusReportCofreWhatsAppUseCase } from "@/features/reports/application/send-status-report-cofre-whatsapp.use-case";
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
-import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 import { PrismaCategoryRepository } from "@/features/categories/infrastructure/prisma-category.repository";
-import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
+import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
+import { PrismaSafeMovementRepository } from "@/features/treasury/infrastructure/prisma-safe-movement.repository";
 import { PrismaOrganizationSettingsRepository } from "@/features/organization-settings/infrastructure/prisma-organization-settings.repository";
 
 const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
-const accountsPayableRepository = new PrismaAccountsPayableRepository();
 const categoryRepository = new PrismaCategoryRepository();
-const safeRepository = new PrismaSafeRepository();
+const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
+const safeMovementRepository = new PrismaSafeMovementRepository();
 const organizationSettingsRepository =
   new PrismaOrganizationSettingsRepository();
 
-/** Botão "Enviar por WhatsApp" da tela do Status Report do Cofre — gera a imagem e envia via Z-API. */
+/** Botão "Enviar por WhatsApp" da tela do Relatório do Caixa Recepção — gera a imagem e envia via Z-API. */
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(PERMISSIONS.DASHBOARD_READ);
     if (!user.organizationId) {
       throw new ForbiddenError(
-        "enviar Status Report do Cofre sem organização vinculada",
+        "enviar Relatório do Caixa Recepção sem organização vinculada",
       );
     }
 
@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
       input.dateTo,
       {
         cashFlowEntryRepository,
-        accountsPayableRepository,
         categoryRepository,
-        safeRepository,
+        cashRegisterDayRepository,
+        safeMovementRepository,
         organizationSettingsRepository,
       },
     );

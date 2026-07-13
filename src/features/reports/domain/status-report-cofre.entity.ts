@@ -8,7 +8,7 @@ export interface StatusReportCofreCategoryRow {
 }
 
 /**
- * Status Report do Cofre — imagem 1080x1920 (`infrastructure/status-report-cofre-image.tsx`).
+ * Relatório do Caixa Recepção — imagem 1080x1920 (`infrastructure/status-report-cofre-image.tsx`).
  * Saldo Final = Saldo Inicial + Entradas Dinheiro - Saída Dinheiro (PIX é só
  * informativo, nunca entra nessa conta — "PIX não fica em caixa", mesma
  * regra do Fluxo Financeiro do Dia no Dashboard).

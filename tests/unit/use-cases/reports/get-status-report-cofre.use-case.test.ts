@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 import { getStatusReportCofreUseCase } from "@/features/reports/application/get-status-report-cofre.use-case";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
-import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
-import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
+import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: {
@@ -21,9 +21,6 @@ const KIT_CATEGORY = { id: "cat-kit", name: "KIT 2 - Rio Preto" };
 const CONVENIO_CATEGORY = { id: "cat-convenio", name: "Convênios" };
 const PARTICULAR_CATEGORY = { id: "cat-particular", name: "Particular" };
 
-const CONTAS_A_PAGAR_CATEGORY = { id: "cat-cp", name: "Contas a Pagar" };
-const DESPESAS_CATEGORY = { id: "cat-op", name: "Despesas Operacionais" };
-
 type CashFlowRow = {
   type: "IN" | "OUT";
   amount: Prisma.Decimal;
@@ -31,68 +28,68 @@ type CashFlowRow = {
   paymentMethodIsCash: boolean;
 };
 
-type PayableRow = {
-  supplierId: string;
-  supplierName: string;
-  categoryId: string;
-  amount: string;
-  paidAt: Date;
-  paymentOrigin: "BANCO" | "COFRE";
-};
-
 function buildDeps(
   overrides: {
     cashFlowRows?: CashFlowRow[];
-    payableRows?: PayableRow[];
     openingBalance?: Prisma.Decimal;
     incomeCategories?: { id: string; name: string }[];
-    outcomeCategories?: { id: string; name: string }[];
+    sangriaAmounts?: Prisma.Decimal[];
   } = {},
 ) {
   const cashFlowRows = overrides.cashFlowRows ?? [];
-  const payableRows = overrides.payableRows ?? [];
   const openingBalance = overrides.openingBalance ?? new Prisma.Decimal(0);
   const incomeCategories = overrides.incomeCategories ?? [
     KIT_CATEGORY,
     CONVENIO_CATEGORY,
     PARTICULAR_CATEGORY,
   ];
-  const outcomeCategories = overrides.outcomeCategories ?? [
-    CONTAS_A_PAGAR_CATEGORY,
-    DESPESAS_CATEGORY,
-  ];
+  const sangriaAmounts = overrides.sangriaAmounts ?? [];
 
   const cashFlowEntryRepository = {
     listForCofreReport: vi.fn().mockResolvedValue(cashFlowRows),
   } as unknown as CashFlowEntryRepository;
 
-  const accountsPayableRepository = {
-    listPaidForReport: vi.fn().mockResolvedValue(payableRows),
-  } as unknown as AccountsPayableRepository;
-
   const categoryRepository = {
-    listActive: vi
-      .fn()
-      .mockImplementation((_orgId: string, type: string) =>
-        Promise.resolve(type === "IN" ? incomeCategories : outcomeCategories),
-      ),
+    listActive: vi.fn().mockResolvedValue(incomeCategories),
   } as unknown as CategoryRepository;
 
-  const safeRepository = {
-    getBalanceAsOf: vi.fn().mockResolvedValue(openingBalance),
-  } as unknown as SafeRepository;
+  const cashRegisterDayRepository = {
+    list: vi.fn().mockResolvedValue({
+      items: [
+        {
+          date: DATE_FROM,
+          openingBalance,
+        },
+      ],
+      page: 1,
+      pageSize: 366,
+      total: 1,
+      totalPages: 1,
+    }),
+  } as unknown as CashRegisterDayRepository;
+
+  const safeMovementRepository = {
+    list: vi.fn().mockResolvedValue({
+      items: sangriaAmounts.map((amount) => ({ amount })),
+      page: 1,
+      pageSize: 1000,
+      total: sangriaAmounts.length,
+      totalPages: 1,
+    }),
+  } as unknown as SafeMovementRepository;
 
   return {
     cashFlowEntryRepository,
-    accountsPayableRepository,
     categoryRepository,
-    safeRepository,
+    cashRegisterDayRepository,
+    safeMovementRepository,
   };
 }
 
 describe("getStatusReportCofreUseCase", () => {
-  it("calcula Saldo Final = Saldo Inicial + Entradas Dinheiro - Saída Dinheiro (PIX nunca entra na conta)", async () => {
+  it("calcula Saldo Final = Saldo Inicial + Entradas Dinheiro - Saída Dinheiro (PIX nunca entra na conta; contas pagas pelo Cofre não entram — são saída do Cofre, não da recepção)", async () => {
     const deps = buildDeps({
+      openingBalance: new Prisma.Decimal("50.00"),
       cashFlowRows: [
         {
           type: "IN",
@@ -119,32 +116,6 @@ describe("getStatusReportCofreUseCase", () => {
           paymentMethodIsCash: true,
         },
       ],
-      payableRows: [
-        {
-          supplierId: "s1",
-          supplierName: "Fornecedor A",
-          categoryId: CONTAS_A_PAGAR_CATEGORY.id,
-          amount: "80.00",
-          paidAt: new Date("2026-07-10T00:00:00.000Z"),
-          paymentOrigin: "COFRE",
-        },
-        {
-          supplierId: "s2",
-          supplierName: "Fornecedor B",
-          categoryId: DESPESAS_CATEGORY.id,
-          amount: "570.00",
-          paidAt: new Date("2026-07-15T00:00:00.000Z"),
-          paymentOrigin: "COFRE",
-        },
-        {
-          supplierId: "s3",
-          supplierName: "Fornecedor C (Banco)",
-          categoryId: DESPESAS_CATEGORY.id,
-          amount: "9999.00",
-          paidAt: new Date("2026-07-20T00:00:00.000Z"),
-          paymentOrigin: "BANCO",
-        },
-      ],
     });
 
     const result = await getStatusReportCofreUseCase(
@@ -154,15 +125,14 @@ describe("getStatusReportCofreUseCase", () => {
       deps,
     );
 
-    expect(result.openingBalance).toBe("0.00");
+    expect(result.openingBalance).toBe("50.00");
     expect(result.cashIncomeTotal).toBe("1000.00");
     expect(result.cashIncomeCount).toBe(1);
     expect(result.pixIncomeTotal).toBe("2280.00");
     expect(result.pixIncomeCount).toBe(2);
-    // 150 (retirada) + 80 + 570 (Cofre) — nunca os 9999 pagos via Banco
-    expect(result.cashOutcomeTotal).toBe("800.00");
-    expect(result.cashOutcomeCount).toBe(3);
-    expect(result.finalBalance).toBe("200.00");
+    expect(result.cashOutcomeTotal).toBe("150.00");
+    expect(result.cashOutcomeCount).toBe(1);
+    expect(result.finalBalance).toBe("900.00");
     expect(result.isSurplus).toBe(true);
 
     // Só categorias com movimentação real aparecem nas linhas — Convênios
@@ -192,18 +162,6 @@ describe("getStatusReportCofreUseCase", () => {
     ]);
     expect(result.cashOutcomeByCategory).toEqual([
       {
-        categoryId: CONTAS_A_PAGAR_CATEGORY.id,
-        label: "Contas a Pagar",
-        count: 1,
-        amount: "80.00",
-      },
-      {
-        categoryId: DESPESAS_CATEGORY.id,
-        label: "Despesas Operacionais",
-        count: 1,
-        amount: "570.00",
-      },
-      {
         categoryId: null,
         label: "Retirada de Caixa (secretária)",
         count: 1,
@@ -213,7 +171,7 @@ describe("getStatusReportCofreUseCase", () => {
   });
 
   it("esconde categorias sem movimentação no período; sem nenhuma entrada/saída, todas as 3 seções mostram o placeholder — inclusive Saídas, já que a Retirada de Caixa zerada some igual às demais", async () => {
-    const deps = buildDeps({ cashFlowRows: [], payableRows: [] });
+    const deps = buildDeps({ cashFlowRows: [] });
 
     const result = await getStatusReportCofreUseCase(
       "org-1",
@@ -232,14 +190,10 @@ describe("getStatusReportCofreUseCase", () => {
     ];
     expect(result.cashIncomeByCategory).toEqual(placeholder);
     expect(result.pixIncomeByCategory).toEqual(placeholder);
-    // Sem nenhuma retirada nem pagamento via Cofre, a Retirada de Caixa
-    // (count 0) segue a mesma regra das categorias reais e some — Saídas
-    // cai no mesmo placeholder das outras seções, não fica com uma linha
-    // zerada sozinha.
     expect(result.cashOutcomeByCategory).toEqual(placeholder);
   });
 
-  it("Retirada de Caixa com valor > 0 continua aparecendo normalmente, mesmo sem nenhum pagamento via Cofre", async () => {
+  it("Retirada de Caixa com valor > 0 continua aparecendo normalmente", async () => {
     const deps = buildDeps({
       cashFlowRows: [
         {
@@ -249,7 +203,6 @@ describe("getStatusReportCofreUseCase", () => {
           paymentMethodIsCash: true,
         },
       ],
-      payableRows: [],
     });
 
     const result = await getStatusReportCofreUseCase(
@@ -266,6 +219,50 @@ describe("getStatusReportCofreUseCase", () => {
         label: "Retirada de Caixa (secretária)",
         count: 1,
         amount: "90.00",
+      },
+    ]);
+  });
+
+  it("sangria (retirada pontual da recepção) soma nas Saídas, ao lado da Retirada de Caixa", async () => {
+    const deps = buildDeps({
+      openingBalance: new Prisma.Decimal("50.00"),
+      cashFlowRows: [
+        {
+          type: "OUT",
+          amount: new Prisma.Decimal("40.00"),
+          categoryId: "irrelevante-para-retirada",
+          paymentMethodIsCash: true,
+        },
+      ],
+      sangriaAmounts: [
+        new Prisma.Decimal("60.00"),
+        new Prisma.Decimal("25.00"),
+      ],
+    });
+
+    const result = await getStatusReportCofreUseCase(
+      "org-1",
+      DATE_FROM,
+      DATE_TO,
+      deps,
+    );
+
+    // 40 (retirada) + 60 + 25 (sangria) = 125
+    expect(result.cashOutcomeTotal).toBe("125.00");
+    expect(result.cashOutcomeCount).toBe(3);
+    expect(result.finalBalance).toBe("-75.00");
+    expect(result.cashOutcomeByCategory).toEqual([
+      {
+        categoryId: null,
+        label: "Retirada de Caixa (secretária)",
+        count: 1,
+        amount: "40.00",
+      },
+      {
+        categoryId: null,
+        label: "Sangria (retirada pontual)",
+        count: 2,
+        amount: "85.00",
       },
     ]);
   });

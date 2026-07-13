@@ -22,9 +22,9 @@ const REPORTS: ReportCatalogItem[] = [
   },
   {
     href: "/reports/status-report-cofre",
-    title: "Status Report: Cofre",
+    title: "Relatório do Caixa Recepção",
     description:
-      "Saldo do Cofre do período — entradas em dinheiro/PIX e saídas, em imagem.",
+      "Saldo do caixa recepção do período — entradas em dinheiro/PIX e saídas, em imagem.",
     icon: Vault,
   },
 ];
