@@ -28,21 +28,21 @@ function sumDecimals(values: (string | Prisma.Decimal)[]): Prisma.Decimal {
 const EMPTY_SECTION_LABEL = "Sem movimentação no período";
 
 /**
- * Filtra pra exibição só as categorias com movimentação real no período —
+ * Filtra pra exibição só as linhas com movimentação real no período —
  * `groupByCategory` inclui todo o catálogo (mesmo 0 lançamentos) de
  * propósito, pra alimentar os totais corretamente; aqui só decidimos o
  * que aparece nas linhas da imagem, sem tocar em nenhuma soma. A linha
- * sintética "Retirada de Caixa" (`categoryId: null`) nunca é removida —
- * é um resumo agregado, não uma categoria do catálogo. Se não sobrar
- * nenhuma linha real (nenhuma movimentação no período), mostra um
+ * sintética "Retirada de Caixa" (`categoryId: null`) segue a MESMA
+ * regra das categorias reais — só aparece se tiver `count > 0`; não há
+ * mais exceção pra ela (evita "Retirada de Caixa" zerada aparecer
+ * sozinha quando não houve nenhuma saída no período). Se não sobrar
+ * nenhuma linha (nenhuma movimentação no período), mostra um
  * placeholder em vez de uma tabela vazia.
  */
 function filterVisibleRows(
   rows: StatusReportCofreCategoryRow[],
 ): StatusReportCofreCategoryRow[] {
-  const visible = rows.filter(
-    (row) => row.categoryId === null || row.count > 0,
-  );
+  const visible = rows.filter((row) => row.count > 0);
   if (visible.length > 0) return visible;
   return [
     {

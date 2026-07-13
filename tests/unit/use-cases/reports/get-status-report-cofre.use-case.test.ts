@@ -212,7 +212,7 @@ describe("getStatusReportCofreUseCase", () => {
     ]);
   });
 
-  it("esconde categorias sem movimentação no período; sem nenhuma entrada, mostra placeholder — mas nunca remove a linha sintética de Retirada", async () => {
+  it("esconde categorias sem movimentação no período; sem nenhuma entrada/saída, todas as 3 seções mostram o placeholder — inclusive Saídas, já que a Retirada de Caixa zerada some igual às demais", async () => {
     const deps = buildDeps({ cashFlowRows: [], payableRows: [] });
 
     const result = await getStatusReportCofreUseCase(
@@ -222,31 +222,50 @@ describe("getStatusReportCofreUseCase", () => {
       deps,
     );
 
-    expect(result.cashIncomeByCategory).toEqual([
+    const placeholder = [
       {
         categoryId: null,
         label: "Sem movimentação no período",
         count: 0,
         amount: "0.00",
       },
-    ]);
-    expect(result.pixIncomeByCategory).toEqual([
-      {
-        categoryId: null,
-        label: "Sem movimentação no período",
-        count: 0,
-        amount: "0.00",
-      },
-    ]);
-    // Saídas nunca fica vazia: a linha sintética de Retirada sempre
-    // aparece, mesmo com 0 lançamentos — as categorias reais (Contas a
-    // Pagar/Despesas), essas sim, somem por não terem movimentação.
+    ];
+    expect(result.cashIncomeByCategory).toEqual(placeholder);
+    expect(result.pixIncomeByCategory).toEqual(placeholder);
+    // Sem nenhuma retirada nem pagamento via Cofre, a Retirada de Caixa
+    // (count 0) segue a mesma regra das categorias reais e some — Saídas
+    // cai no mesmo placeholder das outras seções, não fica com uma linha
+    // zerada sozinha.
+    expect(result.cashOutcomeByCategory).toEqual(placeholder);
+  });
+
+  it("Retirada de Caixa com valor > 0 continua aparecendo normalmente, mesmo sem nenhum pagamento via Cofre", async () => {
+    const deps = buildDeps({
+      cashFlowRows: [
+        {
+          type: "OUT",
+          amount: new Prisma.Decimal("90.00"),
+          categoryId: "irrelevante-para-retirada",
+          paymentMethodIsCash: true,
+        },
+      ],
+      payableRows: [],
+    });
+
+    const result = await getStatusReportCofreUseCase(
+      "org-1",
+      DATE_FROM,
+      DATE_TO,
+      deps,
+    );
+
+    expect(result.cashOutcomeTotal).toBe("90.00");
     expect(result.cashOutcomeByCategory).toEqual([
       {
         categoryId: null,
         label: "Retirada de Caixa (secretária)",
-        count: 0,
-        amount: "0.00",
+        count: 1,
+        amount: "90.00",
       },
     ]);
   });
