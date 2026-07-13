@@ -17,6 +17,62 @@ import {
   loadOrganizationLogoDataUri,
 } from "./report-image-kit";
 
+const CANVAS_WIDTH = 1080;
+const MIN_CANVAS_HEIGHT = 1500;
+
+// Alturas aproximadas (px) de cada bloco de altura fixa do layout —
+// medidas comparando o mock renderizado com o resultado real; não
+// precisam ser exatas, só suficientes pra nunca subestimar (sobrar
+// espaço em branco no rodapé é preferível a cortar conteúdo).
+const HEADER_HEIGHT = 100;
+const PERIOD_BOX_HEIGHT = 90;
+const HERO_CARD_HEIGHT = 230;
+const KPI_ROW_HEIGHT = 195;
+// Título da seção + cabeçalho da tabela + barra de total + gaps internos
+// (linhas de categoria são somadas à parte, por tabela).
+const SECTION_FIXED_HEIGHT = 155;
+const CATEGORY_ROW_HEIGHT = 50;
+const FOOTER_HEIGHT = 100;
+const OUTER_VERTICAL_PADDING = 52; // "26px 52px" no container raiz
+const OUTER_GAP = 13; // gap entre os 8 blocos de nível superior (ver SECTION_COUNT)
+const SECTION_COUNT = 8; // cabeçalho, período, hero, KPIs, 3 tabelas, rodapé
+// Margem de segurança — as constantes acima são aproximações; melhor
+// sobrar um respiro no rodapé do que arriscar cortar por 1-2 linhas de
+// diferença entre a estimativa e o layout real do Satori.
+const SAFETY_MARGIN = 100;
+
+/**
+ * Altura do canvas a partir do conteúdo real — soma os blocos de altura
+ * fixa (cabeçalho, período, Hero, KPIs, título/cabeçalho/total de cada
+ * tabela, rodapé) ao número de linhas de categoria JÁ FILTRADAS (sem
+ * categorias zeradas — filtro aplicado no use case, `filterVisibleRows`)
+ * vezes a altura de uma linha. Sem isso, o Satori (`ImageResponse`)
+ * rasteriza um canvas de tamanho fixo e descarta silenciosamente
+ * qualquer conteúdo que ultrapasse a altura — não existe scroll nem
+ * auto-altura nessa API.
+ */
+function calculateImageHeight(input: StatusReportCofreSummary): number {
+  const totalRows =
+    input.cashIncomeByCategory.length +
+    input.pixIncomeByCategory.length +
+    input.cashOutcomeByCategory.length;
+
+  const fixedHeight =
+    OUTER_VERTICAL_PADDING +
+    OUTER_GAP * (SECTION_COUNT - 1) +
+    HEADER_HEIGHT +
+    PERIOD_BOX_HEIGHT +
+    HERO_CARD_HEIGHT +
+    KPI_ROW_HEIGHT +
+    SECTION_FIXED_HEIGHT * 3 +
+    FOOTER_HEIGHT;
+
+  return Math.max(
+    MIN_CANVAS_HEIGHT,
+    fixedHeight + totalRows * CATEGORY_ROW_HEIGHT + SAFETY_MARGIN,
+  );
+}
+
 /** Paleta exata validada no protótipo (`prototipo-status-report-v2.html`) — difere um pouco das cores genéricas de `report-image-kit.ts`, por isso local. */
 const PAGE_BG = "#F8F8F6";
 const CARD_BG = "#FFFFFF";
@@ -470,15 +526,18 @@ function SectionTitle({ title, color }: { title: string; color: string }) {
 }
 
 /**
- * Renderiza o Status Report do Cofre como imagem 1080x1920 (`next/og`).
- * Estrutura fiel ao protótipo validado (`prototipo-status-report-v2.html`):
- * cabeçalho, período, Hero de Saldo Final, 4 KPIs, e 3 tabelas
- * (Dinheiro/PIX/Saídas) cada uma com barra de total colorida.
+ * Renderiza o Status Report do Cofre como imagem 1080xN (`next/og`), N
+ * calculado a partir do conteúdo real (`calculateImageHeight`) — nunca
+ * mais um valor fixo. Estrutura fiel ao protótipo validado
+ * (`prototipo-status-report-v2.html`): cabeçalho, período, Hero de
+ * Saldo Final, 4 KPIs, e 3 tabelas (Dinheiro/PIX/Saídas) cada uma com
+ * barra de total colorida.
  */
 export async function renderStatusReportCofreImage(
   input: StatusReportCofreSummary,
 ): Promise<ArrayBuffer> {
   const logoDataUri = loadOrganizationLogoDataUri();
+  const canvasHeight = calculateImageHeight(input);
 
   const image = new ImageResponse(
     <div
@@ -691,7 +750,7 @@ export async function renderStatusReportCofreImage(
         </div>
       </div>
     </div>,
-    { width: 1080, height: 1920 },
+    { width: CANVAS_WIDTH, height: canvasHeight },
   );
 
   return image.arrayBuffer();
