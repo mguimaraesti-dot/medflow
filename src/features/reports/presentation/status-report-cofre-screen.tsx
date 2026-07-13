@@ -17,7 +17,7 @@ import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { useSendStatusReportCofreWhatsApp } from "./use-send-status-report-cofre-whatsapp";
 
-/** Tela do Status Report do Cofre — mesma estrutura dos outros Status Reports (preview 1080x1920, baixar, enviar por WhatsApp). */
+/** Tela do Relatório do Caixa Recepção — mesma estrutura dos outros Status Reports (preview 1080x1920, baixar, enviar por WhatsApp). */
 export function StatusReportCofreScreen() {
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("MONTH");
   const [periodCustom, setPeriodCustom] = useState<PeriodRange | undefined>();
@@ -33,7 +33,7 @@ export function StatusReportCofreScreen() {
         dateFrom: range.from,
         dateTo: range.to,
       });
-      toast.success("Status Report do Cofre enviado por WhatsApp.");
+      toast.success("Relatório do Caixa Recepção enviado por WhatsApp.");
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -54,17 +54,17 @@ export function StatusReportCofreScreen() {
           Relatórios
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Status Report: Cofre
+          Relatório do Caixa Recepção
         </h1>
         <p className="text-muted-foreground text-sm">
-          Saldo do Cofre do período em imagem, pronto pra baixar ou enviar por
-          WhatsApp.
+          Saldo do caixa recepção do período em imagem, pronto pra baixar ou
+          enviar por WhatsApp.
         </p>
       </div>
 
       <Card>
         <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Status Report: Cofre</CardTitle>
+          <CardTitle>Relatório do Caixa Recepção</CardTitle>
           <PeriodSelector
             variant="select"
             size="sm"
@@ -82,7 +82,7 @@ export function StatusReportCofreScreen() {
             <Image
               key={imageKey}
               src={imageUrl}
-              alt="Status Report: Cofre"
+              alt="Relatório do Caixa Recepção"
               width={1080}
               height={1920}
               unoptimized
@@ -92,7 +92,7 @@ export function StatusReportCofreScreen() {
 
           <div className="flex flex-wrap justify-center gap-2">
             <Button asChild variant="outline">
-              <a href={imageUrl} download="status-report-cofre.png">
+              <a href={imageUrl} download="relatorio-caixa-recepcao.png">
                 <Download className="h-4 w-4" />
                 Baixar imagem
               </a>

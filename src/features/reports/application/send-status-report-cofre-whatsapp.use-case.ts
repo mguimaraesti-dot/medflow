@@ -54,7 +54,7 @@ export async function sendStatusReportCofreWhatsAppUseCase(
     await sendImageMessage({
       phone: settings.whatsapp,
       image: base64Image,
-      caption: `Status Report: Cofre — ${formatDateOnlyBR(dateFrom)} a ${formatDateOnlyBR(dateTo)}`,
+      caption: `Relatório do Caixa Recepção — ${formatDateOnlyBR(dateFrom)} a ${formatDateOnlyBR(dateTo)}`,
     });
   } catch (error) {
     logger.error("Falha ao enviar Relatório do Caixa Recepção por WhatsApp", {
