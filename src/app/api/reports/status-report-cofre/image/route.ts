@@ -8,12 +8,10 @@ import { getStatusReportCofreSchema } from "@/features/reports/application/dtos/
 import { getStatusReportCofreUseCase } from "@/features/reports/application/get-status-report-cofre.use-case";
 import { renderStatusReportCofreImage } from "@/features/reports/infrastructure/status-report-cofre-image";
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
-import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 import { PrismaCategoryRepository } from "@/features/categories/infrastructure/prisma-category.repository";
 import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 
 const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
-const accountsPayableRepository = new PrismaAccountsPayableRepository();
 const categoryRepository = new PrismaCategoryRepository();
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
 
@@ -41,7 +39,6 @@ export async function GET(request: NextRequest) {
       input.dateTo,
       {
         cashFlowEntryRepository,
-        accountsPayableRepository,
         categoryRepository,
         cashRegisterDayRepository,
       },

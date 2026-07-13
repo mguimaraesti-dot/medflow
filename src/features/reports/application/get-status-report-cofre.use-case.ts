@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/core/database/prisma.client";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
-import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type {
@@ -11,7 +10,6 @@ import type {
 
 interface Deps {
   cashFlowEntryRepository: CashFlowEntryRepository;
-  accountsPayableRepository: AccountsPayableRepository;
   categoryRepository: CategoryRepository;
   cashRegisterDayRepository: CashRegisterDayRepository;
 }
@@ -121,12 +119,12 @@ function groupByCategory(
  * (`findPeriodOpeningBalance`), não do saldo do Cofre — este relatório
  * reflete só a recepção, não o Cofre consolidado.
  *
- * Saída (Dinheiro) combina duas fontes, por regra de negócio explícita:
- * retiradas feitas pela secretária no Caixa Recepção (`CashFlowEntry`
- * type OUT, sempre em dinheiro — o formulário só permite isso) e contas
- * pagas usando o Cofre como origem (`AccountsPayable.paymentOrigin ===
- * "COFRE"`). Pagamentos com origem "Banco" nunca entram aqui — não
- * afetam o saldo físico do Cofre.
+ * Saída (Dinheiro) é só o que sai de dinheiro da recepção: retiradas
+ * feitas pela secretária no Caixa Recepção (`CashFlowEntry` type OUT,
+ * sempre em dinheiro — o formulário só permite isso). Contas pagas
+ * usando o Cofre como origem (`AccountsPayable.paymentOrigin ===
+ * "COFRE"`) não passam pela recepção e não entram aqui — são saída do
+ * Cofre, não do caixa da recepção.
  */
 export async function getStatusReportCofreUseCase(
   organizationId: string,
@@ -134,37 +132,25 @@ export async function getStatusReportCofreUseCase(
   dateTo: Date,
   deps: Deps,
 ): Promise<StatusReportCofreSummary> {
-  const [
-    organization,
-    openingBalance,
-    cashFlowRows,
-    paidPayableRows,
-    incomeCategories,
-    outcomeCategories,
-  ] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { name: true },
-    }),
-    findPeriodOpeningBalance(
-      organizationId,
-      dateFrom,
-      dateTo,
-      deps.cashRegisterDayRepository,
-    ),
-    deps.cashFlowEntryRepository.listForCofreReport(
-      organizationId,
-      dateFrom,
-      dateTo,
-    ),
-    deps.accountsPayableRepository.listPaidForReport(
-      organizationId,
-      dateFrom,
-      dateTo,
-    ),
-    deps.categoryRepository.listActive(organizationId, "IN"),
-    deps.categoryRepository.listActive(organizationId, "OUT"),
-  ]);
+  const [organization, openingBalance, cashFlowRows, incomeCategories] =
+    await Promise.all([
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { name: true },
+      }),
+      findPeriodOpeningBalance(
+        organizationId,
+        dateFrom,
+        dateTo,
+        deps.cashRegisterDayRepository,
+      ),
+      deps.cashFlowEntryRepository.listForCofreReport(
+        organizationId,
+        dateFrom,
+        dateTo,
+      ),
+      deps.categoryRepository.listActive(organizationId, "IN"),
+    ]);
 
   // Reversão preserva a forma de pagamento original (uma reversão de PIX
   // vira OUT+PIX, não Dinheiro) — por isso o filtro é sempre por
@@ -180,36 +166,25 @@ export async function getStatusReportCofreUseCase(
     (row) => row.type === "OUT" && row.paymentMethodIsCash,
   );
 
-  const cofrePaidPayableRows = paidPayableRows.filter(
-    (row) => row.paymentOrigin === "COFRE",
-  );
-
   const cashIncomeByCategory = groupByCategory(
     cashIncomeRows,
     incomeCategories,
   );
   const pixIncomeByCategory = groupByCategory(pixIncomeRows, incomeCategories);
 
-  const cofrePayableByCategory = groupByCategory(
-    cofrePaidPayableRows.map((row) => ({
-      categoryId: row.categoryId,
-      amount: new Prisma.Decimal(row.amount),
-    })),
-    outcomeCategories,
-  );
   const retiradaRow: StatusReportCofreCategoryRow = {
     categoryId: null,
     label: RETIRADA_LABEL,
     count: cashOutcomeRows.length,
     amount: sumDecimals(cashOutcomeRows.map((row) => row.amount)).toFixed(2),
   };
-  const cashOutcomeByCategory = [...cofrePayableByCategory, retiradaRow];
+  const cashOutcomeByCategory = [retiradaRow];
 
   const cashIncomeTotal = sumDecimals(cashIncomeRows.map((row) => row.amount));
   const pixIncomeTotal = sumDecimals(pixIncomeRows.map((row) => row.amount));
   const cashOutcomeTotal = sumDecimals(
     cashOutcomeRows.map((row) => row.amount),
-  ).plus(sumDecimals(cofrePaidPayableRows.map((row) => row.amount)));
+  );
   const finalBalance = openingBalance
     .plus(cashIncomeTotal)
     .minus(cashOutcomeTotal);
@@ -225,7 +200,7 @@ export async function getStatusReportCofreUseCase(
     pixIncomeTotal: pixIncomeTotal.toFixed(2),
     pixIncomeCount: pixIncomeRows.length,
     cashOutcomeTotal: cashOutcomeTotal.toFixed(2),
-    cashOutcomeCount: cashOutcomeRows.length + cofrePaidPayableRows.length,
+    cashOutcomeCount: cashOutcomeRows.length,
     finalBalance: finalBalance.toFixed(2),
     isSurplus: finalBalance.greaterThanOrEqualTo(0),
     cashIncomeByCategory: filterVisibleRows(cashIncomeByCategory),
