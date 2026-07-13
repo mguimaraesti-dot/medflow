@@ -10,14 +10,14 @@ import { sendImageMessage } from "@/core/whatsapp/zapi-client";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
-import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
 
 interface Deps {
   cashFlowEntryRepository: CashFlowEntryRepository;
   accountsPayableRepository: AccountsPayableRepository;
   categoryRepository: CategoryRepository;
-  safeRepository: SafeRepository;
+  cashRegisterDayRepository: CashRegisterDayRepository;
   organizationSettingsRepository: OrganizationSettingsRepository;
 }
 

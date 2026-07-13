@@ -9,13 +9,13 @@ import { sendStatusReportCofreWhatsAppUseCase } from "@/features/reports/applica
 import { PrismaCashFlowEntryRepository } from "@/features/cash-flow/infrastructure/prisma-cash-flow-entry.repository";
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 import { PrismaCategoryRepository } from "@/features/categories/infrastructure/prisma-category.repository";
-import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
+import { PrismaCashRegisterDayRepository } from "@/features/cash-register/infrastructure/prisma-cash-register-day.repository";
 import { PrismaOrganizationSettingsRepository } from "@/features/organization-settings/infrastructure/prisma-organization-settings.repository";
 
 const cashFlowEntryRepository = new PrismaCashFlowEntryRepository();
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
 const categoryRepository = new PrismaCategoryRepository();
-const safeRepository = new PrismaSafeRepository();
+const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
 const organizationSettingsRepository =
   new PrismaOrganizationSettingsRepository();
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         cashFlowEntryRepository,
         accountsPayableRepository,
         categoryRepository,
-        safeRepository,
+        cashRegisterDayRepository,
         organizationSettingsRepository,
       },
     );

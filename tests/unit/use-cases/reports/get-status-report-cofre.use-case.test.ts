@@ -4,7 +4,7 @@ import { getStatusReportCofreUseCase } from "@/features/reports/application/get-
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
-import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: {
@@ -78,15 +78,26 @@ function buildDeps(
       ),
   } as unknown as CategoryRepository;
 
-  const safeRepository = {
-    getBalanceAsOf: vi.fn().mockResolvedValue(openingBalance),
-  } as unknown as SafeRepository;
+  const cashRegisterDayRepository = {
+    list: vi.fn().mockResolvedValue({
+      items: [
+        {
+          date: DATE_FROM,
+          openingBalance,
+        },
+      ],
+      page: 1,
+      pageSize: 366,
+      total: 1,
+      totalPages: 1,
+    }),
+  } as unknown as CashRegisterDayRepository;
 
   return {
     cashFlowEntryRepository,
     accountsPayableRepository,
     categoryRepository,
-    safeRepository,
+    cashRegisterDayRepository,
   };
 }
 

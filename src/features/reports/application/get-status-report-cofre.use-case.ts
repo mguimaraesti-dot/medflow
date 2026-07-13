@@ -3,7 +3,7 @@ import { prisma } from "@/core/database/prisma.client";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
-import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
+import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type {
   StatusReportCofreCategoryRow,
   StatusReportCofreSummary,
@@ -13,7 +13,35 @@ interface Deps {
   cashFlowEntryRepository: CashFlowEntryRepository;
   accountsPayableRepository: AccountsPayableRepository;
   categoryRepository: CategoryRepository;
-  safeRepository: SafeRepository;
+  cashRegisterDayRepository: CashRegisterDayRepository;
+}
+
+/**
+ * Um período pode abranger vários dias de caixa (ex.: um mês inteiro).
+ * O Saldo Inicial do relatório é o fundo de abertura do PRIMEIRO dia de
+ * caixa dentro do período — o valor com que a recepção começou o
+ * período, vindo do Cofre (`SafeMovement` tipo `FUNDING`, ver
+ * `open-cash-register.use-case.ts`). `pageSize` bem acima do que
+ * qualquer período razoável (um relatório mensal tem no máximo ~31
+ * dias de caixa) evita paginação de verdade aqui; sem nenhum dia de
+ * caixa no período, zero-padroniza (nunca inventa um valor).
+ */
+async function findPeriodOpeningBalance(
+  organizationId: string,
+  dateFrom: Date,
+  dateTo: Date,
+  cashRegisterDayRepository: CashRegisterDayRepository,
+): Promise<Prisma.Decimal> {
+  const { items } = await cashRegisterDayRepository.list(
+    { organizationId, dateFrom, dateTo },
+    { page: 1, pageSize: 366 },
+  );
+  if (items.length === 0) return new Prisma.Decimal(0);
+
+  const firstDay = items.reduce((earliest, day) =>
+    day.date < earliest.date ? day : earliest,
+  );
+  return firstDay.openingBalance;
 }
 
 const RETIRADA_LABEL = "Retirada de Caixa (secretária)";
@@ -86,11 +114,12 @@ function groupByCategory(
 }
 
 /**
- * Status Report do Cofre — imagem 1080x1920 (`infrastructure/status-report-cofre-image.tsx`).
+ * Status Report do Caixa Recepção — imagem 1080xN (`infrastructure/status-report-cofre-image.tsx`).
  * Reaproveita a mesma separação Dinheiro/PIX do Fluxo Financeiro do Dia
- * (`get-dashboard-overview.use-case.ts`: "PIX não fica em caixa") e a
- * mesma lógica de saldo do Cofre já usada na Tesouraria
- * (`safeRepository.getBalanceAsOf`) — nenhum cálculo paralelo novo.
+ * (`get-dashboard-overview.use-case.ts`: "PIX não fica em caixa").
+ * Saldo Inicial vem do fundo de abertura do caixa da recepção
+ * (`findPeriodOpeningBalance`), não do saldo do Cofre — este relatório
+ * reflete só a recepção, não o Cofre consolidado.
  *
  * Saída (Dinheiro) combina duas fontes, por regra de negócio explícita:
  * retiradas feitas pela secretária no Caixa Recepção (`CashFlowEntry`
@@ -117,7 +146,12 @@ export async function getStatusReportCofreUseCase(
       where: { id: organizationId },
       select: { name: true },
     }),
-    deps.safeRepository.getBalanceAsOf(organizationId, dateFrom),
+    findPeriodOpeningBalance(
+      organizationId,
+      dateFrom,
+      dateTo,
+      deps.cashRegisterDayRepository,
+    ),
     deps.cashFlowEntryRepository.listForCofreReport(
       organizationId,
       dateFrom,
