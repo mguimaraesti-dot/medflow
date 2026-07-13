@@ -19,7 +19,7 @@ const safeMovementRepository = new PrismaSafeMovementRepository();
 const organizationSettingsRepository =
   new PrismaOrganizationSettingsRepository();
 
-/** Botão "Enviar por WhatsApp" da tela do Status Report do Cofre — gera a imagem e envia via Z-API. */
+/** Botão "Enviar por WhatsApp" da tela do Relatório do Caixa Recepção — gera a imagem e envia via Z-API. */
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(PERMISSIONS.DASHBOARD_READ);
     if (!user.organizationId) {
       throw new ForbiddenError(
-        "enviar Status Report do Cofre sem organização vinculada",
+        "enviar Relatório do Caixa Recepção sem organização vinculada",
       );
     }
 

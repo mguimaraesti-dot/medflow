@@ -17,7 +17,7 @@ const categoryRepository = new PrismaCategoryRepository();
 const cashRegisterDayRepository = new PrismaCashRegisterDayRepository();
 const safeMovementRepository = new PrismaSafeMovementRepository();
 
-/** Serve o Status Report do Cofre como PNG (1080x1920) — mesmo padrão dos outros Status Reports (preview + download na mesma URL). */
+/** Serve o Relatório do Caixa Recepção como PNG (1080x1920) — mesmo padrão dos outros Status Reports (preview + download na mesma URL). */
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const user = await requirePermission(PERMISSIONS.DASHBOARD_READ);
     if (!user.organizationId) {
       throw new ForbiddenError(
-        "gerar Status Report do Cofre sem organização vinculada",
+        "gerar Relatório do Caixa Recepção sem organização vinculada",
       );
     }
 

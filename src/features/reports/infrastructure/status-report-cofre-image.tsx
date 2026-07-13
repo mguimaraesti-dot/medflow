@@ -250,7 +250,7 @@ function HeroCard({
           color: isSurplus ? "#166534" : "#991B1B",
         }}
       >
-        Saldo final no Cofre — considera apenas valores recebidos em dinheiro
+        Saldo final da recepção — considera apenas valores recebidos em dinheiro
       </div>
     </div>
   );
@@ -526,7 +526,7 @@ function SectionTitle({ title, color }: { title: string; color: string }) {
 }
 
 /**
- * Renderiza o Status Report do Cofre como imagem 1080xN (`next/og`), N
+ * Renderiza o Relatório do Caixa Recepção como imagem 1080xN (`next/og`), N
  * calculado a partir do conteúdo real (`calculateImageHeight`) — nunca
  * mais um valor fixo. Estrutura fiel ao protótipo validado
  * (`prototipo-status-report-v2.html`): cabeçalho, período, Hero de
@@ -584,7 +584,7 @@ export async function renderStatusReportCofreImage(
               letterSpacing: 1,
             }}
           >
-            STATUS REPORT
+            RELATÓRIO DO CAIXA RECEPÇÃO
           </div>
           <div
             style={{
@@ -595,7 +595,7 @@ export async function renderStatusReportCofreImage(
               textAlign: "right",
             }}
           >
-            Saldo do Cofre — consolidado Caixa Recepção + Cofre
+            Saldo do caixa recepção do período
           </div>
         </div>
       </div>

@@ -22,7 +22,7 @@ interface Deps {
 }
 
 /**
- * Gera a imagem do Status Report do Cofre e envia por WhatsApp via
+ * Gera a imagem do Relatório do Caixa Recepção e envia por WhatsApp via
  * Z-API `/send-image` — mesmo padrão dos outros Status Reports. Não
  * persiste nada.
  */
@@ -57,14 +57,14 @@ export async function sendStatusReportCofreWhatsAppUseCase(
       caption: `Status Report: Cofre — ${formatDateOnlyBR(dateFrom)} a ${formatDateOnlyBR(dateTo)}`,
     });
   } catch (error) {
-    logger.error("Falha ao enviar Status Report do Cofre por WhatsApp", {
+    logger.error("Falha ao enviar Relatório do Caixa Recepção por WhatsApp", {
       organizationId,
       error: error instanceof Error ? error.message : String(error),
     });
     throw new ReportWhatsAppSendError("status-report-cofre");
   }
 
-  logger.info("Status Report do Cofre enviado por WhatsApp", {
+  logger.info("Relatório do Caixa Recepção enviado por WhatsApp", {
     organizationId,
   });
 }
