@@ -1,3 +1,4 @@
+import { startOfDayInTz, endOfDayInTz } from "@/shared/lib/business-day";
 import type { SafeRepository } from "../domain/safe.repository";
 import type { SafeMovementRepository } from "../domain/safe-movement.repository";
 import type { TreasuryDashboardSummaryResponseDTO } from "./dtos/treasury-dashboard-summary.response-dto";
@@ -7,19 +8,11 @@ interface Deps {
   safeMovementRepository: SafeMovementRepository;
 }
 
-function startOfTodayUTC(): Date {
-  const now = new Date();
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-}
-
-function endOfTodayUTC(): Date {
-  const start = startOfTodayUTC();
-  const end = new Date(start);
-  end.setUTCHours(23, 59, 59, 999);
-  return end;
-}
+/**
+ * Mesmo default de `OrganizationSettings.timezone` usado em outros
+ * pontos do sistema (MVP opera com uma única clínica, ver CLAUDE.md).
+ */
+const TIMEZONE = "America/Sao_Paulo";
 
 /**
  * Agrega os indicadores da Tesouraria — não mexe no contrato de
@@ -34,8 +27,8 @@ export async function getTreasuryDashboardSummaryUseCase(
   deps: Deps,
   range?: { from: Date; to: Date },
 ): Promise<TreasuryDashboardSummaryResponseDTO> {
-  const from = range?.from ?? startOfTodayUTC();
-  const to = range?.to ?? endOfTodayUTC();
+  const from = range?.from ?? startOfDayInTz(new Date(), TIMEZONE);
+  const to = range?.to ?? endOfDayInTz(new Date(), TIMEZONE);
 
   const [balance, periodSums, pending, lastConfirmed] = await Promise.all([
     deps.safeRepository.getBalance(organizationId),
