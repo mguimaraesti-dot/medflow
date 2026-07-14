@@ -25,3 +25,31 @@ export function getBusinessDay(
 
   return new Date(Date.UTC(year, month - 1, day));
 }
+
+/**
+ * Início do dia calendário *local* (`timezone`) que contém `date`,
+ * representado como meia-noite UTC do dia calendário local — mesmo
+ * valor de `getBusinessDay`, só com a ordem de parâmetros invertida
+ * (`date` primeiro) pra combinar com `endOfDayInTz`. Nunca usar
+ * `getUTCFullYear`/`Date.UTC(now.getUTC...)` pra isso — mesmo bug de
+ * fuso já corrigido aqui (`getBusinessDay`) e no relatório do Caixa
+ * Recepção (`period-selector.tsx`).
+ */
+export function startOfDayInTz(date: Date, timezone: string): Date {
+  return getBusinessDay(timezone, date);
+}
+
+/**
+ * Fim do dia calendário *local* (`timezone`) que contém `date` —
+ * meia-noite local do dia seguinte menos 1ms. Como o valor de
+ * `startOfDayInTz` é só um rótulo (meia-noite UTC representando o dia
+ * local, sem instante real associado), somar 1 dia e subtrair 1ms é
+ * aritmética segura sobre esse rótulo, não sobre um instante de
+ * verdade.
+ */
+export function endOfDayInTz(date: Date, timezone: string): Date {
+  const start = startOfDayInTz(date, timezone);
+  const nextDayStart = new Date(start);
+  nextDayStart.setUTCDate(nextDayStart.getUTCDate() + 1);
+  return new Date(nextDayStart.getTime() - 1);
+}
