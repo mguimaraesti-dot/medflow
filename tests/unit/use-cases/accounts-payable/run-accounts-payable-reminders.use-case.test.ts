@@ -11,11 +11,12 @@ vi.mock(
   () => ({ sendAccountsPayableWhatsAppReminderUseCase: vi.fn() }),
 );
 
-const TODAY = new Date("2026-07-20T00:00:00.000Z");
-// Meia-noite UTC = 21h do dia anterior em America/Sao_Paulo (UTC-3, sem
-// DST atualmente) — usado como reminderSendHour "de fábrica" nos testes
-// que esperam que o envio de fato aconteça.
-const CURRENT_HOUR_SP = 21;
+// Horário de meio de tarde em Brasília — deliberadamente longe da
+// borda da meia-noite UTC (21h-23h59 locais), pra estes testes
+// validarem só a lógica de janela/reenvio, sem se misturar com o caso
+// de borda de fuso (esse tem teste dedicado logo abaixo).
+const TODAY = new Date("2026-07-20T15:00:00.000Z");
+const CURRENT_HOUR_SP = 12;
 
 function payable(overrides: Record<string, unknown> = {}) {
   return {
@@ -144,6 +145,45 @@ describe("runAccountsPayableRemindersUseCase", () => {
       lastReminderSentAt: new Date("2026-07-19T10:00:00.000Z"),
     });
     const deps = buildDeps([candidate]);
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ sentCount: 1, failedCount: 0 });
+  });
+
+  it("NÃO dispara o lembrete de '0 dias' um dia adiantado quando reminderSendHour é tarde (bug de fuso corrigido)", async () => {
+    // Cenário real do bug: hoje é 19/07 em Brasília, uma conta vence
+    // AMANHÃ (20/07) com reminderDaysBefore=0 (lembrete só no dia do
+    // vencimento) e a organização manda lembretes às 22h. Às 22h de
+    // 19/07 em Brasília já é 01h de 20/07 em UTC — o código antigo
+    // (`new Date(); setUTCHours(0,0,0,0)`) lia "hoje" como 20/07 (o dia
+    // de vencimento!) e disparava um dia cedo demais.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-20T01:00:00.000Z")); // 22h de 19/07 em Brasília
+
+    const candidate = payable({
+      dueDate: new Date("2026-07-20T00:00:00.000Z"), // vence amanhã (Brasília)
+      reminderDaysBefore: 0,
+    });
+    const deps = buildDeps([candidate], { reminderSendHour: 22 });
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).not.toHaveBeenCalled();
+    expect(result).toEqual({ sentCount: 0, failedCount: 0 });
+  });
+
+  it("dispara o lembrete de '0 dias' no dia certo (dueDate = hoje de verdade em Brasília), mesmo com reminderSendHour tarde", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-20T01:00:00.000Z")); // 22h de 19/07 em Brasília
+    vi.mocked(sendAccountsPayableWhatsAppReminderUseCase).mockResolvedValue();
+
+    const candidate = payable({
+      dueDate: new Date("2026-07-19T00:00:00.000Z"), // vence hoje de verdade (19/07 em Brasília)
+      reminderDaysBefore: 0,
+    });
+    const deps = buildDeps([candidate], { reminderSendHour: 22 });
 
     const result = await runAccountsPayableRemindersUseCase("org-1", deps);
 

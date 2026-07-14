@@ -1,4 +1,5 @@
 import { logger } from "@/core/logger/logger";
+import { getBusinessDay } from "@/shared/lib/business-day";
 import type { AccountsPayableRepository } from "../domain/accounts-payable.repository";
 import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
 import type { SupplierRepository } from "@/features/suppliers/domain/supplier.repository";
@@ -92,8 +93,13 @@ export async function runAccountsPayableRemindersUseCase(
     return { sentCount: 0, failedCount: 0 };
   }
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  // "Hoje" no timezone da organização, não em UTC puro — `new Date();
+  // setUTCHours(0,0,0,0)` truncava pro dia corrente em UTC, que a
+  // partir de ~21h no horário de Brasília já é o dia seguinte (mesmo
+  // bug documentado em `todayDateOnlyBR`, `shared/lib/format.ts`).
+  // Isso fazia o lembrete de "0 dias" disparar no dia errado quando
+  // `reminderSendHour` cai tarde o suficiente pra cruzar essa borda.
+  const today = getBusinessDay(settings.timezone, new Date());
 
   const candidates =
     await deps.accountsPayableRepository.listPendingForReminders(
@@ -104,7 +110,10 @@ export async function runAccountsPayableRemindersUseCase(
     const inWindow =
       today >= reminderWindowStart(payable.dueDate, payable.reminderDaysBefore);
     const alreadySentToday = payable.lastReminderSentAt
-      ? isSameUTCDate(payable.lastReminderSentAt, today)
+      ? isSameUTCDate(
+          getBusinessDay(settings.timezone, payable.lastReminderSentAt),
+          today,
+        )
       : false;
     return inWindow && !alreadySentToday;
   });
