@@ -3,10 +3,29 @@
 import { Search } from "lucide-react";
 import { Input } from "@/shared/ui/input";
 import { cn } from "@/shared/lib/utils";
+import { startOfDayInTz } from "@/shared/lib/business-day";
 import type {
   SafeMovementType,
   SafeMovementStatus,
 } from "../domain/safe-movement.entity";
+
+/**
+ * Mesmo default de `OrganizationSettings.timezone` usado em outros
+ * pontos do sistema (MVP opera com uma única clínica, ver CLAUDE.md).
+ */
+const TIMEZONE = "America/Sao_Paulo";
+
+/**
+ * Fim do dia representado por um rótulo de data JÁ correto (não um
+ * instante real) — aritmética pura, sem reconverter timezone. Mesmo
+ * cuidado do `period-selector.tsx`: passar um rótulo de novo por
+ * `startOfDayInTz`/`endOfDayInTz` desloca a data pra trás.
+ */
+function endOfDayLabel(date: Date): Date {
+  const result = new Date(date);
+  result.setUTCHours(23, 59, 59, 999);
+  return result;
+}
 
 export type QuickPeriod = "TODAY" | "YESTERDAY" | "7D" | "30D";
 
@@ -152,21 +171,15 @@ export function computeQuickPeriodRange(period: QuickPeriod): {
   from: Date;
   to: Date;
 } {
-  const now = new Date();
-  const todayStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-  const todayEnd = new Date(todayStart);
-  todayEnd.setUTCHours(23, 59, 59, 999);
+  const todayStart = startOfDayInTz(new Date(), TIMEZONE);
+  const todayEnd = endOfDayLabel(todayStart);
 
   if (period === "TODAY") return { from: todayStart, to: todayEnd };
 
   if (period === "YESTERDAY") {
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
-    const yesterdayEnd = new Date(yesterdayStart);
-    yesterdayEnd.setUTCHours(23, 59, 59, 999);
-    return { from: yesterdayStart, to: yesterdayEnd };
+    return { from: yesterdayStart, to: endOfDayLabel(yesterdayStart) };
   }
 
   const daysAgo = period === "7D" ? 6 : 29;
