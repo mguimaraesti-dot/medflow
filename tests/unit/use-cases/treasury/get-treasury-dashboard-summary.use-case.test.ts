@@ -1,10 +1,46 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { Prisma } from "@prisma/client";
 import { getTreasuryDashboardSummaryUseCase } from "@/features/treasury/application/get-treasury-dashboard-summary.use-case";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
 import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
 
 describe("getTreasuryDashboardSummaryUseCase", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("usa o dia de Brasília (não UTC) como 'hoje' default, mesmo às 22h locais (já 01h em UTC do dia seguinte)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T01:00:00.000Z")); // 22h de 14/07 em Brasília
+
+    const safeRepository = {
+      getBalance: vi.fn().mockResolvedValue(new Prisma.Decimal(0)),
+    } as unknown as SafeRepository;
+    const sumSignedByDateRangeAndStatus = vi
+      .fn()
+      .mockResolvedValue({ in: "0.00", out: "0.00" });
+    const safeMovementRepository = {
+      sumSignedByDateRangeAndStatus,
+      countAndSumPending: vi.fn().mockResolvedValue({ count: 0, sum: "0.00" }),
+      findLastConfirmed: vi.fn().mockResolvedValue(null),
+    } as unknown as SafeMovementRepository;
+
+    await getTreasuryDashboardSummaryUseCase("org-1", {
+      safeRepository,
+      safeMovementRepository,
+    });
+
+    // Antes do fix: "hoje" vinha de Date.UTC(now.getUTCFullYear(), ...),
+    // que às 22h locais já lê 15/07 (dia UTC seguinte) — os cards
+    // mostravam a janela errada perto da meia-noite UTC.
+    expect(sumSignedByDateRangeAndStatus).toHaveBeenCalledWith(
+      "org-1",
+      new Date("2026-07-14T00:00:00.000Z"),
+      new Date("2026-07-14T23:59:59.999Z"),
+      "CONFIRMED",
+    );
+  });
+
   it("agrega saldo, entradas/saídas de hoje, pendentes e última conferência", async () => {
     const safeRepository = {
       getBalance: vi.fn().mockResolvedValue(new Prisma.Decimal("6028.00")),
