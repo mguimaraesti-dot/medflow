@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { formatDateOnlyBR } from "@/shared/lib/format";
+import { startOfDayInTz } from "@/shared/lib/business-day";
 
 export type PeriodPreset =
   "TODAY" | "WEEK" | "MONTH" | "NEXT_MONTH" | "YEAR" | "CUSTOM";
@@ -24,16 +25,29 @@ export interface PeriodRange {
   to: Date;
 }
 
+/**
+ * Mesmo default de `OrganizationSettings.timezone` usado em outros
+ * pontos do backend (MVP opera com uma única clínica, ver CLAUDE.md).
+ */
+const TIMEZONE = "America/Sao_Paulo";
+
 function utcDate(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month, day));
 }
 
-function startOfDayUTC(date: Date): Date {
-  return utcDate(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
-function endOfDayUTC(date: Date): Date {
-  const result = startOfDayUTC(date);
+/**
+ * Fim do dia representado por um rótulo de data JÁ correto (meia-noite
+ * UTC representando um dia calendário — mesma convenção de
+ * `startOfDayInTz`/`dueDate`), não um instante real. Aritmética pura,
+ * sem reconverter timezone: passar um rótulo por `startOfDayInTz`/
+ * `endOfDayInTz` de novo desloca a data pra trás (o rótulo seria lido
+ * como se fosse um instante real e re-convertido, cruzando meia-noite
+ * ao subtrair as horas do fuso). Só `computePeriodRange` converte o
+ * instante real (`new Date()`) uma única vez; daqui em diante é tudo
+ * aritmética de calendário sobre esse rótulo.
+ */
+function endOfDayLabel(date: Date): Date {
+  const result = new Date(date);
   result.setUTCHours(23, 59, 59, 999);
   return result;
 }
@@ -43,10 +57,10 @@ export function computePeriodRange(
   preset: PeriodPreset,
   custom?: PeriodRange,
 ): PeriodRange {
-  const today = startOfDayUTC(new Date());
+  const today = startOfDayInTz(new Date(), TIMEZONE);
 
   if (preset === "TODAY") {
-    return { from: today, to: endOfDayUTC(today) };
+    return { from: today, to: endOfDayLabel(today) };
   }
 
   if (preset === "WEEK") {
@@ -54,28 +68,28 @@ export function computePeriodRange(
     start.setUTCDate(start.getUTCDate() - today.getUTCDay());
     const end = new Date(start);
     end.setUTCDate(end.getUTCDate() + 6);
-    return { from: start, to: endOfDayUTC(end) };
+    return { from: start, to: endOfDayLabel(end) };
   }
 
   if (preset === "MONTH") {
     const start = utcDate(today.getUTCFullYear(), today.getUTCMonth(), 1);
     const end = utcDate(today.getUTCFullYear(), today.getUTCMonth() + 1, 0);
-    return { from: start, to: endOfDayUTC(end) };
+    return { from: start, to: endOfDayLabel(end) };
   }
 
   if (preset === "NEXT_MONTH") {
     const start = utcDate(today.getUTCFullYear(), today.getUTCMonth() + 1, 1);
     const end = utcDate(today.getUTCFullYear(), today.getUTCMonth() + 2, 0);
-    return { from: start, to: endOfDayUTC(end) };
+    return { from: start, to: endOfDayLabel(end) };
   }
 
   if (preset === "YEAR") {
     const start = utcDate(today.getUTCFullYear(), 0, 1);
     const end = utcDate(today.getUTCFullYear(), 11, 31);
-    return { from: start, to: endOfDayUTC(end) };
+    return { from: start, to: endOfDayLabel(end) };
   }
 
-  return custom ?? { from: today, to: endOfDayUTC(today) };
+  return custom ?? { from: today, to: endOfDayLabel(today) };
 }
 
 const PERIOD_PRESET_OPTIONS = [
@@ -125,7 +139,14 @@ export function PeriodSelector({
 
   function applyCustom() {
     if (!fromInput || !toInput) return;
-    onChange("CUSTOM", { from: new Date(fromInput), to: new Date(toInput) });
+    // `to` precisa virar fim do dia (23:59:59.999) — senão o intervalo
+    // corta às 00:00 UTC do último dia (bug real já relatado: o
+    // Relatório do Caixa Recepção perdia as movimentações de "hoje" em
+    // qualquer período multi-dia digitado aqui).
+    onChange("CUSTOM", {
+      from: new Date(fromInput),
+      to: endOfDayLabel(new Date(toInput)),
+    });
     setPopoverOpen(false);
   }
 
