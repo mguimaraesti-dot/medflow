@@ -29,6 +29,7 @@ export async function createAccountsPayableUseCase(
     paymentOrigin: input.paymentOrigin,
     recurringBillId: input.recurringBillId,
     createdByUserId,
+    reminderEnabled: input.reminderEnabled,
     reminderDaysBefore: input.reminderDaysBefore,
   });
 

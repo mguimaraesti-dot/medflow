@@ -36,6 +36,7 @@ function payable(overrides: Partial<AccountsPayable>): AccountsPayable {
     paidVia: null,
     paidSafeMovementId: null,
     attachmentsCount: 0,
+    reminderEnabled: true,
     reminderDaysBefore: 5,
     lastReminderSentAt: null,
     lastReminderMessageId: null,

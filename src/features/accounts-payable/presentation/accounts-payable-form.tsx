@@ -40,6 +40,7 @@ import type { RecurrenceInput } from "../application/dtos/create-accounts-payabl
 const accountsPayableFormSchema = createAccountsPayableSchema.extend({
   dueDate: z.string().min(1, "Informe o vencimento"),
   paymentOrigin: z.enum(["BANCO", "COFRE"]),
+  reminderEnabled: z.boolean(),
 });
 export type AccountsPayableFormValues = z.infer<
   typeof accountsPayableFormSchema
@@ -57,6 +58,7 @@ const emptyFormValues: AccountsPayableFormValues = {
   qrCodeUrl: "",
   boletoPdfUrl: "",
   paymentOrigin: "BANCO",
+  reminderEnabled: true,
   reminderDaysBefore: 5,
 };
 
@@ -102,11 +104,13 @@ export function AccountsPayableForm({
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<AccountsPayableFormValues>({
     resolver: zodResolver(accountsPayableFormSchema),
     defaultValues: { ...emptyFormValues, ...initialValues },
   });
+  const reminderEnabled = watch("reminderEnabled");
 
   async function onSubmit(values: AccountsPayableFormValues) {
     setServerError(null);
@@ -380,20 +384,39 @@ export function AccountsPayableForm({
               <Input id="pixKey" {...register("pixKey")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reminderDaysBefore">
-                Lembrete de WhatsApp (dias antes)
-              </Label>
-              <Input
-                id="reminderDaysBefore"
-                type="number"
-                min={0}
-                max={60}
-                {...register("reminderDaysBefore", { valueAsNumber: true })}
-              />
-              {errors.reminderDaysBefore && (
-                <p className="text-destructive text-sm">
-                  {errors.reminderDaysBefore.message}
-                </p>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <Controller
+                  control={control}
+                  name="reminderEnabled"
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(checked) =>
+                        field.onChange(checked === true)
+                      }
+                    />
+                  )}
+                />
+                Lembrete de WhatsApp
+              </label>
+              {reminderEnabled && (
+                <>
+                  <Label htmlFor="reminderDaysBefore">Dias antes</Label>
+                  <Input
+                    id="reminderDaysBefore"
+                    type="number"
+                    min={0}
+                    max={60}
+                    {...register("reminderDaysBefore", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                  {errors.reminderDaysBefore && (
+                    <p className="text-destructive text-sm">
+                      {errors.reminderDaysBefore.message}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

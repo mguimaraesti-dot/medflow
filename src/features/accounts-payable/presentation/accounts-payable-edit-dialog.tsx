@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { updateAccountsPayableSchema } from "../application/dtos/update-accounts-payable.dto";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +15,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
@@ -28,17 +32,16 @@ import {
 } from "./accounts-payable-recurrence-scope-dialog";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
-interface EditFormValues {
-  supplierId: string;
-  categoryId: string;
-  amount: number;
-  dueDate: string;
-  description: string;
-  paymentOrigin: "BANCO" | "COFRE";
-  barcode: string;
-  pixKey: string;
-  reminderDaysBefore: number;
-}
+// <input type="date"> devolve string, não Date — mesmo tratamento já
+// usado no formulário de criação (accounts-payable-form.tsx). `scope`
+// não é campo de formulário aqui (decidido depois, via
+// AccountsPayableRecurrenceScopeDialog, conforme o usuário escolhe no
+// dialog de escopo), por isso omitido do schema de validação.
+const editAccountsPayableFormSchema = updateAccountsPayableSchema
+  .omit({ scope: true })
+  .extend({ dueDate: z.string().min(1, "Informe o vencimento") });
+
+type EditFormValues = z.infer<typeof editAccountsPayableFormSchema>;
 
 function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
   return {
@@ -50,6 +53,7 @@ function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
     paymentOrigin: payable.paymentOrigin,
     barcode: payable.barcode ?? "",
     pixKey: payable.pixKey ?? "",
+    reminderEnabled: payable.reminderEnabled,
     reminderDaysBefore: payable.reminderDaysBefore,
   };
 }
@@ -83,8 +87,10 @@ export function AccountsPayableEditDialog({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<EditFormValues>({
+    resolver: zodResolver(editAccountsPayableFormSchema),
     defaultValues: {
       supplierId: "",
       categoryId: "",
@@ -94,9 +100,11 @@ export function AccountsPayableEditDialog({
       paymentOrigin: "BANCO",
       barcode: "",
       pixKey: "",
+      reminderEnabled: true,
       reminderDaysBefore: 5,
     },
   });
+  const reminderEnabled = watch("reminderEnabled");
 
   useEffect(() => {
     if (payable) reset(toFormValues(payable));
@@ -261,22 +269,41 @@ export function AccountsPayableEditDialog({
                   <Input id="edit-pixKey" {...register("pixKey")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-reminderDaysBefore">
-                    Lembrete de WhatsApp (dias antes)
-                  </Label>
-                  <Input
-                    id="edit-reminderDaysBefore"
-                    type="number"
-                    min={0}
-                    max={60}
-                    {...register("reminderDaysBefore", {
-                      valueAsNumber: true,
-                    })}
-                  />
-                  {errors.reminderDaysBefore && (
-                    <p className="text-destructive text-sm">
-                      Informe um valor entre 0 e 60.
-                    </p>
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <Controller
+                      control={control}
+                      name="reminderEnabled"
+                      render={({ field }) => (
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(checked === true)
+                          }
+                        />
+                      )}
+                    />
+                    Lembrete de WhatsApp
+                  </label>
+                  {reminderEnabled && (
+                    <>
+                      <Label htmlFor="edit-reminderDaysBefore">
+                        Dias antes
+                      </Label>
+                      <Input
+                        id="edit-reminderDaysBefore"
+                        type="number"
+                        min={0}
+                        max={60}
+                        {...register("reminderDaysBefore", {
+                          valueAsNumber: true,
+                        })}
+                      />
+                      {errors.reminderDaysBefore && (
+                        <p className="text-destructive text-sm">
+                          Informe um valor entre 0 e 60.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

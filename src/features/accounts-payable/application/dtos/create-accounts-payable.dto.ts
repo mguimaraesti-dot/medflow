@@ -27,7 +27,9 @@ export const createAccountsPayableSchema = z.object({
   recurringBillId: cuidSchema.optional(),
   /** Presente só quando "Conta recorrente" está marcada no cadastro. */
   recurrence: recurrenceInputSchema.optional(),
-  /** Omitido = usa o default do banco (5). Dias antes do vencimento em que o lembrete de WhatsApp começa a ser enviado. */
+  /** Interruptor do lembrete de WhatsApp. Omitido = default true (comportamento atual). */
+  reminderEnabled: z.boolean().default(true),
+  /** Omitido = usa o default do banco (5). Dias antes do vencimento em que o lembrete de WhatsApp começa a ser enviado — ignorado quando `reminderEnabled` é `false`. */
   reminderDaysBefore: z.number().int().min(0).max(60).optional(),
 });
 

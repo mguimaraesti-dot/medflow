@@ -456,6 +456,11 @@ model AccountsPayable {
   // número é único pra clínica inteira, nunca por conta, então o
   // telefone sozinho não desambigua nada — ver
   // handle-zapi-webhook.use-case.ts).
+  // Interruptor por conta — desliga o lembrete sem exigir um
+  // reminderDaysBefore "mágico" pra significar "nunca" (nenhum valor
+  // numérico fecha isso, já que o cron usa `>=`, nunca `=`). Default
+  // true preserva o comportamento atual de todas as contas existentes.
+  reminderEnabled      Boolean   @default(true)
   reminderDaysBefore   Int       @default(5)
   lastReminderSentAt   DateTime?
   lastReminderMessageId String?

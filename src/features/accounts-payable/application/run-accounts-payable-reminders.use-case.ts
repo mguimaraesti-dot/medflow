@@ -107,6 +107,14 @@ export async function runAccountsPayableRemindersUseCase(
     );
 
   const due = candidates.filter((payable) => {
+    // reminderEnabled === false é checado ANTES de qualquer cálculo de
+    // janela/data — a conta é ignorada silenciosamente (não conta como
+    // falha, não gera log de erro). listPendingForReminders já filtra
+    // isso na própria query (mais eficiente, evita trazer do banco
+    // linhas que seriam descartadas); esta checagem é redundante de
+    // propósito (defesa em profundidade) e é o que torna o
+    // comportamento testável aqui sem depender da query do repositório.
+    if (!payable.reminderEnabled) return false;
     const inWindow =
       today >= reminderWindowStart(payable.dueDate, payable.reminderDaysBefore);
     const alreadySentToday = payable.lastReminderSentAt
