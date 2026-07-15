@@ -157,6 +157,8 @@ export interface SendButtonListInput {
   /** Id do botão — carrega o `accountsPayableId` (prefixado `pago_`), pro webhook identificar exatamente qual conta confirmar sem precisar casar telefone nem mensagem citada. */
   buttonId: string;
   buttonLabel: string;
+  /** Segundos (1-15) que a Z-API espera, na PRÓPRIA fila dela, antes de liberar a PRÓXIMA mensagem daquela conversa — não bloqueia esta requisição nem consome tempo de execução do nosso lado (testado em produção: ver `zapi-whatsapp-messaging.ts`). Omitido = default da Z-API (1-3s). */
+  delayMessage?: number;
 }
 
 /** Cartão-resumo do lembrete com um único botão de ação (ex: "Pago"). */
@@ -169,6 +171,7 @@ export async function sendButtonListMessage(
     buttonList: {
       buttons: [{ id: input.buttonId, label: input.buttonLabel }],
     },
+    delayMessage: input.delayMessage,
   })) as ZapiSendTextResponse | undefined;
 
   const messageId =
@@ -182,6 +185,8 @@ export interface SendButtonCodeInput {
   message: string;
   code: string;
   buttonText: string;
+  /** Ver `SendButtonListInput.delayMessage`. */
+  delayMessage?: number;
 }
 
 /** Mensagem com botão nativo de copiar um código (usado pro código de barras do boleto). */
@@ -193,6 +198,7 @@ export async function sendButtonCodeMessage(
     message: input.message,
     code: input.code,
     buttonText: input.buttonText,
+    delayMessage: input.delayMessage,
   });
 }
 
@@ -201,6 +207,8 @@ export interface SendButtonPixInput {
   pixKey: string;
   pixKeyType: "CPF" | "CNPJ" | "PHONE" | "EMAIL" | "EVP";
   merchantName: string;
+  /** Ver `SendButtonListInput.delayMessage`. */
+  delayMessage?: number;
 }
 
 /**
@@ -223,6 +231,7 @@ export async function sendButtonPixMessage(
     pixKey: input.pixKey,
     type: input.pixKeyType,
     merchantName: input.merchantName,
+    delayMessage: input.delayMessage,
   });
 }
 
