@@ -165,6 +165,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         recurringBillId: data.recurringBillId,
         occurrenceNumber: data.occurrenceNumber,
         createdByUserId: data.createdByUserId,
+        reminderEnabled: data.reminderEnabled,
         reminderDaysBefore: data.reminderDaysBefore,
       },
       include: USER_NAMES_INCLUDE,
@@ -200,6 +201,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         recurringBillId: item.recurringBillId,
         occurrenceNumber: item.occurrenceNumber,
         createdByUserId: item.createdByUserId,
+        reminderEnabled: item.reminderEnabled,
         reminderDaysBefore: item.reminderDaysBefore,
       })),
     });
@@ -228,6 +230,7 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         paymentOrigin: data.paymentOrigin,
         barcode: data.barcode,
         pixKey: data.pixKey,
+        reminderEnabled: data.reminderEnabled,
         reminderDaysBefore: data.reminderDaysBefore,
       },
       include: USER_NAMES_INCLUDE,
@@ -616,7 +619,12 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     organizationId: string,
   ): Promise<AccountsPayable[]> {
     const rows = await prisma.accountsPayable.findMany({
-      where: { organizationId, status: "PENDING", deletedAt: null },
+      where: {
+        organizationId,
+        status: "PENDING",
+        deletedAt: null,
+        reminderEnabled: true,
+      },
       include: USER_NAMES_INCLUDE,
       orderBy: { dueDate: "asc" },
     });

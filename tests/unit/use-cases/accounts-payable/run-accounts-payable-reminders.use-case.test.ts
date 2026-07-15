@@ -22,6 +22,7 @@ function payable(overrides: Record<string, unknown> = {}) {
   return {
     id: "payable-1",
     dueDate: new Date("2026-07-25T00:00:00.000Z"),
+    reminderEnabled: true,
     reminderDaysBefore: 5,
     lastReminderSentAt: null,
     ...overrides,
@@ -99,6 +100,27 @@ describe("runAccountsPayableRemindersUseCase", () => {
       expect.any(Object),
     );
     expect(result).toEqual({ sentCount: 1, failedCount: 0 });
+  });
+
+  // reminderEnabled: false é o interruptor por conta — a conta some do
+  // cron mesmo estando dentro da janela normal de antecedência (não
+  // existe valor de reminderDaysBefore que signifique "nunca", já que
+  // a janela usa >=, nunca fecha sozinha).
+  it("não envia quando reminderEnabled é false, mesmo dentro da janela", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(TODAY);
+
+    const candidate = payable({
+      dueDate: new Date("2026-07-25T00:00:00.000Z"),
+      reminderDaysBefore: 5,
+      reminderEnabled: false,
+    });
+    const deps = buildDeps([candidate]);
+
+    const result = await runAccountsPayableRemindersUseCase("org-1", deps);
+
+    expect(sendAccountsPayableWhatsAppReminderUseCase).not.toHaveBeenCalled();
+    expect(result).toEqual({ sentCount: 0, failedCount: 0 });
   });
 
   it("não envia quando ainda não entrou na janela", async () => {

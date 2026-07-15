@@ -32,6 +32,7 @@ function buildPayable(
     paidVia: null,
     paidSafeMovementId: null,
     attachmentsCount: 0,
+    reminderEnabled: true,
     reminderDaysBefore: 5,
     lastReminderSentAt: null,
     lastReminderMessageId: null,

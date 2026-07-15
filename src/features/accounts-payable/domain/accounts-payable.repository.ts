@@ -26,6 +26,8 @@ export interface CreateAccountsPayableInput {
   recurringBillId?: string;
   occurrenceNumber?: number;
   createdByUserId: string;
+  /** Omitido = usa o default do banco (true). Interruptor por conta do lembrete de WhatsApp. */
+  reminderEnabled?: boolean;
   /** Omitido = usa o default do banco (5). Dias antes do vencimento em que o lembrete de WhatsApp começa a ser enviado. */
   reminderDaysBefore?: number;
 }
@@ -88,6 +90,7 @@ export interface UpdateAccountsPayableInput {
   paymentOrigin: PaymentOrigin;
   barcode?: string;
   pixKey?: string;
+  reminderEnabled: boolean;
   reminderDaysBefore: number;
 }
 

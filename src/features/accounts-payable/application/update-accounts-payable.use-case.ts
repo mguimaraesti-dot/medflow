@@ -45,6 +45,7 @@ export async function updateAccountsPayableUseCase(
     paymentOrigin: input.paymentOrigin,
     barcode: input.barcode,
     pixKey: input.pixKey,
+    reminderEnabled: input.reminderEnabled,
     reminderDaysBefore: input.reminderDaysBefore,
   };
 
@@ -71,6 +72,7 @@ export async function updateAccountsPayableUseCase(
         paymentOrigin: payable.paymentOrigin,
         barcode: payable.barcode,
         pixKey: payable.pixKey,
+        reminderEnabled: payable.reminderEnabled,
         reminderDaysBefore: payable.reminderDaysBefore,
       },
       after: changes,

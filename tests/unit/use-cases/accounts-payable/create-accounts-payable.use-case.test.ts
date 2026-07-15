@@ -23,6 +23,7 @@ describe("createAccountsPayableUseCase", () => {
         amount: 2000,
         dueDate,
         paymentOrigin: "BANCO",
+        reminderEnabled: true,
       },
       "user-1",
       "org-1",
