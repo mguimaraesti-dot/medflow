@@ -1,3 +1,4 @@
+import { logger } from "@/core/logger/logger";
 import {
   sendButtonListMessage,
   sendButtonCodeMessage,
@@ -42,6 +43,10 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }> {
+    // Cartão com botão "Pago" é a mensagem CRÍTICA: sem ela, nada foi
+    // entregue ao dono da conta — a falha aqui propaga (não é
+    // capturada), pra que o use case chamador não marque a conta como
+    // lembrada e ela seja retentada no próximo ciclo.
     const { messageId } = await sendButtonListMessage({
       phone: input.phone,
       message:
@@ -55,24 +60,49 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
     });
 
+    // Código de barras e PIX são BEST-EFFORT: o cartão principal já
+    // chegou, então uma falha aqui não pode derrubar o lembrete inteiro
+    // — isso faria o cartão (já entregue) ser reenviado duplicado no
+    // próximo ciclo. Só loga um aviso claro o bastante pra alguém notar
+    // que essa conta ficou sem boleto/PIX.
     if (input.barcode) {
-      await sendButtonCodeMessage({
-        phone: input.phone,
-        message: `*${input.supplierName}*\nCódigo de barras da fatura:`,
-        code: input.barcode,
-        buttonText: "Copiar código de barras",
-        delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
-      });
+      try {
+        await sendButtonCodeMessage({
+          phone: input.phone,
+          message: `*${input.supplierName}*\nCódigo de barras da fatura:`,
+          code: input.barcode,
+          buttonText: "Copiar código de barras",
+          delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
+        });
+      } catch (error) {
+        logger.warn(
+          "Lembrete de WhatsApp: falha ao enviar código de barras (best-effort — conta segue marcada como lembrada)",
+          {
+            accountsPayableId: input.accountsPayableId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
+      }
     }
 
     if (input.pixKey) {
-      await sendButtonPixMessage({
-        phone: input.phone,
-        pixKey: input.pixKey,
-        pixKeyType: "EVP",
-        merchantName: input.supplierName,
-        delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
-      });
+      try {
+        await sendButtonPixMessage({
+          phone: input.phone,
+          pixKey: input.pixKey,
+          pixKeyType: "EVP",
+          merchantName: input.supplierName,
+          delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
+        });
+      } catch (error) {
+        logger.warn(
+          "Lembrete de WhatsApp: falha ao enviar chave Pix (best-effort — conta segue marcada como lembrada)",
+          {
+            accountsPayableId: input.accountsPayableId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
+      }
     }
 
     return { messageId };
