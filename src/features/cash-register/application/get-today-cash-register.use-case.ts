@@ -1,5 +1,5 @@
-import { Prisma } from "@prisma/client";
 import { getBusinessDay } from "@/shared/lib/business-day";
+import { computeLiveCashRegisterDay } from "./compute-live-cash-register-day";
 import type { CashRegisterDayRepository } from "../domain/cash-register-day.repository";
 import type { CashFlowEntryRepository } from "@/features/cash-flow/domain/cash-flow-entry.repository";
 import type { SafeMovementRepository } from "@/features/treasury/domain/safe-movement.repository";
@@ -47,29 +47,5 @@ export async function getTodayCashRegisterUseCase(
   );
   if (!day) return null;
 
-  if (day.status === "OPEN") {
-    const [sums, cashSums, sangriaTotal] = await Promise.all([
-      deps.cashFlowEntryRepository.sumByCashRegisterDay(day.id),
-      deps.cashFlowEntryRepository.sumCashOnlyByCashRegisterDay(day.id),
-      deps.safeMovementRepository.sumByCashRegisterDayAndType(
-        day.id,
-        "SANGRIA",
-      ),
-    ]);
-
-    const expectedCashAmount = new Prisma.Decimal(day.openingBalance)
-      .plus(new Prisma.Decimal(cashSums.totalIn))
-      .minus(new Prisma.Decimal(cashSums.totalOut))
-      .minus(new Prisma.Decimal(sangriaTotal));
-
-    return {
-      ...day,
-      totalIn: new Prisma.Decimal(sums.totalIn),
-      totalOut: new Prisma.Decimal(sums.totalOut),
-      expectedCashAmount,
-      cashIn: new Prisma.Decimal(cashSums.totalIn),
-    };
-  }
-
-  return day;
+  return computeLiveCashRegisterDay(day, deps);
 }

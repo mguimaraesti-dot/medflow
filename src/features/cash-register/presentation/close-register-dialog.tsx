@@ -14,7 +14,8 @@ import { useCashRegisterToday } from "./use-cash-register-today";
 import { ApiError } from "@/shared/lib/api-client";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { Field } from "@/shared/components/detail-field";
-import { formatCurrencyBRL } from "@/shared/lib/format";
+import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
+import type { CashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
@@ -40,12 +41,28 @@ const SMALL_DIFFERENCE_THRESHOLD = 5;
  * estado intermediário) — a secretária tem autonomia de reabrir depois
  * (com justificativa) se precisar. Componente compartilhado com a
  * Caixa Recepção (via `CashBalanceHeader`).
+ *
+ * `previousDayOpenRegister`: quando o único caixa `OPEN` é um esquecido
+ * de dia anterior (`PreviousDayCashRegisterOpenError`), o resumo usa
+ * ESSE registro em vez do de `useCashRegisterToday()` (que resolve por
+ * data exata e devolveria zeros nesse cenário) — o fechamento em si já
+ * mira o alvo certo sozinho (`closeCashRegisterUseCase` via
+ * `findOpenByOrganization`), mas o resumo precisa mostrar o saldo REAL
+ * daquele dia, nunca zero, pra secretária não declarar um valor contado
+ * às cegas.
  */
-export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
+export function CloseRegisterDialog({
+  disabled,
+  previousDayOpenRegister,
+}: {
+  disabled?: boolean;
+  previousDayOpenRegister?: CashRegisterDayResponseDTO | null;
+}) {
   const [open, setOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const closeCashRegister = useCloseCashRegister();
   const { data: today } = useCashRegisterToday();
+  const source = previousDayOpenRegister ?? today;
 
   const {
     control,
@@ -76,12 +93,12 @@ export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
     }
   }
 
-  const openingBalance = Number(today?.openingBalance ?? 0);
-  const cashIn = Number(today?.cashIn ?? 0);
-  const totalIn = Number(today?.totalIn ?? 0);
+  const openingBalance = Number(source?.openingBalance ?? 0);
+  const cashIn = Number(source?.cashIn ?? 0);
+  const totalIn = Number(source?.totalIn ?? 0);
   const pixIn = totalIn - cashIn;
-  const cashOut = Number(today?.totalOut ?? 0);
-  const expectedCash = Number(today?.expectedCashAmount ?? 0);
+  const cashOut = Number(source?.totalOut ?? 0);
+  const expectedCash = Number(source?.expectedCashAmount ?? 0);
 
   const hasCountedInput = countedAmount !== undefined && countedAmount !== null;
   const difference = hasCountedInput ? countedAmount - expectedCash : 0;
@@ -126,7 +143,9 @@ export function CloseRegisterDialog({ disabled }: { disabled?: boolean }) {
           <DialogHeader>
             <DialogTitle>Fechar Caixa</DialogTitle>
             <DialogDescription>
-              Confira o resumo do dia e informe o dinheiro contado na gaveta.
+              {source
+                ? `Fechando o caixa do dia ${formatDateOnlyBR(source.date)}. Confira o resumo e informe o dinheiro contado na gaveta.`
+                : "Confira o resumo do dia e informe o dinheiro contado na gaveta."}
             </DialogDescription>
           </DialogHeader>
 

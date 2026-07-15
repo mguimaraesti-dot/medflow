@@ -153,7 +153,10 @@ export function CashBalanceHeader({
             </>
           )}
           {hasPreviousDayOpen && !isOpen && (
-            <CloseRegisterDialog disabled={!canClose} />
+            <CloseRegisterDialog
+              disabled={!canClose}
+              previousDayOpenRegister={previousDayOpen}
+            />
           )}
           {!today && !hasPreviousDayOpen && (
             <OpenRegisterDialog disabled={!canOpen} />
