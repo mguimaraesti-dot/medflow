@@ -35,13 +35,19 @@ export function OrganizationSettingsForm() {
     formState: { errors, isSubmitting },
   } = useForm<UpdateOrganizationSettingsInput>({
     resolver: zodResolver(updateOrganizationSettingsSchema),
-    defaultValues: { whatsapp: "", reminderSendHour: 7 },
+    defaultValues: {
+      whatsapp: "",
+      accountsPayableReminderWhatsapp: "",
+      reminderSendHour: 7,
+    },
   });
 
   useEffect(() => {
     if (settings) {
       reset({
         whatsapp: settings.whatsapp ?? "",
+        accountsPayableReminderWhatsapp:
+          settings.accountsPayableReminderWhatsapp ?? "",
         reminderSendHour: settings.reminderSendHour,
       });
     }
@@ -72,10 +78,33 @@ export function OrganizationSettingsForm() {
           {...register("whatsapp")}
         />
         <p className="text-muted-foreground text-sm">
-          Número que recebe os lembretes de cobrança de Contas a Pagar.
+          Número padrão da clínica. Recebe o relatório do caixa e também os
+          lembretes de Contas a Pagar, quando não houver um destino específico
+          configurado abaixo.
         </p>
         {errors.whatsapp && (
           <p className="text-destructive text-sm">{errors.whatsapp.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="accountsPayableReminderWhatsapp">
+          Destino dos lembretes de Contas a Pagar
+        </Label>
+        <Input
+          id="accountsPayableReminderWhatsapp"
+          placeholder="11999999999 ou 120363...-group"
+          {...register("accountsPayableReminderWhatsapp")}
+        />
+        <p className="text-muted-foreground text-sm">
+          Só para os lembretes automáticos de Contas a Pagar (com botão
+          &quot;Pago&quot;). Aceita um número de WhatsApp ou o ID de um grupo.
+          Deixe em branco para usar o WhatsApp da clínica acima.
+        </p>
+        {errors.accountsPayableReminderWhatsapp && (
+          <p className="text-destructive text-sm">
+            {errors.accountsPayableReminderWhatsapp.message}
+          </p>
         )}
       </div>
 

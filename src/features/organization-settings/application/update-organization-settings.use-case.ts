@@ -16,7 +16,11 @@ export async function updateOrganizationSettingsUseCase(
 ): Promise<OrganizationSettings> {
   const settings = await deps.organizationSettingsRepository.update(
     organizationId,
-    { whatsapp: input.whatsapp, reminderSendHour: input.reminderSendHour },
+    {
+      whatsapp: input.whatsapp,
+      accountsPayableReminderWhatsapp: input.accountsPayableReminderWhatsapp,
+      reminderSendHour: input.reminderSendHour,
+    },
   );
 
   await prisma.auditLog.create({
@@ -27,6 +31,8 @@ export async function updateOrganizationSettingsUseCase(
       action: "UPDATE",
       after: {
         whatsapp: settings.whatsapp,
+        accountsPayableReminderWhatsapp:
+          settings.accountsPayableReminderWhatsapp,
         reminderSendHour: settings.reminderSendHour,
       },
     },

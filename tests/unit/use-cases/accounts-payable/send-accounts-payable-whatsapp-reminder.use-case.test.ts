@@ -35,6 +35,7 @@ function buildPayable(overrides: Record<string, unknown> = {}) {
 function buildDeps(overrides: {
   payable?: Record<string, unknown> | null;
   whatsapp?: string | null;
+  accountsPayableReminderWhatsapp?: string | null;
   supplier?: Record<string, unknown> | null;
   sendPaymentReminder?: ReturnType<typeof vi.fn>;
 }) {
@@ -46,13 +47,14 @@ function buildDeps(overrides: {
   } as unknown as AccountsPayableRepository;
 
   const organizationSettingsRepository = {
-    findByOrganization: vi
-      .fn()
-      .mockResolvedValue(
-        overrides.whatsapp === undefined
-          ? { whatsapp: "11999999999" }
-          : { whatsapp: overrides.whatsapp },
-      ),
+    findByOrganization: vi.fn().mockResolvedValue({
+      whatsapp:
+        overrides.whatsapp === undefined ? "11999999999" : overrides.whatsapp,
+      accountsPayableReminderWhatsapp:
+        overrides.accountsPayableReminderWhatsapp === undefined
+          ? null
+          : overrides.accountsPayableReminderWhatsapp,
+    }),
   } as unknown as OrganizationSettingsRepository;
 
   const supplier =
@@ -172,5 +174,37 @@ describe("sendAccountsPayableWhatsAppReminderUseCase", () => {
     expect(
       deps.accountsPayableRepository.touchReminderSent,
     ).toHaveBeenCalledWith("payable-1", expect.any(Date), "msg-123");
+  });
+
+  it("com accountsPayableReminderWhatsapp preenchido (id de grupo), envia para o grupo em vez do whatsapp padrão", async () => {
+    const deps = buildDeps({
+      accountsPayableReminderWhatsapp: "120363412092364134-group",
+    });
+
+    await sendAccountsPayableWhatsAppReminderUseCase(
+      "payable-1",
+      "org-1",
+      "user-1",
+      deps,
+    );
+
+    expect(deps.whatsAppMessaging.sendPaymentReminder).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: "120363412092364134-group" }),
+    );
+  });
+
+  it("com accountsPayableReminderWhatsapp vazio, cai no whatsapp padrão (comportamento idêntico ao atual)", async () => {
+    const deps = buildDeps({ accountsPayableReminderWhatsapp: null });
+
+    await sendAccountsPayableWhatsAppReminderUseCase(
+      "payable-1",
+      "org-1",
+      "user-1",
+      deps,
+    );
+
+    expect(deps.whatsAppMessaging.sendPaymentReminder).toHaveBeenCalledWith(
+      expect.objectContaining({ phone: "11999999999" }),
+    );
   });
 });

@@ -22,6 +22,7 @@ export class PrismaOrganizationSettingsRepository implements OrganizationSetting
       where: { organizationId },
       data: {
         whatsapp: data.whatsapp,
+        accountsPayableReminderWhatsapp: data.accountsPayableReminderWhatsapp,
         reminderSendHour: data.reminderSendHour,
       },
     });
