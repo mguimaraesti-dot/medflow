@@ -78,7 +78,9 @@ export function OrganizationSettingsForm() {
           {...register("whatsapp")}
         />
         <p className="text-muted-foreground text-sm">
-          Número que recebe os lembretes de cobrança de Contas a Pagar.
+          Número padrão da clínica. Recebe o relatório do caixa e também os
+          lembretes de Contas a Pagar, quando não houver um destino específico
+          configurado abaixo.
         </p>
         {errors.whatsapp && (
           <p className="text-destructive text-sm">{errors.whatsapp.message}</p>
