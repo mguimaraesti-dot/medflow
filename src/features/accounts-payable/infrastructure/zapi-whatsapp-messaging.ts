@@ -20,6 +20,18 @@ import type {
  */
 const REMINDER_MESSAGE_DELAY_SECONDS = 5;
 
+/**
+ * Linha de emojis no topo do cartão, marcando visualmente onde começa
+ * o lembrete de cada conta — sem isso, várias contas em sequência
+ * ficam impossíveis de distinguir na tela, com risco de o dono
+ * confundir de qual conta é o PIX/boleto e pagar a errada.
+ *
+ * 10 repetições: testado no aparelho — 11 é o máximo que cabe numa
+ * linha só, 12 já quebra (11 + 1 órfão embaixo). Usamos 10 pra ter
+ * folga em telas menores/fonte maior. NÃO aumentar sem testar de novo.
+ */
+const REMINDER_SEPARATOR_LINE = "👇🏻".repeat(10);
+
 /** Id do botão "Pago" — carrega o `accountsPayableId`, lido direto pelo webhook (ver `handle-zapi-webhook.use-case.ts`). */
 function payButtonId(accountsPayableId: string): string {
   return `pago_${accountsPayableId}`;
@@ -50,6 +62,7 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     const { messageId } = await sendButtonListMessage({
       phone: input.phone,
       message:
+        `${REMINDER_SEPARATOR_LINE}\n` +
         `⚠️ *Conta a Pagar*\n\n` +
         `Fornecedor: *${input.supplierName}*\n` +
         `Descrição: *${input.description}*\n` +
