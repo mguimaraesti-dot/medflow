@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
@@ -37,6 +38,7 @@ interface EditFormValues {
   paymentOrigin: "BANCO" | "COFRE";
   barcode: string;
   pixKey: string;
+  reminderEnabled: boolean;
   reminderDaysBefore: number;
 }
 
@@ -50,6 +52,7 @@ function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
     paymentOrigin: payable.paymentOrigin,
     barcode: payable.barcode ?? "",
     pixKey: payable.pixKey ?? "",
+    reminderEnabled: payable.reminderEnabled,
     reminderDaysBefore: payable.reminderDaysBefore,
   };
 }
@@ -83,6 +86,7 @@ export function AccountsPayableEditDialog({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<EditFormValues>({
     defaultValues: {
@@ -94,9 +98,11 @@ export function AccountsPayableEditDialog({
       paymentOrigin: "BANCO",
       barcode: "",
       pixKey: "",
+      reminderEnabled: true,
       reminderDaysBefore: 5,
     },
   });
+  const reminderEnabled = watch("reminderEnabled");
 
   useEffect(() => {
     if (payable) reset(toFormValues(payable));
@@ -261,22 +267,41 @@ export function AccountsPayableEditDialog({
                   <Input id="edit-pixKey" {...register("pixKey")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-reminderDaysBefore">
-                    Lembrete de WhatsApp (dias antes)
-                  </Label>
-                  <Input
-                    id="edit-reminderDaysBefore"
-                    type="number"
-                    min={0}
-                    max={60}
-                    {...register("reminderDaysBefore", {
-                      valueAsNumber: true,
-                    })}
-                  />
-                  {errors.reminderDaysBefore && (
-                    <p className="text-destructive text-sm">
-                      Informe um valor entre 0 e 60.
-                    </p>
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <Controller
+                      control={control}
+                      name="reminderEnabled"
+                      render={({ field }) => (
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(checked === true)
+                          }
+                        />
+                      )}
+                    />
+                    Lembrete de WhatsApp
+                  </label>
+                  {reminderEnabled && (
+                    <>
+                      <Label htmlFor="edit-reminderDaysBefore">
+                        Dias antes
+                      </Label>
+                      <Input
+                        id="edit-reminderDaysBefore"
+                        type="number"
+                        min={0}
+                        max={60}
+                        {...register("reminderDaysBefore", {
+                          valueAsNumber: true,
+                        })}
+                      />
+                      {errors.reminderDaysBefore && (
+                        <p className="text-destructive text-sm">
+                          Informe um valor entre 0 e 60.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
