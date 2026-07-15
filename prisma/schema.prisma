@@ -54,6 +54,13 @@ model OrganizationSettings {
   whatsapp  String?
   email     String?
 
+  // Destino específico dos lembretes de WhatsApp de Contas a Pagar
+  // (número comum OU id de grupo, ex: "120363...-group") — vazio usa
+  // `whatsapp` acima como fallback (ver send-accounts-payable-whatsapp-
+  // reminder.use-case.ts). O Relatório do Caixa Recepção NÃO usa este
+  // campo, continua sempre em `whatsapp`.
+  accountsPayableReminderWhatsapp String?
+
   currency    String @default("BRL")
   timezone    String @default("America/Sao_Paulo")
   openingTime String @default("08:00") // usado no alerta "caixa não aberto"
