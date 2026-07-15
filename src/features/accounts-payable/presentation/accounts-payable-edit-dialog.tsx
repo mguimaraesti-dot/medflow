@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { updateAccountsPayableSchema } from "../application/dtos/update-accounts-payable.dto";
 import {
   Dialog,
   DialogContent,
@@ -29,18 +32,16 @@ import {
 } from "./accounts-payable-recurrence-scope-dialog";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
-interface EditFormValues {
-  supplierId: string;
-  categoryId: string;
-  amount: number;
-  dueDate: string;
-  description: string;
-  paymentOrigin: "BANCO" | "COFRE";
-  barcode: string;
-  pixKey: string;
-  reminderEnabled: boolean;
-  reminderDaysBefore: number;
-}
+// <input type="date"> devolve string, não Date — mesmo tratamento já
+// usado no formulário de criação (accounts-payable-form.tsx). `scope`
+// não é campo de formulário aqui (decidido depois, via
+// AccountsPayableRecurrenceScopeDialog, conforme o usuário escolhe no
+// dialog de escopo), por isso omitido do schema de validação.
+const editAccountsPayableFormSchema = updateAccountsPayableSchema
+  .omit({ scope: true })
+  .extend({ dueDate: z.string().min(1, "Informe o vencimento") });
+
+type EditFormValues = z.infer<typeof editAccountsPayableFormSchema>;
 
 function toFormValues(payable: AccountsPayableResponseDTO): EditFormValues {
   return {
@@ -89,6 +90,7 @@ export function AccountsPayableEditDialog({
     watch,
     formState: { errors },
   } = useForm<EditFormValues>({
+    resolver: zodResolver(editAccountsPayableFormSchema),
     defaultValues: {
       supplierId: "",
       categoryId: "",
