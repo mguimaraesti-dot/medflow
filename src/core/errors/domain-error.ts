@@ -80,6 +80,25 @@ export class CashRegisterNotOpenError extends DomainError {
   }
 }
 
+/**
+ * Existe um `CashRegisterDay` `OPEN` de uma data anterior à de hoje —
+ * abrir um novo por cima deixaria o dinheiro daquele dia no limbo
+ * (incidente real: caixa de 14/07 esquecido aberto, novo caixa aberto
+ * em 15/07 por cima, exigiu regularização manual). `previousDate` já
+ * vem formatado (dd/MM/yyyy) pelo chamador.
+ */
+export class PreviousDayCashRegisterOpenError extends DomainError {
+  readonly code = "PREVIOUS_DAY_CASH_REGISTER_OPEN";
+  readonly httpStatus = 409;
+
+  constructor(organizationId: string, previousDate: string) {
+    super(
+      `Existe um caixa aberto do dia ${previousDate}. Feche-o antes de abrir um novo caixa.`,
+      { organizationId, previousDate },
+    );
+  }
+}
+
 export class DuplicateReversalError extends DomainError {
   readonly code = "DUPLICATE_REVERSAL";
   readonly httpStatus = 409;

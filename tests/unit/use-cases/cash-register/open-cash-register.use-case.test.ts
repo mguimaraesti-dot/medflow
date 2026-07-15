@@ -4,6 +4,7 @@ import { openCashRegisterUseCase } from "@/features/cash-register/application/op
 import {
   CashRegisterAlreadyOpenError,
   InsufficientSafeBalanceError,
+  PreviousDayCashRegisterOpenError,
 } from "@/core/errors/domain-error";
 import type { CashRegisterDayRepository } from "@/features/cash-register/domain/cash-register-day.repository";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
@@ -21,6 +22,7 @@ function makeRepo(
     findByOrganizationAndDate: vi.fn().mockResolvedValue(null),
     findLastClosed: vi.fn().mockResolvedValue(null),
     findOpenByOrganization: vi.fn(),
+    findOldestOpenBefore: vi.fn().mockResolvedValue(null),
     list: vi.fn(),
     create: vi.fn(),
     close: vi.fn(),
@@ -101,5 +103,44 @@ describe("openCashRegisterUseCase", () => {
         organizationSettingsRepository,
       }),
     ).rejects.toThrow(CashRegisterAlreadyOpenError);
+  });
+
+  // Incidente real: caixa de 14/07 esquecido aberto, caixa novo aberto em
+  // 15/07 por cima — o dinheiro do 14/07 ficou no limbo até regularização
+  // manual. Bloquear só a mesma data (teste acima) não pegava esse caso.
+  it("bloqueia abrir um novo caixa quando existe um OPEN de data anterior", async () => {
+    const repo = makeRepo({
+      findOldestOpenBefore: vi.fn().mockResolvedValue({
+        id: "day-old",
+        date: new Date("2026-07-14T00:00:00.000Z"),
+        openingBalance: new Prisma.Decimal("40.00"),
+      }),
+    });
+    const safeRepository = makeSafeRepo("2000.00");
+
+    await expect(
+      openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
+        cashRegisterDayRepository: repo,
+        safeRepository,
+        organizationSettingsRepository,
+      }),
+    ).rejects.toThrow(PreviousDayCashRegisterOpenError);
+  });
+
+  it("abre normalmente quando não existe nenhum OPEN de data anterior", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "day-1" });
+    const repo = makeRepo({
+      findOldestOpenBefore: vi.fn().mockResolvedValue(null),
+      create,
+    });
+    const safeRepository = makeSafeRepo("2000.00");
+
+    await openCashRegisterUseCase({ openingBalance: 100 }, "user-1", "org-1", {
+      cashRegisterDayRepository: repo,
+      safeRepository,
+      organizationSettingsRepository,
+    });
+
+    expect(create).toHaveBeenCalled();
   });
 });

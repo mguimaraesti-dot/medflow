@@ -14,21 +14,21 @@ interface Deps {
   cashFlowEntryRepository: CashFlowEntryRepository;
   safeMovementRepository: SafeMovementRepository;
   organizationSettingsRepository: OrganizationSettingsRepository;
-  /** Injetado só para permitir teste determinístico — em produção é sempre `new Date()`. */
-  referenceDate?: Date;
 }
 
 /**
- * Enquanto o caixa está OPEN, `totalIn`/`totalOut`/`expectedCashAmount`
- * ainda não existem no banco (só são gravados no fechamento) — aqui
- * completamos com a soma ao vivo, pra a UI poder mostrar o resumo do
- * dia (inclusive o Saldo Esperado em Dinheiro, que só conta espécie)
- * mesmo com o caixa ainda aberto. Mesma fórmula usada em
- * `close-cash-register.use-case.ts`: Saldo Inicial + Entradas em
- * dinheiro − Saídas em dinheiro − Sangrias — PIX/cartão nunca entram
- * aqui, só no `totalIn`/`totalOut` contábil (todas as formas).
+ * Alimenta o aviso da tela de Caixa (Etapa 2 do bloqueio de abertura
+ * com dia anterior) — a entidade INTEIRA, com `totalIn`/`cashIn`/
+ * `expectedCashAmount` já calculados ao vivo via `computeLiveCashRegisterDay`
+ * (mesmo helper de `getTodayCashRegisterUseCase`, mesma fórmula do
+ * fechamento real). Corrigido depois do 1º commit desta PR: o dialog de
+ * fechamento é o ÚNICO jeito de encerrar esse caixa esquecido, então
+ * mostrar zeros ali (em vez do saldo real) faria a usuária declarar um
+ * valor contado errado no exato momento em que o sistema mais precisa
+ * ser confiável. NÃO usa `findOpenByOrganization` (reservado a
+ * fechamento/sangria, semântica de "o mais recente").
  */
-export async function getTodayCashRegisterUseCase(
+export async function getPreviousDayOpenRegisterUseCase(
   organizationId: string,
   deps: Deps,
 ): Promise<CashRegisterDay | null> {
@@ -36,16 +36,13 @@ export async function getTodayCashRegisterUseCase(
     await deps.organizationSettingsRepository.findByOrganization(
       organizationId,
     );
-  const today = getBusinessDay(
-    settings?.timezone ?? DEFAULT_TIMEZONE,
-    deps.referenceDate ?? new Date(),
-  );
+  const today = getBusinessDay(settings?.timezone ?? DEFAULT_TIMEZONE);
 
-  const day = await deps.cashRegisterDayRepository.findByOrganizationAndDate(
+  const found = await deps.cashRegisterDayRepository.findOldestOpenBefore(
     organizationId,
     today,
   );
-  if (!day) return null;
+  if (!found) return null;
 
-  return computeLiveCashRegisterDay(day, deps);
+  return computeLiveCashRegisterDay(found, deps);
 }
