@@ -69,7 +69,7 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       try {
         await sendButtonCodeMessage({
           phone: input.phone,
-          message: `*${input.supplierName}*\nCódigo de barras da fatura:`,
+          message: `*${input.supplierName}*\n${input.amount}\nCódigo de barras da fatura:`,
           code: input.barcode,
           buttonText: "Copiar código de barras",
           delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
@@ -91,7 +91,14 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
           phone: input.phone,
           pixKey: input.pixKey,
           pixKeyType: "EVP",
-          merchantName: input.supplierName,
+          // Valor primeiro: o cartão nativo de PIX só nos deixa
+          // controlar merchantName, e testado em produção o WhatsApp
+          // trunca por largura de tela (não por contagem de
+          // caracteres) — cortando sempre o fim da string. Com o valor
+          // no começo, ele sobrevive ao corte mesmo quando o nome do
+          // fornecedor é longo; não faz sentido truncar por tamanho
+          // aqui, o próprio WhatsApp já faz isso.
+          merchantName: `${input.amount} - ${input.supplierName}`,
           delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
         });
       } catch (error) {
