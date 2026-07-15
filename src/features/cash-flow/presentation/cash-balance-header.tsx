@@ -2,11 +2,13 @@
 
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useCashRegisterToday } from "@/features/cash-register/presentation/use-cash-register-today";
+import { usePreviousDayOpenRegister } from "@/features/cash-register/presentation/use-previous-day-open-register";
 import { OpenRegisterDialog } from "@/features/cash-register/presentation/open-register-dialog";
 import { CloseRegisterDialog } from "@/features/cash-register/presentation/close-register-dialog";
 import { ReopenRegisterDialog } from "@/features/cash-register/presentation/reopen-register-dialog";
 import {
   formatCurrencyBRL,
+  formatDateOnlyBR,
   formatDateOnlyLocalBR,
   formatTimeBR,
 } from "@/shared/lib/format";
@@ -38,6 +40,7 @@ export function CashBalanceHeader({
   onSelectType: (type: "IN" | "OUT") => void;
 }) {
   const { data: today, isLoading } = useCashRegisterToday();
+  const { data: previousDayOpen } = usePreviousDayOpenRegister();
 
   if (isLoading) {
     return <Skeleton className="h-24 w-full" />;
@@ -45,6 +48,7 @@ export function CashBalanceHeader({
 
   const isOpen = today?.status === "OPEN";
   const closedToday = today?.status === "CLOSED";
+  const hasPreviousDayOpen = Boolean(previousDayOpen);
 
   const resultToday = (
     Number(today?.totalIn ?? "0") - Number(today?.totalOut ?? "0")
@@ -72,11 +76,27 @@ export function CashBalanceHeader({
               <span
                 className={cn(
                   "h-2.5 w-2.5 rounded-full",
-                  isOpen ? "bg-green-500" : "bg-destructive",
+                  isOpen
+                    ? "bg-green-500"
+                    : hasPreviousDayOpen
+                      ? "bg-amber-500"
+                      : "bg-destructive",
                 )}
               />
-              {isOpen ? "Caixa Aberto" : "Caixa Fechado"}
+              {isOpen
+                ? "Caixa Aberto"
+                : hasPreviousDayOpen
+                  ? "Caixa aberto (dia anterior)"
+                  : "Caixa Fechado"}
             </span>
+            {hasPreviousDayOpen && previousDayOpen && (
+              <p className="text-muted-foreground mt-1 text-sm">
+                Caixa do dia {formatDateOnlyBR(previousDayOpen.date)} continua
+                aberto.
+                <br />
+                Feche-o antes de abrir um novo caixa.
+              </p>
+            )}
             {isOpen && today && today.reopenCount > 0 && today.reopenedAt && (
               <p className="text-muted-foreground mt-1 text-sm">
                 Reaberto hoje às {formatTimeBR(today.reopenedAt)}
@@ -101,7 +121,7 @@ export function CashBalanceHeader({
                 por {today.closedByUserName}
               </p>
             )}
-            {!today && (
+            {!today && !hasPreviousDayOpen && (
               <p className="text-muted-foreground mt-1 text-sm">
                 Nenhum caixa aberto hoje.
               </p>
@@ -132,8 +152,13 @@ export function CashBalanceHeader({
               <CloseRegisterDialog disabled={!canClose} />
             </>
           )}
-          {!today && <OpenRegisterDialog disabled={!canOpen} />}
-          {closedToday && canReopen && (
+          {hasPreviousDayOpen && !isOpen && (
+            <CloseRegisterDialog disabled={!canClose} />
+          )}
+          {!today && !hasPreviousDayOpen && (
+            <OpenRegisterDialog disabled={!canOpen} />
+          )}
+          {closedToday && canReopen && !hasPreviousDayOpen && (
             <ReopenRegisterDialog cashRegisterDayId={today.id} />
           )}
         </div>
