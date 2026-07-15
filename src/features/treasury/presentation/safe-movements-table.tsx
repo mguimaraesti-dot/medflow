@@ -144,8 +144,17 @@ export function SafeMovementsTable({
                       <TableCell className="text-muted-foreground">
                         {categoryLabel(movement)}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {describeMovement(movement)}
+                      <TableCell className="text-muted-foreground max-w-[220px]">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <p className="cursor-help truncate">
+                              {describeMovement(movement)}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            {describeMovement(movement)}
+                          </TooltipContent>
+                        </Tooltip>
                       </TableCell>
                       <TableCell
                         className={
