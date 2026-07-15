@@ -85,6 +85,18 @@ export class PrismaCashRegisterDayRepository implements CashRegisterDayRepositor
     return row ? toDomainDay(row) : null;
   }
 
+  async findOldestOpenBefore(
+    organizationId: string,
+    date: Date,
+  ): Promise<CashRegisterDay | null> {
+    const row = await prisma.cashRegisterDay.findFirst({
+      where: { organizationId, status: "OPEN", date: { lt: date } },
+      orderBy: { date: "asc" },
+      include: OPENED_BY_INCLUDE,
+    });
+    return row ? toDomainDay(row) : null;
+  }
+
   async list(
     filter: ListCashRegisterDaysFilter,
     pagination: Pagination,

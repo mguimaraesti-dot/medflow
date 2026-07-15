@@ -78,6 +78,17 @@ export interface CashRegisterDayRepository {
   ): Promise<CashRegisterDay | null>;
 
   /**
+   * O `CashRegisterDay` `OPEN` mais ANTIGO com `date` anterior à
+   * informada — usado só para bloquear abertura enquanto existir um
+   * caixa esquecido de dia anterior (nunca para resolver o alvo de
+   * fechamento/sangria, que continuam em `findOpenByOrganization`).
+   */
+  findOldestOpenBefore(
+    organizationId: string,
+    date: Date,
+  ): Promise<CashRegisterDay | null>;
+
+  /**
    * Cria o dia de caixa e, na mesma transação, retira `openingBalance`
    * do Cofre da organização (`SafeMovement` tipo `FUNDING`) — re-checa
    * saldo suficiente dentro da transação (rede de segurança; a checagem
