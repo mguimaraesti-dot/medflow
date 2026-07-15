@@ -247,8 +247,12 @@ async function main() {
 
   const nowLabel = new Date().toISOString();
   const closureNote =
-    `Regularização retroativa — caixa esquecido em aberto, fechado pelo valor esperado ` +
-    `calculado pelo sistema em ${nowLabel}. Não houve contagem física.`;
+    `Regularização retroativa — caixa do dia 14/07 permaneceu aberto por ` +
+    `esquecimento e o sistema exibia "caixa fechado" na manhã seguinte ` +
+    `(a tela considera apenas o dia atual). Valor conferido fisicamente ` +
+    `pela recepcionista em 15/07: R$ 40,00 de abertura + R$ 60,00 de venda ` +
+    `de Kit = R$ 100,00, coincidente com o valor esperado calculado pelo ` +
+    `sistema. Fechado retroativamente em ${nowLabel}.`;
 
   console.log("=== CÁLCULO (Dinheiro Esperado) ===");
   console.log(`  openingBalance        : ${openingBalance.toFixed(2)}`);
