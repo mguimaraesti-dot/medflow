@@ -45,7 +45,9 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
     await deps.organizationSettingsRepository.findByOrganization(
       organizationId,
     );
-  if (!settings?.whatsapp) {
+  const destinationPhone =
+    settings?.accountsPayableReminderWhatsapp || settings?.whatsapp;
+  if (!destinationPhone) {
     throw new WhatsAppNotConfiguredError(organizationId);
   }
 
@@ -58,7 +60,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
   try {
     const result = await deps.whatsAppMessaging.sendPaymentReminder({
       accountsPayableId: payable.id,
-      phone: settings.whatsapp,
+      phone: destinationPhone,
       supplierName: supplier.name,
       description: payable.description,
       amount: formatCurrencyBRL(payable.amount.toString()),

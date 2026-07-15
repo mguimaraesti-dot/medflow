@@ -8,6 +8,12 @@ export const updateOrganizationSettingsSchema = z.object({
     .max(30)
     .nullable()
     .transform((value) => (value ? value : null)),
+  accountsPayableReminderWhatsapp: z
+    .string()
+    .trim()
+    .max(30)
+    .nullable()
+    .transform((value) => (value ? value : null)),
   reminderSendHour: z.number().int().min(0).max(23),
 });
 
