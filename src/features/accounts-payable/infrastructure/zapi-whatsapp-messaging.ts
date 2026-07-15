@@ -82,7 +82,7 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       try {
         await sendButtonCodeMessage({
           phone: input.phone,
-          message: `*${input.supplierName}*\nCódigo de barras da fatura:`,
+          message: `*${input.supplierName}*\n${input.amount}\nCódigo de barras da fatura:`,
           code: input.barcode,
           buttonText: "Copiar código de barras",
           delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
