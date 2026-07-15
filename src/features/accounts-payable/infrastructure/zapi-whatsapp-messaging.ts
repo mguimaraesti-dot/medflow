@@ -1,3 +1,4 @@
+import { logger } from "@/core/logger/logger";
 import {
   sendButtonListMessage,
   sendButtonCodeMessage,
@@ -8,10 +9,16 @@ import type {
   WhatsAppPaymentReminderInput,
 } from "../domain/whatsapp-messaging.port";
 
-/** Intervalo entre as mensagens (evita parecer spam e dá tempo da Z-API processar cada botão) — ver `maxDuration` nas rotas que chamam este adapter. */
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+/**
+ * Segundos de espaçamento entre as mensagens de uma mesma conta —
+ * repassado como `delayMessage` pra Z-API processar na PRÓPRIA fila
+ * dela, sem bloquear a execução do nosso lado (ao contrário de um sleep
+ * de código, que consumiria o `maxDuration` das rotas que chamam este
+ * adapter). Testado em produção: ordem e espaçamento respeitados por
+ * conversa mesmo disparando as mensagens em sequência imediata. Range
+ * válido da Z-API é 1-15s.
+ */
+const REMINDER_MESSAGE_DELAY_SECONDS = 5;
 
 /** Id do botão "Pago" — carrega o `accountsPayableId`, lido direto pelo webhook (ver `handle-zapi-webhook.use-case.ts`). */
 function payButtonId(accountsPayableId: string): string {
@@ -36,6 +43,10 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }> {
+    // Cartão com botão "Pago" é a mensagem CRÍTICA: sem ela, nada foi
+    // entregue ao dono da conta — a falha aqui propaga (não é
+    // capturada), pra que o use case chamador não marque a conta como
+    // lembrada e ela seja retentada no próximo ciclo.
     const { messageId } = await sendButtonListMessage({
       phone: input.phone,
       message:
@@ -46,26 +57,52 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
         `Vencimento: *${input.dueDate}*`,
       buttonId: payButtonId(input.accountsPayableId),
       buttonLabel: "Pago",
+      delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
     });
 
+    // Código de barras e PIX são BEST-EFFORT: o cartão principal já
+    // chegou, então uma falha aqui não pode derrubar o lembrete inteiro
+    // — isso faria o cartão (já entregue) ser reenviado duplicado no
+    // próximo ciclo. Só loga um aviso claro o bastante pra alguém notar
+    // que essa conta ficou sem boleto/PIX.
     if (input.barcode) {
-      await delay(3000);
-      await sendButtonCodeMessage({
-        phone: input.phone,
-        message: `*${input.supplierName}*\nCódigo de barras da fatura:`,
-        code: input.barcode,
-        buttonText: "Copiar código de barras",
-      });
+      try {
+        await sendButtonCodeMessage({
+          phone: input.phone,
+          message: `*${input.supplierName}*\nCódigo de barras da fatura:`,
+          code: input.barcode,
+          buttonText: "Copiar código de barras",
+          delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
+        });
+      } catch (error) {
+        logger.warn(
+          "Lembrete de WhatsApp: falha ao enviar código de barras (best-effort — conta segue marcada como lembrada)",
+          {
+            accountsPayableId: input.accountsPayableId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
+      }
     }
 
     if (input.pixKey) {
-      await delay(3000);
-      await sendButtonPixMessage({
-        phone: input.phone,
-        pixKey: input.pixKey,
-        pixKeyType: "EVP",
-        merchantName: input.supplierName,
-      });
+      try {
+        await sendButtonPixMessage({
+          phone: input.phone,
+          pixKey: input.pixKey,
+          pixKeyType: "EVP",
+          merchantName: input.supplierName,
+          delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
+        });
+      } catch (error) {
+        logger.warn(
+          "Lembrete de WhatsApp: falha ao enviar chave Pix (best-effort — conta segue marcada como lembrada)",
+          {
+            accountsPayableId: input.accountsPayableId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
+      }
     }
 
     return { messageId };
