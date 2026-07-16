@@ -250,3 +250,30 @@ export async function sendImageMessage(input: SendImageInput): Promise<void> {
     caption: input.caption,
   });
 }
+
+export interface SendDocumentInput {
+  phone: string;
+  /** Data URI base64 (`data:application/pdf;base64,...`) — a Z-API também aceita URL pública, mas aqui o PDF é gerado on-the-fly (`jspdf`) e nunca fica hospedado em lugar nenhum. */
+  document: string;
+  fileName?: string;
+  caption?: string;
+}
+
+/**
+ * Envia um documento (anexo de arquivo, ex: PDF) — documentado em
+ * `/send-document/{extension}` (confirmado via developer.z-api.io,
+ * 2026-07-16: aceita `document` como URL pública OU base64, `fileName`
+ * e `caption` opcionais). Usado pelo Relatório de Recebimentos (PDF de
+ * múltiplas páginas, diferente dos outros relatórios que enviam
+ * imagem via `sendImageMessage`).
+ */
+export async function sendDocumentMessage(
+  input: SendDocumentInput,
+): Promise<void> {
+  await post("/send-document/pdf", {
+    phone: input.phone,
+    document: input.document,
+    fileName: input.fileName,
+    caption: input.caption,
+  });
+}
