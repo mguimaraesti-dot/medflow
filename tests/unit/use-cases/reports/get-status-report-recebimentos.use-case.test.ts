@@ -234,7 +234,7 @@ describe("getStatusReportRecebimentosUseCase", () => {
     expect(result.totalCount).toBe(4);
   });
 
-  it("trunca a lista exibida em 100 lançamentos, mas totais/contagens somam TODOS os 120", async () => {
+  it("não trunca a lista de entries — o PDF pagina sozinho, sem teto de linhas", async () => {
     const rows = Array.from({ length: 120 }, (_, index) =>
       row({ id: `e${index}`, amount: new Prisma.Decimal("10.00") }),
     );
@@ -247,7 +247,7 @@ describe("getStatusReportRecebimentosUseCase", () => {
       deps,
     );
 
-    expect(result.entries).toHaveLength(100);
+    expect(result.entries).toHaveLength(120);
     expect(result.totalCount).toBe(120);
     expect(result.totalAmount).toBe("1200.00");
   });

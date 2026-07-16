@@ -1,7 +1,7 @@
 /**
  * Uma linha da tabela de lançamentos — detalhe, não agregado (diferente
  * dos outros Status Reports). `frascos` é `null` quando a categoria não
- * é um kit (mostra "—" na imagem).
+ * é um kit (mostra "—" no PDF).
  */
 export interface StatusReportRecebimentosEntry {
   id: string;
@@ -24,8 +24,8 @@ export interface StatusReportRecebimentosKitRow {
 }
 
 /**
- * Relatório de Recebimentos — imagem 1080xN
- * (`infrastructure/status-report-recebimentos-image.tsx`). Detalhe
+ * Relatório de Recebimentos — PDF de múltiplas páginas
+ * (`infrastructure/status-report-recebimentos-pdf.ts`). Detalhe
  * lançamento a lançamento das ENTRADAS do Caixa Recepção no período
  * (relatório de conferência, não agregado como os outros dois Status
  * Reports).
@@ -46,13 +46,7 @@ export interface StatusReportRecebimentosSummary {
 
   totalFrascos: number;
 
-  /**
-   * Truncado em `MAX_DISPLAYED_ENTRIES` (ver use case) — pode ter menos
-   * itens que `totalCount` num período com muitos lançamentos. Todos
-   * os totais/KPIs/frascos acima já somam o período INTEIRO, mesmo
-   * quando esta lista é truncada; a imagem deve mostrar um aviso
-   * "mostrando N de totalCount" quando `entries.length < totalCount`.
-   */
+  /** Sem teto — o PDF pagina automaticamente via `jspdf-autotable`, ao contrário da imagem única dos outros dois relatórios. */
   entries: StatusReportRecebimentosEntry[];
   kitRows: StatusReportRecebimentosKitRow[];
 }

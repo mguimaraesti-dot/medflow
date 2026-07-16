@@ -16,18 +16,6 @@ interface Deps {
   categoryRepository: CategoryRepository;
 }
 
-/**
- * Teto de linhas exibidas NA TABELA da imagem — este relatório é
- * detalhe (lançamento a lançamento, sem agregação), então o número de
- * linhas não tem limite natural. Um mês cheio (~250 lançamentos)
- * geraria uma imagem de ~12.000px (Satori/next-og não tem scroll nem
- * paginação, e o canvas de um PNG desse tamanho pesa bastante pra
- * gerar e enviar por WhatsApp). Os TOTAIS, KPIs e o bloco de frascos
- * continuam somando TODOS os lançamentos do período, mesmo truncados
- * na tabela — só a lista visual é limitada.
- */
-const MAX_DISPLAYED_ENTRIES = 100;
-
 function sumDecimals(values: Prisma.Decimal[]): Prisma.Decimal {
   return values.reduce(
     (total, value) => total.plus(value),
@@ -90,11 +78,13 @@ function buildKitRows(
 }
 
 /**
- * Relatório de Recebimentos — imagem 1080xN
- * (`infrastructure/status-report-recebimentos-image.tsx`). Diferente
- * dos outros dois Status Reports (agregados), este é um relatório de
- * CONFERÊNCIA: detalhe lançamento a lançamento das entradas do Caixa
- * Recepção no período, com nome do paciente.
+ * Relatório de Recebimentos — PDF de múltiplas páginas
+ * (`infrastructure/status-report-recebimentos-pdf.ts`, via
+ * `jspdf-autotable`). Diferente dos outros dois Status Reports
+ * (imagem única, agregados), este é um relatório de CONFERÊNCIA:
+ * detalhe lançamento a lançamento das entradas do Caixa Recepção no
+ * período, com nome do paciente — sem teto de linhas (o PDF pagina
+ * sozinho, ao contrário da imagem única dos outros relatórios).
  *
  * Estornados NÃO entram: `listReceiptsForReport` já filtra
  * `isReversed: false` e `type: "IN"` (o lançamento de estorno em si é
@@ -161,7 +151,7 @@ export async function getStatusReportRecebimentosUseCase(
     pixTotal: pixTotal.toFixed(2),
     pixCount: pixRows.length,
     totalFrascos,
-    entries: entries.slice(0, MAX_DISPLAYED_ENTRIES),
+    entries,
     kitRows,
   };
 }
