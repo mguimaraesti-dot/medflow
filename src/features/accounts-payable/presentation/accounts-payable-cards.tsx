@@ -237,14 +237,14 @@ export function AccountsPayableCards({
                   </div>
 
                   <div
-                    className="mt-3 flex items-center gap-2"
+                    className="mt-3 flex items-center justify-end gap-2"
                     onClick={(event) => event.stopPropagation()}
                   >
                     {canPayThis ? (
                       <Button
                         type="button"
                         size="sm"
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        className="bg-green-600 hover:bg-green-700"
                         onClick={() => setPayingTarget(payable)}
                       >
                         <Check className="h-3.5 w-3.5" />
@@ -255,7 +255,6 @@ export function AccountsPayableCards({
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="flex-1"
                         onClick={() => onView(payable)}
                       >
                         Ver

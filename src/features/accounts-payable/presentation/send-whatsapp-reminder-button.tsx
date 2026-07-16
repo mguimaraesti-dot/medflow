@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/shared/components/whatsapp-icon";
 import { Button } from "@/shared/ui/button";
+import { cn } from "@/shared/lib/utils";
 import { ApiError } from "@/shared/lib/api-client";
 import { useSendWhatsAppReminder } from "./use-send-whatsapp-reminder";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
@@ -11,8 +12,11 @@ import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-pa
 /** Some da tela quando a conta já não está PENDENTE — paga/cancelada não recebe mais lembrete. */
 export function SendWhatsAppReminderButton({
   payable,
+  className,
 }: {
   payable: AccountsPayableResponseDTO;
+  /** Sobrepõe o estilo padrão — usado pelo Drawer mobile pra parecer um item de menu em vez de um botão com borda. */
+  className?: string;
 }) {
   const sendReminder = useSendWhatsAppReminder();
 
@@ -35,7 +39,7 @@ export function SendWhatsAppReminderButton({
     <Button
       type="button"
       variant="outline"
-      className="text-green-700 dark:text-green-500"
+      className={cn("text-green-700 dark:text-green-500", className)}
       disabled={sendReminder.isPending}
       onClick={handleSend}
     >

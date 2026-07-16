@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { WhatsAppIcon } from "@/shared/components/whatsapp-icon";
 import { Button } from "@/shared/ui/button";
+import { cn } from "@/shared/lib/utils";
 import { buildWhatsAppMessage } from "./accounts-payable-helpers";
 import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-payable.response-dto";
 
@@ -18,11 +19,14 @@ export function CopyToWhatsAppButton({
   payable,
   supplierName,
   variant = "icon",
+  className,
 }: {
   payable: AccountsPayableResponseDTO;
   supplierName: string;
   /** "icon" — só o ícone (linha da tabela). "full" — ícone + rótulo (Drawer). */
   variant?: "icon" | "full";
+  /** Sobrepõe o estilo padrão — usado pelo Drawer mobile pra parecer um item de menu em vez de um botão com borda. */
+  className?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -68,7 +72,7 @@ export function CopyToWhatsAppButton({
     <Button
       type="button"
       variant="outline"
-      className="text-green-700 dark:text-green-500"
+      className={cn("text-green-700 dark:text-green-500", className)}
       onClick={handleCopy}
     >
       {copied ? (
