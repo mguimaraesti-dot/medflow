@@ -666,23 +666,13 @@ export async function renderStatusReportContasPagasImage(
             alignItems: "center",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={logoDataUri}
-              width={152}
-              height={95}
-              alt={input.organizationName}
-            />
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", fontSize: 22, fontWeight: 800 }}>
-                Clínica MAE
-              </div>
-              <div style={{ display: "flex", fontSize: 14, color: MUTED_TEXT }}>
-                Diagnóstico e Tratamento em Gastroenterologia
-              </div>
-            </div>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoDataUri}
+            width={152}
+            height={95}
+            alt={input.organizationName}
+          />
           <div
             style={{
               display: "flex",
