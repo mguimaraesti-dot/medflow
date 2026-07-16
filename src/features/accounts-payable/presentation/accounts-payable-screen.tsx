@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import {
   AlertTriangle,
   ArrowDown,
@@ -21,6 +22,7 @@ import {
   type StatusFilter,
   type VisibleColumns,
 } from "./accounts-payable-table";
+import { AccountsPayableCards } from "./accounts-payable-cards";
 import { AccountsPayableFormDialog } from "./accounts-payable-form-dialog";
 import { AccountsPayableDrawer } from "./accounts-payable-drawer";
 import { AccountsPayableEditDialog } from "./accounts-payable-edit-dialog";
@@ -34,6 +36,10 @@ import {
   type PeriodPreset,
   type PeriodRange,
 } from "@/shared/components/period-selector";
+import {
+  MobileFilterSheet,
+  FilterChipGroup,
+} from "@/shared/components/mobile-filter-sheet";
 import { KpiCard } from "@/shared/components/kpi-card";
 import { formatCurrencyBRL } from "@/shared/lib/format";
 import { Input } from "@/shared/ui/input";
@@ -96,6 +102,10 @@ export function AccountsPayableScreen({
   const canCreate = can(PERMISSIONS.PAYABLE_CREATE);
   const canPay = can(PERMISSIONS.PAYABLE_PAY);
   const canDelete = can(PERMISSIONS.PAYABLE_DELETE);
+  // Mesmo corte que a tela já usa pra empilhar os filtros (`lg:flex-row`)
+  // e esconder colunas da tabela (`hidden lg:table-cell`) — um só valor
+  // de breakpoint pra tudo que "encolhe" nesta tela.
+  const isMobile = useMediaQuery("(max-width: 1023px)");
 
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("MONTH");
   const [periodCustom, setPeriodCustom] = useState<PeriodRange | undefined>();
@@ -182,6 +192,13 @@ export function AccountsPayableScreen({
 
   const supplierName = suppliers?.find((s) => s.id === supplierId)?.name;
   const categoryName = categories?.find((c) => c.id === categoryId)?.name;
+  const activeFilterCount = [
+    status !== "ALL",
+    Boolean(categoryId),
+    Boolean(supplierId),
+    Boolean(recurringOnly),
+    Boolean(search.trim()),
+  ].filter(Boolean).length;
   const hasNonDefaultFilters =
     status !== "ALL" ||
     Boolean(categoryId) ||
@@ -223,282 +240,371 @@ export function AccountsPayableScreen({
   return (
     <div className="space-y-5">
       {summary && (
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
-          <KpiCard
-            label="Total do período"
-            value={formatCurrencyBRL(summary.total.amount)}
-            comparison={
-              <TrendComparison
-                count={summary.total.count}
-                changePercent={trend?.total ?? null}
-              />
-            }
-            icon={Wallet}
-            iconTone="blue"
-            compact
-            onClick={filterByTotal}
-            active={isTotalActive}
-          />
-          <KpiCard
-            label="Hoje"
-            value={formatCurrencyBRL(summary.dueToday.amount)}
-            comparison={
-              <TrendComparison
-                count={summary.dueToday.count}
-                countLabel={
-                  summary.dueToday.count === 0
-                    ? "Nenhum vencimento"
-                    : `${formatCardSubtitle(summary.dueToday.count)} ${
-                        summary.dueToday.count === 1 ? "vence" : "vencem"
-                      } hoje`
-                }
-                changePercent={trend?.dueToday ?? null}
-                comparisonLabel="ontem"
-              />
-            }
-            icon={CalendarClock}
-            iconTone="blue"
-            compact
-            onClick={filterByDueToday}
-            active={isDueTodayActive}
-            emphasized={summary.dueToday.count > 0}
-          />
-          <KpiCard
-            label="A vencer"
-            value={formatCurrencyBRL(summary.upcoming.amount)}
-            comparison={
-              <TrendComparison
-                count={summary.upcoming.count}
-                changePercent={trend?.upcoming ?? null}
-              />
-            }
-            icon={Clock}
-            iconTone="green"
-            compact
-            onClick={filterByUpcoming}
-            active={isUpcomingActive}
-          />
-          <KpiCard
-            label="Vencidas"
-            value={formatCurrencyBRL(summary.overdue.amount)}
-            comparison={
-              <TrendComparison
-                count={summary.overdue.count}
-                changePercent={trend?.overdue ?? null}
-              />
-            }
-            icon={AlertTriangle}
-            iconTone="red"
-            compact
-            onClick={filterByOverdue}
-            active={isOverdueActive}
-            emphasized={summary.overdue.count > 0}
-          />
-          <KpiCard
-            label="Pagas"
-            value={formatCurrencyBRL(summary.paid.amount)}
-            comparison={
-              <div className="space-y-0.5">
+        <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
+          <div className="w-[150px] shrink-0 lg:contents">
+            <KpiCard
+              label="Total do período"
+              value={formatCurrencyBRL(summary.total.amount)}
+              comparison={
                 <TrendComparison
-                  count={summary.paid.count}
-                  countLabel={formatCardSubtitle(summary.paid.count, "pagas")}
-                  changePercent={trend?.paid ?? null}
+                  count={summary.total.count}
+                  changePercent={trend?.total ?? null}
                 />
-                {paidPercentOfPeriod !== null && (
-                  <p>{paidPercentOfPeriod.toFixed(0)}% do período</p>
-                )}
-              </div>
-            }
-            icon={CheckCircle2}
-            iconTone="violet"
-            compact
-            onClick={filterByPaid}
-            active={isPaidActive}
-          />
+              }
+              icon={Wallet}
+              iconTone="blue"
+              compact
+              onClick={filterByTotal}
+              active={isTotalActive}
+            />
+          </div>
+          <div className="w-[150px] shrink-0 lg:contents">
+            <KpiCard
+              label="Hoje"
+              value={formatCurrencyBRL(summary.dueToday.amount)}
+              comparison={
+                <TrendComparison
+                  count={summary.dueToday.count}
+                  countLabel={
+                    summary.dueToday.count === 0
+                      ? "Nenhum vencimento"
+                      : `${formatCardSubtitle(summary.dueToday.count)} ${
+                          summary.dueToday.count === 1 ? "vence" : "vencem"
+                        } hoje`
+                  }
+                  changePercent={trend?.dueToday ?? null}
+                  comparisonLabel="ontem"
+                />
+              }
+              icon={CalendarClock}
+              iconTone="blue"
+              compact
+              onClick={filterByDueToday}
+              active={isDueTodayActive}
+              emphasized={summary.dueToday.count > 0}
+            />
+          </div>
+          <div className="w-[150px] shrink-0 lg:contents">
+            <KpiCard
+              label="A vencer"
+              value={formatCurrencyBRL(summary.upcoming.amount)}
+              comparison={
+                <TrendComparison
+                  count={summary.upcoming.count}
+                  changePercent={trend?.upcoming ?? null}
+                />
+              }
+              icon={Clock}
+              iconTone="green"
+              compact
+              onClick={filterByUpcoming}
+              active={isUpcomingActive}
+            />
+          </div>
+          <div className="w-[150px] shrink-0 lg:contents">
+            <KpiCard
+              label="Vencidas"
+              value={formatCurrencyBRL(summary.overdue.amount)}
+              comparison={
+                <TrendComparison
+                  count={summary.overdue.count}
+                  changePercent={trend?.overdue ?? null}
+                />
+              }
+              icon={AlertTriangle}
+              iconTone="red"
+              compact
+              onClick={filterByOverdue}
+              active={isOverdueActive}
+              emphasized={summary.overdue.count > 0}
+            />
+          </div>
+          <div className="w-[150px] shrink-0 lg:contents">
+            <KpiCard
+              label="Pagas"
+              value={formatCurrencyBRL(summary.paid.amount)}
+              comparison={
+                <div className="space-y-0.5">
+                  <TrendComparison
+                    count={summary.paid.count}
+                    countLabel={formatCardSubtitle(summary.paid.count, "pagas")}
+                    changePercent={trend?.paid ?? null}
+                  />
+                  {paidPercentOfPeriod !== null && (
+                    <p>{paidPercentOfPeriod.toFixed(0)}% do período</p>
+                  )}
+                </div>
+              }
+              icon={CheckCircle2}
+              iconTone="violet"
+              compact
+              onClick={filterByPaid}
+              active={isPaidActive}
+            />
+          </div>
         </div>
       )}
 
-      <div className="flex flex-col flex-wrap gap-2 lg:flex-row lg:items-center">
-        <div className="relative w-full lg:w-[220px]">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <Input
-            placeholder="Buscar contas..."
-            className="h-8 pl-9"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-
-        <PeriodSelector
-          variant="select"
-          size="sm"
-          preset={periodPreset}
-          custom={periodCustom}
-          onChange={(preset, custom) => {
-            setPeriodPreset(preset);
-            setPeriodCustom(custom);
-          }}
-        />
-
-        <Select
-          value={status}
-          onValueChange={(value) => setStatus(value as StatusFilter)}
-        >
-          <SelectTrigger size="sm" className="w-full lg:w-[130px]">
-            <SelectValue>
-              {status === "ALL" ? "Status" : STATUS_FILTER_LABEL[status]}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todos os status</SelectItem>
-            <SelectItem value="PENDING">Pendentes</SelectItem>
-            <SelectItem value="OVERDUE">Vencidas</SelectItem>
-            <SelectItem value="PAID">Pagas</SelectItem>
-            <SelectItem value="CANCELLED">Canceladas</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={categoryId ?? "ALL"}
-          onValueChange={(value) =>
-            setCategoryId(value === "ALL" ? undefined : value)
-          }
-        >
-          <SelectTrigger size="sm" className="w-full lg:w-[150px]">
-            <SelectValue>
-              {categoryId ? (categoryName ?? "—") : "Categorias"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todas as categorias</SelectItem>
-            {categories?.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={recurringOnly ?? "ALL"}
-          onValueChange={(value) =>
-            setRecurringOnly(
-              value === "ALL"
-                ? undefined
-                : (value as "RECURRING" | "NON_RECURRING"),
-            )
-          }
-        >
-          <SelectTrigger size="sm" className="w-full lg:w-[150px]">
-            <SelectValue>
-              {recurringOnly === "RECURRING"
-                ? "Apenas recorrentes"
-                : recurringOnly === "NON_RECURRING"
-                  ? "Apenas não recorrentes"
-                  : "Recorrências"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todas as recorrências</SelectItem>
-            <SelectItem value="RECURRING">Apenas recorrentes</SelectItem>
-            <SelectItem value="NON_RECURRING">
-              Apenas não recorrentes
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={supplierId ?? "ALL"}
-          onValueChange={(value) =>
-            setSupplierId(value === "ALL" ? undefined : value)
-          }
-        >
-          <SelectTrigger size="sm" className="w-full lg:w-[150px]">
-            <SelectValue>
-              {supplierId ? (supplierName ?? "—") : "Beneficiários"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Todos os beneficiários</SelectItem>
-            {suppliers?.map((supplier) => (
-              <SelectItem key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              <Columns3 className="h-4 w-4" />
-              Colunas
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-56 space-y-2">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={visibleColumns.category}
-                onCheckedChange={(checked) =>
-                  setVisibleColumns((prev) => ({
-                    ...prev,
-                    category: checked === true,
-                  }))
-                }
-              />
-              Categoria
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={visibleColumns.recurring}
-                onCheckedChange={(checked) =>
-                  setVisibleColumns((prev) => ({
-                    ...prev,
-                    recurring: checked === true,
-                  }))
-                }
-              />
-              Recorrência
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={visibleColumns.confirmedBy}
-                onCheckedChange={(checked) =>
-                  setVisibleColumns((prev) => ({
-                    ...prev,
-                    confirmedBy: checked === true,
-                  }))
-                }
-              />
-              Confirmado por
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={visibleColumns.attachments}
-                onCheckedChange={(checked) =>
-                  setVisibleColumns((prev) => ({
-                    ...prev,
-                    attachments: checked === true,
-                  }))
-                }
-              />
-              Documentos
-            </label>
-          </PopoverContent>
-        </Popover>
-
-        {canCreate && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={openCreate}
-            className="lg:ml-auto"
+      {isMobile ? (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Input
+              placeholder="Buscar contas..."
+              className="h-9 pl-9"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+          <MobileFilterSheet
+            activeCount={activeFilterCount}
+            onClear={clearFilters}
           >
-            <Plus className="h-4 w-4" />
-            Nova Conta
-          </Button>
-        )}
-      </div>
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+                Período
+              </p>
+              <PeriodSelector
+                variant="segmented"
+                preset={periodPreset}
+                custom={periodCustom}
+                onChange={(preset, custom) => {
+                  setPeriodPreset(preset);
+                  setPeriodCustom(custom);
+                }}
+              />
+            </div>
+            <FilterChipGroup
+              label="Status"
+              value={status === "ALL" ? undefined : status}
+              onChange={(value) => setStatus(value ?? "ALL")}
+              allLabel="Todos"
+              options={[
+                { value: "PENDING", label: "Pendentes" },
+                { value: "OVERDUE", label: "Vencidas" },
+                { value: "PAID", label: "Pagas" },
+                { value: "CANCELLED", label: "Canceladas" },
+              ]}
+            />
+            <FilterChipGroup
+              label="Categorias"
+              value={categoryId}
+              onChange={setCategoryId}
+              allLabel="Todas"
+              options={
+                categories?.map((category) => ({
+                  value: category.id,
+                  label: category.name,
+                })) ?? []
+              }
+            />
+            <FilterChipGroup
+              label="Recorrências"
+              value={recurringOnly}
+              onChange={setRecurringOnly}
+              allLabel="Todas"
+              options={[
+                { value: "RECURRING", label: "Recorrentes" },
+                { value: "NON_RECURRING", label: "Não recorrentes" },
+              ]}
+            />
+            <FilterChipGroup
+              label="Beneficiários"
+              value={supplierId}
+              onChange={setSupplierId}
+              allLabel="Todos"
+              options={
+                suppliers?.map((supplier) => ({
+                  value: supplier.id,
+                  label: supplier.name,
+                })) ?? []
+              }
+            />
+          </MobileFilterSheet>
+        </div>
+      ) : (
+        <div className="flex flex-col flex-wrap gap-2 lg:flex-row lg:items-center">
+          <div className="relative w-full lg:w-[220px]">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Input
+              placeholder="Buscar contas..."
+              className="h-8 pl-9"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+
+          <PeriodSelector
+            variant="select"
+            size="sm"
+            preset={periodPreset}
+            custom={periodCustom}
+            onChange={(preset, custom) => {
+              setPeriodPreset(preset);
+              setPeriodCustom(custom);
+            }}
+          />
+
+          <Select
+            value={status}
+            onValueChange={(value) => setStatus(value as StatusFilter)}
+          >
+            <SelectTrigger size="sm" className="w-full lg:w-[130px]">
+              <SelectValue>
+                {status === "ALL" ? "Status" : STATUS_FILTER_LABEL[status]}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos os status</SelectItem>
+              <SelectItem value="PENDING">Pendentes</SelectItem>
+              <SelectItem value="OVERDUE">Vencidas</SelectItem>
+              <SelectItem value="PAID">Pagas</SelectItem>
+              <SelectItem value="CANCELLED">Canceladas</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={categoryId ?? "ALL"}
+            onValueChange={(value) =>
+              setCategoryId(value === "ALL" ? undefined : value)
+            }
+          >
+            <SelectTrigger size="sm" className="w-full lg:w-[150px]">
+              <SelectValue>
+                {categoryId ? (categoryName ?? "—") : "Categorias"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todas as categorias</SelectItem>
+              {categories?.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={recurringOnly ?? "ALL"}
+            onValueChange={(value) =>
+              setRecurringOnly(
+                value === "ALL"
+                  ? undefined
+                  : (value as "RECURRING" | "NON_RECURRING"),
+              )
+            }
+          >
+            <SelectTrigger size="sm" className="w-full lg:w-[150px]">
+              <SelectValue>
+                {recurringOnly === "RECURRING"
+                  ? "Apenas recorrentes"
+                  : recurringOnly === "NON_RECURRING"
+                    ? "Apenas não recorrentes"
+                    : "Recorrências"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todas as recorrências</SelectItem>
+              <SelectItem value="RECURRING">Apenas recorrentes</SelectItem>
+              <SelectItem value="NON_RECURRING">
+                Apenas não recorrentes
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={supplierId ?? "ALL"}
+            onValueChange={(value) =>
+              setSupplierId(value === "ALL" ? undefined : value)
+            }
+          >
+            <SelectTrigger size="sm" className="w-full lg:w-[150px]">
+              <SelectValue>
+                {supplierId ? (supplierName ?? "—") : "Beneficiários"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos os beneficiários</SelectItem>
+              {suppliers?.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                <Columns3 className="h-4 w-4" />
+                Colunas
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-56 space-y-2">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visibleColumns.category}
+                  onCheckedChange={(checked) =>
+                    setVisibleColumns((prev) => ({
+                      ...prev,
+                      category: checked === true,
+                    }))
+                  }
+                />
+                Categoria
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visibleColumns.recurring}
+                  onCheckedChange={(checked) =>
+                    setVisibleColumns((prev) => ({
+                      ...prev,
+                      recurring: checked === true,
+                    }))
+                  }
+                />
+                Recorrência
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visibleColumns.confirmedBy}
+                  onCheckedChange={(checked) =>
+                    setVisibleColumns((prev) => ({
+                      ...prev,
+                      confirmedBy: checked === true,
+                    }))
+                  }
+                />
+                Confirmado por
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={visibleColumns.attachments}
+                  onCheckedChange={(checked) =>
+                    setVisibleColumns((prev) => ({
+                      ...prev,
+                      attachments: checked === true,
+                    }))
+                  }
+                />
+                Documentos
+              </label>
+            </PopoverContent>
+          </Popover>
+
+          {canCreate && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={openCreate}
+              className="lg:ml-auto"
+            >
+              <Plus className="h-4 w-4" />
+              Nova Conta
+            </Button>
+          )}
+        </div>
+      )}
 
       {hasNonDefaultFilters && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -579,8 +685,8 @@ export function AccountsPayableScreen({
         </div>
       )}
 
-      <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
-        <AccountsPayableTable
+      {isMobile ? (
+        <AccountsPayableCards
           canPay={canPay}
           canCreate={canCreate}
           canDelete={canDelete}
@@ -591,13 +697,44 @@ export function AccountsPayableScreen({
           search={debouncedSearch.trim() || undefined}
           dueDateFrom={range.from}
           dueDateTo={range.to}
-          visibleColumns={visibleColumns}
           onView={handleView}
           onEdit={setEditing}
           onDuplicate={handleDuplicate}
           onCreateNew={openCreate}
         />
-      </div>
+      ) : (
+        <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
+          <AccountsPayableTable
+            canPay={canPay}
+            canCreate={canCreate}
+            canDelete={canDelete}
+            status={status}
+            categoryId={categoryId}
+            supplierId={supplierId}
+            recurringOnly={recurringOnly}
+            search={debouncedSearch.trim() || undefined}
+            dueDateFrom={range.from}
+            dueDateTo={range.to}
+            visibleColumns={visibleColumns}
+            onView={handleView}
+            onEdit={setEditing}
+            onDuplicate={handleDuplicate}
+            onCreateNew={openCreate}
+          />
+        </div>
+      )}
+
+      {isMobile && canCreate && (
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-5 bottom-5 z-20 h-14 w-14 rounded-full shadow-lg"
+          onClick={openCreate}
+        >
+          <Plus className="h-6 w-6" />
+          <span className="sr-only">Nova Conta</span>
+        </Button>
+      )}
 
       <AccountsPayableFormDialog
         open={createOpen}
