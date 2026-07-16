@@ -8,21 +8,17 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Copy,
   Eye,
-  MoreHorizontal,
   Paperclip,
-  Pencil,
   Receipt,
   Repeat,
-  Trash2,
-  XCircle,
 } from "lucide-react";
 import { useAccountsPayable } from "./use-accounts-payable";
 import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
 import { AccountsPayableRecurrenceScopeDialog } from "./accounts-payable-recurrence-scope-dialog";
 import { DeleteAccountsPayableDialog } from "./delete-accounts-payable-dialog";
+import { AccountsPayableRowMenu } from "./accounts-payable-row-menu";
 import {
   CATEGORY_COLOR_OVERRIDES,
   STATUS_META,
@@ -53,12 +49,6 @@ import {
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -425,11 +415,12 @@ export function AccountsPayableTable({
                   // pontual) ou (b) conta PENDENTE que pertence a uma
                   // recorrência (único jeito de "encerrar recorrência").
                   // Conta pendente avulsa usa Excluir, não Cancelar.
-                  const canCancelThis =
+                  const canCancelThis = Boolean(
                     canPay &&
                     ((payable.status === "PENDING" &&
                       payable.recurringBillId) ||
-                      payable.status === "PAID");
+                      payable.status === "PAID"),
+                  );
 
                   return (
                     <TableRow
@@ -626,106 +617,20 @@ export function AccountsPayableTable({
                               Ver
                             </Button>
                           )}
-                          {payable.status === "PAID" && canCancelThis && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Mais ações</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => onView(payable)}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  Visualizar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  onClick={() =>
-                                    setCancelPaymentTarget(payable)
-                                  }
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Cancelar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                          {(payable.status === "CANCELLED" ||
-                            (payable.status === "PAID" && !canCancelThis)) && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Mais ações</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => onView(payable)}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  Visualizar
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                          {payable.status === "PENDING" && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Mais ações</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => onView(payable)}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                  Visualizar
-                                </DropdownMenuItem>
-                                {canCreate && (
-                                  <DropdownMenuItem
-                                    onClick={() => onEdit(payable)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                    Editar
-                                  </DropdownMenuItem>
-                                )}
-                                {canCreate && (
-                                  <DropdownMenuItem
-                                    onClick={() => onDuplicate(payable)}
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                    Duplicar
-                                  </DropdownMenuItem>
-                                )}
-                                {canCancelThis && payable.recurringBillId && (
-                                  <DropdownMenuItem
-                                    variant="destructive"
-                                    onClick={() =>
-                                      setCancelScopeTarget(payable)
-                                    }
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                    Cancelar
-                                  </DropdownMenuItem>
-                                )}
-                                {canDelete && (
-                                  <DropdownMenuItem
-                                    variant="destructive"
-                                    onClick={() => setDeletingTarget(payable)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    Excluir
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                          <AccountsPayableRowMenu
+                            payable={payable}
+                            canCreate={canCreate}
+                            canDelete={canDelete}
+                            canCancelThis={canCancelThis}
+                            onView={() => onView(payable)}
+                            onEdit={() => onEdit(payable)}
+                            onDuplicate={() => onDuplicate(payable)}
+                            onCancelScope={() => setCancelScopeTarget(payable)}
+                            onCancelPayment={() =>
+                              setCancelPaymentTarget(payable)
+                            }
+                            onDelete={() => setDeletingTarget(payable)}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
