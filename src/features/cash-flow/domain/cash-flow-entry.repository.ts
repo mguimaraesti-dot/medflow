@@ -42,6 +42,17 @@ export interface CashFlowEntryCofreReportRow {
   paymentMethodIsCash: boolean;
 }
 
+/** Projeção usada pelo Relatório de Recebimentos — detalhe lançamento a lançamento, já com o nome/isCash da forma de pagamento via join. */
+export interface CashFlowEntryReceiptRow {
+  id: string;
+  occurredAt: Date;
+  categoryId: string;
+  patientName: string | null;
+  amount: Prisma.Decimal;
+  paymentMethodName: string;
+  paymentMethodIsCash: boolean;
+}
+
 /** Projeção usada pelos insights (origem das receitas por categoria + por hora). */
 export interface CashFlowEntryInsightProjection {
   type: CashFlowEntryType;
@@ -98,4 +109,16 @@ export interface CashFlowEntryRepository {
     from: Date,
     to: Date,
   ): Promise<CashFlowEntryCofreReportRow[]>;
+
+  /**
+   * Lançamentos de ENTRADA (recebimentos) do período, em ordem
+   * cronológica, para o Relatório de Recebimentos. Exclui estornados
+   * (`isReversed: true`) — o `type: "IN"` já exclui naturalmente o
+   * lançamento de estorno em si (que é sempre `OUT`, ver `reverse()`).
+   */
+  listReceiptsForReport(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<CashFlowEntryReceiptRow[]>;
 }

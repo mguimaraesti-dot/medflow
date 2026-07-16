@@ -9,6 +9,7 @@ import type {
   CashFlowEntrySums,
   CashFlowEntryCofreReportRow,
   CashFlowEntryInsightProjection,
+  CashFlowEntryReceiptRow,
 } from "../domain/cash-flow-entry.repository";
 import type { CashFlowEntry } from "../domain/cash-flow-entry.entity";
 
@@ -230,6 +231,40 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
       type: row.type,
       amount: row.amount,
       categoryId: row.categoryId,
+      paymentMethodIsCash: row.paymentMethod.isCash,
+    }));
+  }
+
+  async listReceiptsForReport(
+    organizationId: string,
+    from: Date,
+    to: Date,
+  ): Promise<CashFlowEntryReceiptRow[]> {
+    const rows = await prisma.cashFlowEntry.findMany({
+      where: {
+        organizationId,
+        type: "IN",
+        isReversed: false,
+        occurredAt: { gte: from, lte: to },
+      },
+      select: {
+        id: true,
+        occurredAt: true,
+        categoryId: true,
+        patientName: true,
+        amount: true,
+        paymentMethod: { select: { name: true, isCash: true } },
+      },
+      orderBy: { occurredAt: "asc" },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      occurredAt: row.occurredAt,
+      categoryId: row.categoryId,
+      patientName: row.patientName,
+      amount: row.amount,
+      paymentMethodName: row.paymentMethod.name,
       paymentMethodIsCash: row.paymentMethod.isCash,
     }));
   }
