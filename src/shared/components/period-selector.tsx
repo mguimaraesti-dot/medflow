@@ -16,6 +16,7 @@ import {
 } from "@/shared/ui/select";
 import { formatDateOnlyBR } from "@/shared/lib/format";
 import { startOfDayInTz } from "@/shared/lib/business-day";
+import { cn } from "@/shared/lib/utils";
 
 export type PeriodPreset =
   "TODAY" | "WEEK" | "MONTH" | "NEXT_MONTH" | "YEAR" | "CUSTOM";
@@ -92,7 +93,7 @@ export function computePeriodRange(
   return custom ?? { from: today, to: endOfDayLabel(today) };
 }
 
-const PERIOD_PRESET_OPTIONS = [
+export const PERIOD_PRESET_OPTIONS = [
   { value: "TODAY" as const, label: "Hoje" },
   { value: "WEEK" as const, label: "Esta Semana" },
   { value: "MONTH" as const, label: "Este Mês" },
@@ -111,8 +112,19 @@ export function PeriodSelector({
   preset: PeriodPreset;
   custom?: PeriodRange;
   onChange: (preset: PeriodPreset, custom?: PeriodRange) => void;
-  /** "select" é um único dropdown (usado em telas que precisam de cabeçalho mais enxuto); "segmented" (default) preserva o comportamento original de botões. */
-  variant?: "segmented" | "select";
+  /**
+   * "select" é um único dropdown (usado em telas que precisam de
+   * cabeçalho mais enxuto); "segmented" (default) preserva o
+   * comportamento original de botões. "chips" é como "segmented", mas
+   * cada opção é um botão independente (sem o indicador deslizante do
+   * `SegmentedControl`) — usado em containers estreitos (ex: o painel de
+   * filtros mobile), onde o indicador do `SegmentedControl` desalinha:
+   * ele divide a largura em fatias iguais (`100 / options.length`), mas
+   * rótulos longos como "Personalizado" não cabem na fatia e forçam o
+   * botão a ficar mais largo que ela, fazendo o retângulo colorido
+   * "andar" pra longe do texto selecionado.
+   */
+  variant?: "segmented" | "select" | "chips";
   /** Só se aplica à variante "select" — alinha a altura com os demais filtros de uma toolbar (ex: Contas a Pagar). */
   size?: "sm" | "default";
 }) {
@@ -208,6 +220,31 @@ export function PeriodSelector({
             ))}
           </SelectContent>
         </Select>
+        {customRangeControl}
+      </div>
+    );
+  }
+
+  if (variant === "chips") {
+    return (
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {PERIOD_PRESET_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => handlePresetChange(option.value)}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-sm transition-colors",
+                preset === option.value
+                  ? "border-primary bg-primary text-primary-foreground font-medium"
+                  : "border-border bg-muted/40 text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         {customRangeControl}
       </div>
     );
