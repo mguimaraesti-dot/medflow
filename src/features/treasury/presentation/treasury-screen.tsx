@@ -183,9 +183,9 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
             : "flex flex-col gap-3 sm:flex-row"
         }
       >
-        {canReceive && <SangriaDialog />}
-        {canManualAdjustment && <WithdrawalDialog />}
-        {canManualAdjustment && <ManualAdjustmentDialog />}
+        {canReceive && <SangriaDialog compact={isMobile} />}
+        {canManualAdjustment && <WithdrawalDialog compact={isMobile} />}
+        {canManualAdjustment && <ManualAdjustmentDialog compact={isMobile} />}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">

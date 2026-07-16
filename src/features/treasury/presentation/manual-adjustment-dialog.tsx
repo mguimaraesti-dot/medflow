@@ -5,6 +5,7 @@ import { Settings2 } from "lucide-react";
 import { useManualAdjustment } from "./use-manual-adjustment";
 import { ApiError } from "@/shared/lib/api-client";
 import { CurrencyInput } from "@/shared/components/currency-input";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
@@ -35,7 +36,9 @@ type Direction = "ADD" | "REMOVE";
  * `CurrencyInput`) + uma direção, e monta o valor com sinal antes de
  * enviar — evita criar um input monetário novo que aceite negativos.
  */
-export function ManualAdjustmentDialog() {
+export function ManualAdjustmentDialog({
+  compact,
+}: { compact?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number>(0);
   const [direction, setDirection] = useState<Direction>("ADD");
@@ -83,10 +86,13 @@ export function ManualAdjustmentDialog() {
         <Button
           type="button"
           variant="outline"
-          className="h-10 flex-1 border-blue-600/40 text-blue-600 hover:bg-blue-600/10 hover:text-blue-600 sm:flex-none dark:text-blue-500"
+          className={cn(
+            "h-10 flex-1 border-blue-600/40 text-blue-600 hover:bg-blue-600/10 hover:text-blue-600 sm:flex-none dark:text-blue-500",
+            compact && "gap-1.5 px-2",
+          )}
         >
           <Settings2 className="h-4 w-4" />
-          Ajuste de Saldo
+          {compact ? "Ajuste" : "Ajuste de Saldo"}
         </Button>
       </DialogTrigger>
       <DialogContent>

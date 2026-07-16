@@ -11,6 +11,7 @@ import {
 import { useRequestSangria } from "./use-request-sangria";
 import { ApiError } from "@/shared/lib/api-client";
 import { CurrencyInput } from "@/shared/components/currency-input";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
@@ -31,7 +32,7 @@ import { toast } from "sonner";
  * técnico na interface (Refinamento UX/UI Tesouraria). Continua exigindo
  * um caixa aberto no momento.
  */
-export function SangriaDialog() {
+export function SangriaDialog({ compact }: { compact?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const requestSangria = useRequestSangria();
@@ -74,10 +75,15 @@ export function SangriaDialog() {
         <Button
           type="button"
           variant="outline"
-          className="h-10 flex-1 border-green-600/40 text-green-600 hover:bg-green-600/10 hover:text-green-600 sm:flex-none dark:text-green-500"
+          className={cn(
+            "h-10 flex-1 border-green-600/40 text-green-600 hover:bg-green-600/10 hover:text-green-600 sm:flex-none dark:text-green-500",
+            // Compacto: gap e padding menores dão folga extra pro rótulo
+            // curto não cortar em telas de ~360px (grade de 3 colunas).
+            compact && "gap-1.5 px-2",
+          )}
         >
           <ArrowDownCircle className="h-4 w-4" />
-          Receber do Caixa
+          {compact ? "Receber" : "Receber do Caixa"}
         </Button>
       </DialogTrigger>
       <DialogContent>
