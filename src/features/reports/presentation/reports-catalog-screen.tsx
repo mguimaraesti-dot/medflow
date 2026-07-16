@@ -15,7 +15,7 @@ interface ReportCatalogItem {
 const REPORTS: ReportCatalogItem[] = [
   {
     href: "/reports/status-report-contas-pagas",
-    title: "Status Report: Contas Pagas",
+    title: "Relatório de Contas Pagas",
     description:
       "Contas pagas do período — origem, categorias, beneficiários e semanas em imagem.",
     icon: Receipt,

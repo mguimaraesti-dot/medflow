@@ -33,7 +33,7 @@ export function StatusReportContasPagasScreen() {
         dateFrom: range.from,
         dateTo: range.to,
       });
-      toast.success("Status Report: Contas Pagas enviado por WhatsApp.");
+      toast.success("Relatório de Contas Pagas enviado por WhatsApp.");
     } catch (error) {
       const message =
         error instanceof ApiError
@@ -54,7 +54,7 @@ export function StatusReportContasPagasScreen() {
           Relatórios
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Status Report: Contas Pagas
+          Relatório de Contas Pagas
         </h1>
         <p className="text-muted-foreground text-sm">
           Resumo de contas pagas do período em imagem, pronto pra baixar ou
@@ -64,7 +64,7 @@ export function StatusReportContasPagasScreen() {
 
       <Card>
         <CardHeader className="flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Status Report: Contas Pagas</CardTitle>
+          <CardTitle>Relatório de Contas Pagas</CardTitle>
           <PeriodSelector
             variant="select"
             size="sm"
@@ -82,7 +82,7 @@ export function StatusReportContasPagasScreen() {
             <Image
               key={imageKey}
               src={imageUrl}
-              alt="Status Report: Contas Pagas"
+              alt="Relatório de Contas Pagas"
               width={1080}
               height={1920}
               unoptimized

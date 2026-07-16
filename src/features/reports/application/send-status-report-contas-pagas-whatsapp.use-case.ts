@@ -50,7 +50,7 @@ export async function sendStatusReportContasPagasWhatsAppUseCase(
     await sendImageMessage({
       phone: settings.whatsapp,
       image: base64Image,
-      caption: `Status Report: Contas Pagas — ${formatDateOnlyBR(dateFrom)} a ${formatDateOnlyBR(dateTo)}`,
+      caption: `Relatório de Contas Pagas — ${formatDateOnlyBR(dateFrom)} a ${formatDateOnlyBR(dateTo)}`,
     });
   } catch (error) {
     logger.error("Falha ao enviar Status Report: Contas Pagas por WhatsApp", {

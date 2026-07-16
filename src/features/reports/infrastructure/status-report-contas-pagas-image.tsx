@@ -706,10 +706,7 @@ export async function renderStatusReportContasPagasImage(
               color: BLUE,
             }}
           >
-            STATUS REPORT
-          </div>
-          <div style={{ display: "flex", fontSize: 24, fontWeight: 700 }}>
-            Contas Pagas
+            RELATÓRIO DE CONTAS PAGAS
           </div>
           <div style={{ display: "flex", fontSize: 16, color: MUTED_TEXT }}>
             Período: {formatDateOnlyBR(input.dateFrom)} até{" "}

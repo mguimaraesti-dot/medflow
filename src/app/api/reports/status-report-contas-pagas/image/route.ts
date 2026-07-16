@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const user = await requirePermission(PERMISSIONS.DASHBOARD_READ);
     if (!user.organizationId) {
       throw new ForbiddenError(
-        "gerar Status Report: Contas Pagas sem organização vinculada",
+        "gerar Relatório de Contas Pagas sem organização vinculada",
       );
     }
 
