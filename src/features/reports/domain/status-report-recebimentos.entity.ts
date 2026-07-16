@@ -46,6 +46,13 @@ export interface StatusReportRecebimentosSummary {
 
   totalFrascos: number;
 
+  /**
+   * Truncado em `MAX_DISPLAYED_ENTRIES` (ver use case) — pode ter menos
+   * itens que `totalCount` num período com muitos lançamentos. Todos
+   * os totais/KPIs/frascos acima já somam o período INTEIRO, mesmo
+   * quando esta lista é truncada; a imagem deve mostrar um aviso
+   * "mostrando N de totalCount" quando `entries.length < totalCount`.
+   */
   entries: StatusReportRecebimentosEntry[];
   kitRows: StatusReportRecebimentosKitRow[];
 }

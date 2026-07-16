@@ -234,6 +234,24 @@ describe("getStatusReportRecebimentosUseCase", () => {
     expect(result.totalCount).toBe(4);
   });
 
+  it("trunca a lista exibida em 100 lançamentos, mas totais/contagens somam TODOS os 120", async () => {
+    const rows = Array.from({ length: 120 }, (_, index) =>
+      row({ id: `e${index}`, amount: new Prisma.Decimal("10.00") }),
+    );
+    const deps = buildDeps(rows);
+
+    const result = await getStatusReportRecebimentosUseCase(
+      "org-1",
+      DATE_FROM,
+      DATE_TO,
+      deps,
+    );
+
+    expect(result.entries).toHaveLength(100);
+    expect(result.totalCount).toBe(120);
+    expect(result.totalAmount).toBe("1200.00");
+  });
+
   it("usa patientName '—' quando ausente", async () => {
     const deps = buildDeps([row({ id: "e1", patientName: null })]);
 
