@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Receipt, Vault, type LucideIcon } from "lucide-react";
+import { FileText, Receipt, Vault, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/shared/ui/card";
 
 interface ReportCatalogItem {
@@ -26,6 +26,13 @@ const REPORTS: ReportCatalogItem[] = [
     description:
       "Saldo do caixa recepção do período — entradas em dinheiro/PIX e saídas, em imagem.",
     icon: Vault,
+  },
+  {
+    href: "/reports/status-report-recebimentos",
+    title: "Relatório de Recebimentos",
+    description:
+      "Conferência lançamento a lançamento das entradas do período, com paciente e frascos, em PDF.",
+    icon: FileText,
   },
 ];
 
