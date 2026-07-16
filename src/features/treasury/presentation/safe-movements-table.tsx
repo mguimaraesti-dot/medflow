@@ -68,8 +68,159 @@ export function SafeMovementsTable({
     pageSize: 12,
   });
 
+  const { data: pendingData } = useSafeMovements({
+    status: "PENDING",
+    page: 1,
+    pageSize: 200,
+  });
+  const alwaysPendingIds = new Set(
+    (pendingData?.items ?? []).map((movement) => movement.id),
+  );
+  const visibleItems = (data?.items ?? []).filter(
+    (movement) => !alwaysPendingIds.has(movement.id),
+  );
+
+  const columns = (
+    <TableRow className="hover:bg-transparent">
+      <TableHead>Data/Hora</TableHead>
+      <TableHead>Origem</TableHead>
+      <TableHead>Tipo</TableHead>
+      <TableHead>Categoria</TableHead>
+      <TableHead>Descrição</TableHead>
+      <TableHead className="text-right">Valor</TableHead>
+      <TableHead>Status</TableHead>
+      <TableHead>Responsável</TableHead>
+      {canConfirm && <TableHead className="text-right">Ações</TableHead>}
+    </TableRow>
+  );
+
+  function renderRow(movement: SafeMovementResponseDTO) {
+    const isIn = isMovementIn(movement);
+    const direction = movementDirection(movement);
+
+    return (
+      <TableRow
+        key={movement.id}
+        className="hover:bg-muted/50 cursor-pointer transition-shadow hover:shadow-[inset_3px_0_0_0_var(--primary)]"
+        onClick={() => setSelected(movement)}
+      >
+        <TableCell className="text-muted-foreground">
+          {formatDateTimeBR(movement.createdAt)}
+        </TableCell>
+        <TableCell className="text-muted-foreground">
+          {originLabel(movement)}
+        </TableCell>
+        <TableCell>
+          <Badge
+            variant="outline"
+            className={cn(
+              direction === "IN" &&
+                "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-500",
+              direction === "OUT" &&
+                "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+              direction === "ADJUSTMENT" &&
+                "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+            )}
+          >
+            {direction === "IN"
+              ? "Entrada"
+              : direction === "OUT"
+                ? "Saída"
+                : "Ajuste"}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-muted-foreground">
+          {categoryLabel(movement)}
+        </TableCell>
+        <TableCell className="text-muted-foreground max-w-[220px]">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="cursor-help truncate">
+                {describeMovement(movement)}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              {describeMovement(movement)}
+            </TooltipContent>
+          </Tooltip>
+        </TableCell>
+        <TableCell
+          className={
+            "text-right font-medium tabular-nums " +
+            (isIn ? "text-success" : "text-destructive")
+          }
+        >
+          {isIn ? "+" : "-"}
+          {formatCurrencyBRL(movement.amount.replace("-", ""))}
+        </TableCell>
+        <TableCell>
+          <Badge
+            variant="outline"
+            className={STATUS_BADGE_CLASSES[movement.status]}
+          >
+            {statusLabel(movement.status)}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help">
+                {firstName(movement.performedByUserName)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{movement.performedByUserName}</TooltipContent>
+          </Tooltip>
+        </TableCell>
+        {canConfirm && (
+          <TableCell
+            className="text-right"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {movement.status === "PENDING" && (
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfirmTarget(movement)}
+                >
+                  Confirmar
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setCancelTarget(movement)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </TableCell>
+        )}
+      </TableRow>
+    );
+  }
+
   return (
     <>
+      {pendingData && pendingData.items.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <h3 className="text-sm font-medium text-amber-700 dark:text-amber-500">
+            Aguardando confirmação ({pendingData.total})
+          </h3>
+          <div className="overflow-x-auto rounded-lg border border-amber-500/25">
+            <Table>
+              <TableHeader>{columns}</TableHeader>
+              <TableBody>
+                {pendingData.items.map((movement) => renderRow(movement))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
       {isLoading && (
         <div className="space-y-2">
           <Skeleton className="h-9 w-full" />
@@ -86,136 +237,13 @@ export function SafeMovementsTable({
         />
       )}
 
-      {!isLoading && data && data.items.length > 0 && (
+      {!isLoading && data && visibleItems.length > 0 && (
         <>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Data/Hora</TableHead>
-                  <TableHead>Origem</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  {canConfirm && (
-                    <TableHead className="text-right">Ações</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
+              <TableHeader>{columns}</TableHeader>
               <TableBody>
-                {data.items.map((movement) => {
-                  const isIn = isMovementIn(movement);
-                  const direction = movementDirection(movement);
-
-                  return (
-                    <TableRow
-                      key={movement.id}
-                      className="hover:bg-muted/50 cursor-pointer transition-shadow hover:shadow-[inset_3px_0_0_0_var(--primary)]"
-                      onClick={() => setSelected(movement)}
-                    >
-                      <TableCell className="text-muted-foreground">
-                        {formatDateTimeBR(movement.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {originLabel(movement)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            direction === "IN" &&
-                              "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-500",
-                            direction === "OUT" &&
-                              "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-                            direction === "ADJUSTMENT" &&
-                              "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-                          )}
-                        >
-                          {direction === "IN"
-                            ? "Entrada"
-                            : direction === "OUT"
-                              ? "Saída"
-                              : "Ajuste"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {categoryLabel(movement)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground max-w-[220px]">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <p className="cursor-help truncate">
-                              {describeMovement(movement)}
-                            </p>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            {describeMovement(movement)}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell
-                        className={
-                          "text-right font-medium tabular-nums " +
-                          (isIn ? "text-success" : "text-destructive")
-                        }
-                      >
-                        {isIn ? "+" : "-"}
-                        {formatCurrencyBRL(movement.amount.replace("-", ""))}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={STATUS_BADGE_CLASSES[movement.status]}
-                        >
-                          {statusLabel(movement.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help">
-                              {firstName(movement.performedByUserName)}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {movement.performedByUserName}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      {canConfirm && (
-                        <TableCell
-                          className="text-right"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {movement.status === "PENDING" && (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setConfirmTarget(movement)}
-                              >
-                                Confirmar
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => setCancelTarget(movement)}
-                              >
-                                Cancelar
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
+                {visibleItems.map((movement) => renderRow(movement))}
               </TableBody>
             </Table>
           </div>

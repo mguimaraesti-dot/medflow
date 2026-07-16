@@ -69,7 +69,7 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
   const canConfirm = can(PERMISSIONS.TREASURY_CONFIRM_MOVEMENT);
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
-  const [period, setPeriod] = useState<QuickPeriod>("30D");
+  const [period, setPeriod] = useState<QuickPeriod>("TODAY");
   const [selectedTypes, setSelectedTypes] = useState<SafeMovementType[]>([]);
   const [status, setStatus] = useState<SafeMovementStatus | undefined>();
   const [search, setSearch] = useState("");
@@ -99,7 +99,7 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
   }
 
   function clearFilters() {
-    setPeriod("30D");
+    setPeriod("TODAY");
     setSelectedTypes([]);
     setStatus(undefined);
     setSearch("");

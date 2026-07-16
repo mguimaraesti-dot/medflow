@@ -68,8 +68,115 @@ export function SafeMovementCards({
     pageSize: 20,
   });
 
+  /**
+   * Pendências aparecem sempre, fora do período filtrado (AJUSTE 2) —
+   * mesmo universo (organização inteira, status PENDING, sem outro
+   * filtro) do KPI "Pendentes de Confirmação" no cabeçalho, pra garantir
+   * que os dois números batam mesmo com tipo/status/busca aplicados na
+   * lista abaixo.
+   */
+  const { data: pendingData } = useSafeMovements({
+    status: "PENDING",
+    page: 1,
+    pageSize: 200,
+  });
+  const alwaysPendingIds = new Set(
+    (pendingData?.items ?? []).map((movement) => movement.id),
+  );
+  const visibleItems = (data?.items ?? []).filter(
+    (movement) => !alwaysPendingIds.has(movement.id),
+  );
+
+  function renderCard(movement: SafeMovementResponseDTO) {
+    const isIn = isMovementIn(movement);
+    const direction = movementDirection(movement);
+    const isPending = movement.status === "PENDING";
+
+    return (
+      <div
+        key={movement.id}
+        className={cn(
+          "bg-card cursor-pointer rounded-xl border p-3.5 shadow-sm",
+          DIRECTION_BORDER_CLASS[direction],
+          isPending && "border-amber-500/35 bg-amber-500/[0.06]",
+        )}
+        onClick={() => setSelected(movement)}
+      >
+        <div className="mb-1.5 flex items-start justify-between gap-2">
+          <p className="text-muted-foreground text-xs tabular-nums">
+            {formatDateTimeBR(movement.createdAt)}
+          </p>
+          <p
+            className={cn(
+              "text-[16.5px] font-semibold tabular-nums",
+              isIn ? "text-success" : "text-destructive",
+            )}
+          >
+            {isIn ? "+" : "-"}
+            {formatCurrencyBRL(movement.amount.replace("-", ""))}
+          </p>
+        </div>
+
+        <p className="mb-1 text-[15px] font-medium">
+          {describeMovement(movement)}
+        </p>
+
+        <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
+          <span>{originLabel(movement)}</span>
+          <span className="opacity-40">·</span>
+          <span>{categoryLabel(movement)}</span>
+          <span className="opacity-40">·</span>
+          <Badge
+            variant="outline"
+            className={STATUS_BADGE_CLASSES[movement.status]}
+          >
+            {statusLabel(movement.status)}
+          </Badge>
+          <span className="opacity-40">·</span>
+          <span>{movement.performedByUserName.split(" ")[0]}</span>
+        </div>
+
+        {canConfirm && isPending && (
+          <div
+            className="mt-3 flex gap-2"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={() => setConfirmTarget(movement)}
+            >
+              Confirmar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-destructive/45 text-destructive flex-1"
+              onClick={() => setCancelTarget(movement)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
+      {pendingData && pendingData.items.length > 0 && (
+        <div className="mb-4 space-y-2">
+          <h3 className="text-sm font-medium text-amber-700 dark:text-amber-500">
+            Aguardando confirmação ({pendingData.total})
+          </h3>
+          <div className="flex flex-col gap-2">
+            {pendingData.items.map((movement) => renderCard(movement))}
+          </div>
+        </div>
+      )}
+
       {isLoading && (
         <div className="space-y-2">
           <Skeleton className="h-24 w-full" />
@@ -86,85 +193,10 @@ export function SafeMovementCards({
         />
       )}
 
-      {!isLoading && data && data.items.length > 0 && (
+      {!isLoading && data && visibleItems.length > 0 && (
         <>
           <div className="flex flex-col gap-2">
-            {data.items.map((movement) => {
-              const isIn = isMovementIn(movement);
-              const direction = movementDirection(movement);
-              const isPending = movement.status === "PENDING";
-
-              return (
-                <div
-                  key={movement.id}
-                  className={cn(
-                    "bg-card cursor-pointer rounded-xl border p-3.5 shadow-sm",
-                    DIRECTION_BORDER_CLASS[direction],
-                    isPending && "border-amber-500/35 bg-amber-500/[0.06]",
-                  )}
-                  onClick={() => setSelected(movement)}
-                >
-                  <div className="mb-1.5 flex items-start justify-between gap-2">
-                    <p className="text-muted-foreground text-xs tabular-nums">
-                      {formatDateTimeBR(movement.createdAt)}
-                    </p>
-                    <p
-                      className={cn(
-                        "text-[16.5px] font-semibold tabular-nums",
-                        isIn ? "text-success" : "text-destructive",
-                      )}
-                    >
-                      {isIn ? "+" : "-"}
-                      {formatCurrencyBRL(movement.amount.replace("-", ""))}
-                    </p>
-                  </div>
-
-                  <p className="mb-1 text-[15px] font-medium">
-                    {describeMovement(movement)}
-                  </p>
-
-                  <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
-                    <span>{originLabel(movement)}</span>
-                    <span className="opacity-40">·</span>
-                    <span>{categoryLabel(movement)}</span>
-                    <span className="opacity-40">·</span>
-                    <Badge
-                      variant="outline"
-                      className={STATUS_BADGE_CLASSES[movement.status]}
-                    >
-                      {statusLabel(movement.status)}
-                    </Badge>
-                    <span className="opacity-40">·</span>
-                    <span>{movement.performedByUserName.split(" ")[0]}</span>
-                  </div>
-
-                  {canConfirm && isPending && (
-                    <div
-                      className="mt-3 flex gap-2"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                        onClick={() => setConfirmTarget(movement)}
-                      >
-                        Confirmar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="border-destructive/45 text-destructive flex-1"
-                        onClick={() => setCancelTarget(movement)}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {visibleItems.map((movement) => renderCard(movement))}
           </div>
 
           {data.totalPages > 1 && (
