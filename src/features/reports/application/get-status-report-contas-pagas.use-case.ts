@@ -16,7 +16,7 @@ interface Deps {
 }
 
 const TOP_CATEGORIES_LIMIT = 5;
-const TOP_BENEFICIARIES_LIMIT = 5;
+const TOP_BENEFICIARIES_LIMIT = 10;
 const OUTROS_COLOR = "#CBD5E1";
 
 /** Cores/rótulos já em uso no resto do app (Drawer de Contas a Pagar: 🟢 Cofre / 🏦 Banco) — reaproveitados aqui, não uma paleta nova. */

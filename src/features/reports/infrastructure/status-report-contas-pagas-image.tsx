@@ -16,6 +16,60 @@ import {
   loadOrganizationLogoDataUri,
 } from "./report-image-kit";
 
+const CANVAS_WIDTH = 1080;
+const MIN_CANVAS_HEIGHT = 1920;
+
+// Alturas aproximadas (px) de cada bloco de altura fixa do layout — mesma
+// lógica de `calculateImageHeight` em `status-report-cofre-image.tsx`:
+// medidas comparando o layout real, não precisam ser exatas, só
+// suficientes pra nunca subestimar (sobrar espaço em branco no rodapé é
+// preferível a cortar conteúdo, já que o `ImageResponse` do Satori
+// rasteriza um canvas de tamanho fixo e descarta o que passar).
+const HEADER_BLOCK_HEIGHT = 190; // logo/"Gerado em" + título/período
+const KPI_ROW_HEIGHT = 210;
+const ORIGIN_CARD_HEIGHT = 230;
+// Título + eixo de % + padding do card "Onde o dinheiro foi gasto" (linhas de categoria somadas à parte)
+const CATEGORIES_FIXED_HEIGHT = 100;
+const CATEGORY_ROW_HEIGHT = 34;
+// Título + padding do card "Top 10 Beneficiários" (linhas de beneficiário somadas à parte)
+const BENEFICIARIES_FIXED_HEIGHT = 70;
+const BENEFICIARY_ROW_HEIGHT = 64;
+// "Pagamentos por Semana" tem altura fixa — as colunas ficam lado a lado
+// (largura proporcional), não empilhadas, então o número de semanas no
+// período não muda a altura desse card.
+const WEEKS_CARD_HEIGHT = 235;
+const FOOTER_HEIGHT = 100;
+const OUTER_VERTICAL_PADDING = 48; // "24px 52px" no container raiz
+const OUTER_GAP = 14;
+const SECTION_COUNT = 7; // cabeçalho, KPIs, origem, categorias, beneficiários, semanas, rodapé
+const SAFETY_MARGIN = 150;
+
+/**
+ * Altura do canvas a partir do conteúdo real — soma os blocos de altura
+ * fixa ao número de linhas de categoria e de beneficiário (agora até 10,
+ * ver `TOP_BENEFICIARIES_LIMIT`) vezes a altura de uma linha de cada.
+ */
+function calculateImageHeight(input: StatusReportContasPagasSummary): number {
+  const fixedHeight =
+    OUTER_VERTICAL_PADDING +
+    OUTER_GAP * (SECTION_COUNT - 1) +
+    HEADER_BLOCK_HEIGHT +
+    KPI_ROW_HEIGHT +
+    ORIGIN_CARD_HEIGHT +
+    CATEGORIES_FIXED_HEIGHT +
+    BENEFICIARIES_FIXED_HEIGHT +
+    WEEKS_CARD_HEIGHT +
+    FOOTER_HEIGHT;
+
+  return Math.max(
+    MIN_CANVAS_HEIGHT,
+    fixedHeight +
+      input.categories.length * CATEGORY_ROW_HEIGHT +
+      input.topBeneficiaries.length * BENEFICIARY_ROW_HEIGHT +
+      SAFETY_MARGIN,
+  );
+}
+
 const PAGE_BG = "#F8FAFC";
 const CARD_BG = "#FFFFFF";
 
@@ -640,6 +694,7 @@ export async function renderStatusReportContasPagasImage(
   input: StatusReportContasPagasSummary,
 ): Promise<ArrayBuffer> {
   const logoDataUri = loadOrganizationLogoDataUri();
+  const canvasHeight = calculateImageHeight(input);
   const bancoOrigin = input.origins.find((o) => o.origin === "BANCO");
   const cofreOrigin = input.origins.find((o) => o.origin === "COFRE");
 
@@ -812,8 +867,8 @@ export async function renderStatusReportContasPagasImage(
         </div>
       </ChartCard>
 
-      {/* Top 5 Beneficiários */}
-      <ChartCard title="Top 5 Beneficiários" iconPath={ICON_PATHS.medal}>
+      {/* Top 10 Beneficiários */}
+      <ChartCard title="Top 10 Beneficiários" iconPath={ICON_PATHS.medal}>
         <div style={{ display: "flex", flexDirection: "column" }}>
           {input.topBeneficiaries.map((beneficiary, index) => (
             <BeneficiaryRow
@@ -868,7 +923,7 @@ export async function renderStatusReportContasPagasImage(
         </div>
       </div>
     </div>,
-    { width: 1080, height: 1920 },
+    { width: CANVAS_WIDTH, height: canvasHeight },
   );
 
   return image.arrayBuffer();

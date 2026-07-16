@@ -307,8 +307,8 @@ describe("getStatusReportContasPagasUseCase", () => {
     ]);
   });
 
-  it("limita Top 5 Beneficiários mesmo havendo mais de 5 fornecedores", async () => {
-    const rows = Array.from({ length: 7 }, (_, index) =>
+  it("limita Top 10 Beneficiários mesmo havendo mais de 10 fornecedores", async () => {
+    const rows = Array.from({ length: 12 }, (_, index) =>
       row({
         supplierId: `s${index}`,
         supplierName: `Fornecedor ${index}`,
@@ -324,7 +324,7 @@ describe("getStatusReportContasPagasUseCase", () => {
       deps,
     );
 
-    expect(result.topBeneficiaries).toHaveLength(5);
+    expect(result.topBeneficiaries).toHaveLength(10);
     expect(result.topBeneficiaries[0].supplierId).toBe("s0");
   });
 
