@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const user = await requirePermission(PERMISSIONS.DASHBOARD_READ);
     if (!user.organizationId) {
       throw new ForbiddenError(
-        "enviar Status Report: Contas Pagas sem organização vinculada",
+        "enviar Relatório de Contas Pagas sem organização vinculada",
       );
     }
 
