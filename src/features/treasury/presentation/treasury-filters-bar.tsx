@@ -29,7 +29,7 @@ function endOfDayLabel(date: Date): Date {
 
 export type QuickPeriod = "TODAY" | "YESTERDAY" | "7D" | "30D";
 
-const PERIOD_OPTIONS: { value: QuickPeriod; label: string }[] = [
+export const PERIOD_OPTIONS: { value: QuickPeriod; label: string }[] = [
   { value: "TODAY", label: "Hoje" },
   { value: "YESTERDAY", label: "Ontem" },
   { value: "7D", label: "7 dias" },
@@ -37,16 +37,17 @@ const PERIOD_OPTIONS: { value: QuickPeriod; label: string }[] = [
 ];
 
 /** Cada chip de Origem mapeia pra um subconjunto de `SafeMovementType` — clicar soma/remove esses tipos do filtro (união, nunca interseção). */
-const ORIGIN_OPTIONS: { label: string; types: SafeMovementType[] }[] = [
+export const ORIGIN_OPTIONS: { label: string; types: SafeMovementType[] }[] = [
   { label: "Recepção", types: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
   { label: "Contas a Pagar", types: ["ACCOUNTS_PAYABLE_PAYMENT"] },
   { label: "Ajustes", types: ["MANUAL_ADJUSTMENT"] },
 ];
 
-const DIRECTION_OPTIONS: { label: string; types: SafeMovementType[] }[] = [
-  { label: "Entradas", types: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
-  { label: "Saídas", types: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
-];
+export const DIRECTION_OPTIONS: { label: string; types: SafeMovementType[] }[] =
+  [
+    { label: "Entradas", types: ["SANGRIA", "CASH_REGISTER_HANDOFF"] },
+    { label: "Saídas", types: ["FUNDING", "ACCOUNTS_PAYABLE_PAYMENT"] },
+  ];
 
 function Chip({
   active,

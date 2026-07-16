@@ -209,7 +209,8 @@ export function FilterChipGroup<T extends string>({
   );
 }
 
-function FilterChip({
+/** Botão de chip individual — exportado pra telas que precisam de um grupo sem o "Todos" catch-all do `FilterChipGroup` (ex: Período, sempre com um valor selecionado). */
+export function FilterChip({
   selected,
   onClick,
   children,
