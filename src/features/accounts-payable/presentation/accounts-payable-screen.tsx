@@ -33,15 +33,18 @@ import { useCategories } from "@/features/categories/presentation/use-categories
 import {
   PeriodSelector,
   computePeriodRange,
+  PERIOD_PRESET_OPTIONS,
   type PeriodPreset,
   type PeriodRange,
 } from "@/shared/components/period-selector";
 import {
   MobileFilterSheet,
+  FilterAccordionGroup,
   FilterChipGroup,
+  FilterSearchList,
 } from "@/shared/components/mobile-filter-sheet";
 import { KpiCard } from "@/shared/components/kpi-card";
-import { formatCurrencyBRL } from "@/shared/lib/format";
+import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
@@ -192,6 +195,23 @@ export function AccountsPayableScreen({
 
   const supplierName = suppliers?.find((s) => s.id === supplierId)?.name;
   const categoryName = categories?.find((c) => c.id === categoryId)?.name;
+  // Resumo mostrado no cabeçalho de cada grupo recolhível do painel
+  // mobile — dá pra ler o estado inteiro dos filtros sem abrir nada.
+  const periodSummary =
+    periodPreset === "CUSTOM"
+      ? `${formatDateOnlyBR(range.from)} - ${formatDateOnlyBR(range.to)}`
+      : (PERIOD_PRESET_OPTIONS.find((option) => option.value === periodPreset)
+          ?.label ?? "Período");
+  const statusSummary =
+    status === "ALL" ? "Todos" : STATUS_FILTER_LABEL[status];
+  const categorySummary = categoryId ? (categoryName ?? "—") : "Todas";
+  const recurringSummary =
+    recurringOnly === "RECURRING"
+      ? "Recorrentes"
+      : recurringOnly === "NON_RECURRING"
+        ? "Não recorrentes"
+        : "Todas";
+  const supplierSummary = supplierId ? (supplierName ?? "—") : "Todos";
   const activeFilterCount = [
     status !== "ALL",
     Boolean(categoryId),
@@ -360,12 +380,14 @@ export function AccountsPayableScreen({
             activeCount={activeFilterCount}
             onClear={clearFilters}
           >
-            <div>
-              <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-                Período
-              </p>
+            <FilterAccordionGroup
+              groupKey="period"
+              label="Período"
+              summary={periodSummary}
+              isActive
+            >
               <PeriodSelector
-                variant="segmented"
+                variant="chips"
                 preset={periodPreset}
                 custom={periodCustom}
                 onChange={(preset, custom) => {
@@ -373,53 +395,81 @@ export function AccountsPayableScreen({
                   setPeriodCustom(custom);
                 }}
               />
-            </div>
-            <FilterChipGroup
+            </FilterAccordionGroup>
+            <FilterAccordionGroup
+              groupKey="status"
               label="Status"
-              value={status === "ALL" ? undefined : status}
-              onChange={(value) => setStatus(value ?? "ALL")}
-              allLabel="Todos"
-              options={[
-                { value: "PENDING", label: "Pendentes" },
-                { value: "OVERDUE", label: "Vencidas" },
-                { value: "PAID", label: "Pagas" },
-                { value: "CANCELLED", label: "Canceladas" },
-              ]}
-            />
-            <FilterChipGroup
+              summary={statusSummary}
+              isActive={status !== "ALL"}
+            >
+              <FilterChipGroup
+                value={status === "ALL" ? undefined : status}
+                onChange={(value) => setStatus(value ?? "ALL")}
+                allLabel="Todos"
+                options={[
+                  { value: "PENDING", label: "Pendentes" },
+                  { value: "OVERDUE", label: "Vencidas" },
+                  { value: "PAID", label: "Pagas" },
+                  { value: "CANCELLED", label: "Canceladas" },
+                ]}
+              />
+            </FilterAccordionGroup>
+            <FilterAccordionGroup
+              groupKey="category"
               label="Categorias"
-              value={categoryId}
-              onChange={setCategoryId}
-              allLabel="Todas"
-              options={
-                categories?.map((category) => ({
-                  value: category.id,
-                  label: category.name,
-                })) ?? []
-              }
-            />
-            <FilterChipGroup
+              summary={categorySummary}
+              isActive={Boolean(categoryId)}
+            >
+              <FilterSearchList
+                value={categoryId}
+                onChange={setCategoryId}
+                allLabel="Todas"
+                searchPlaceholder="Buscar categoria…"
+                itemNamePlural="categorias"
+                options={
+                  categories?.map((category) => ({
+                    value: category.id,
+                    label: category.name,
+                  })) ?? []
+                }
+              />
+            </FilterAccordionGroup>
+            <FilterAccordionGroup
+              groupKey="recurring"
               label="Recorrências"
-              value={recurringOnly}
-              onChange={setRecurringOnly}
-              allLabel="Todas"
-              options={[
-                { value: "RECURRING", label: "Recorrentes" },
-                { value: "NON_RECURRING", label: "Não recorrentes" },
-              ]}
-            />
-            <FilterChipGroup
+              summary={recurringSummary}
+              isActive={Boolean(recurringOnly)}
+            >
+              <FilterChipGroup
+                value={recurringOnly}
+                onChange={setRecurringOnly}
+                allLabel="Todas"
+                options={[
+                  { value: "RECURRING", label: "Recorrentes" },
+                  { value: "NON_RECURRING", label: "Não recorrentes" },
+                ]}
+              />
+            </FilterAccordionGroup>
+            <FilterAccordionGroup
+              groupKey="supplier"
               label="Beneficiários"
-              value={supplierId}
-              onChange={setSupplierId}
-              allLabel="Todos"
-              options={
-                suppliers?.map((supplier) => ({
-                  value: supplier.id,
-                  label: supplier.name,
-                })) ?? []
-              }
-            />
+              summary={supplierSummary}
+              isActive={Boolean(supplierId)}
+            >
+              <FilterSearchList
+                value={supplierId}
+                onChange={setSupplierId}
+                allLabel="Todos"
+                searchPlaceholder="Buscar beneficiário…"
+                itemNamePlural="beneficiários"
+                options={
+                  suppliers?.map((supplier) => ({
+                    value: supplier.id,
+                    label: supplier.name,
+                  })) ?? []
+                }
+              />
+            </FilterAccordionGroup>
           </MobileFilterSheet>
         </div>
       ) : (
