@@ -736,22 +736,26 @@ export function AccountsPayableScreen({
       )}
 
       {isMobile ? (
-        <AccountsPayableCards
-          canPay={canPay}
-          canCreate={canCreate}
-          canDelete={canDelete}
-          status={status}
-          categoryId={categoryId}
-          supplierId={supplierId}
-          recurringOnly={recurringOnly}
-          search={debouncedSearch.trim() || undefined}
-          dueDateFrom={range.from}
-          dueDateTo={range.to}
-          onView={handleView}
-          onEdit={setEditing}
-          onDuplicate={handleDuplicate}
-          onCreateNew={openCreate}
-        />
+        // pb-20 dá folga pro FAB fixo (canto inferior direito) nunca
+        // ficar em cima do último card ao rolar até o fim da lista.
+        <div className="pb-20">
+          <AccountsPayableCards
+            canPay={canPay}
+            canCreate={canCreate}
+            canDelete={canDelete}
+            status={status}
+            categoryId={categoryId}
+            supplierId={supplierId}
+            recurringOnly={recurringOnly}
+            search={debouncedSearch.trim() || undefined}
+            dueDateFrom={range.from}
+            dueDateTo={range.to}
+            onView={handleView}
+            onEdit={setEditing}
+            onDuplicate={handleDuplicate}
+            onCreateNew={openCreate}
+          />
+        </div>
       ) : (
         <div className="bg-card overflow-hidden rounded-xl border shadow-sm">
           <AccountsPayableTable

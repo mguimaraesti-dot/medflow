@@ -6,10 +6,10 @@ import {
   Ban,
   CheckCircle2,
   Eye,
+  MoreHorizontal,
   Pencil,
   Repeat,
   Trash2,
-  X,
   XCircle,
 } from "lucide-react";
 import {
@@ -21,6 +21,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { CopyButton } from "@/shared/components/copy-button";
 import { CopyToWhatsAppButton } from "./copy-to-whatsapp-button";
@@ -487,7 +493,7 @@ export function AccountsPayableDrawer({
                 </div>
               </Tabs>
 
-              <div className="flex flex-wrap gap-2 border-t p-4">
+              <div className="flex items-center gap-2 border-t p-4">
                 {canPayThis && (
                   <Button
                     type="button"
@@ -498,57 +504,81 @@ export function AccountsPayableDrawer({
                     Confirmar pagamento
                   </Button>
                 )}
-                {canEditThis && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={canPayThis ? "" : "flex-1"}
-                    onClick={() => onEdit?.(payable)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Editar conta
-                  </Button>
-                )}
-                {canCancelThis && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="text-destructive hover:text-destructive"
-                    onClick={onCancelClick}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Cancelar
-                  </Button>
-                )}
-                {canDeleteThis && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setDeleting(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Excluir
-                  </Button>
-                )}
-                <CopyToWhatsAppButton
-                  payable={payable}
-                  supplierName={supplierName ?? payable.description}
-                  variant="full"
-                />
-                {canPayThis && <SendWhatsAppReminderButton payable={payable} />}
-                {/* Sempre visível — o X do canto do Sheet some fácil no
-                    mobile; este garante um jeito claro de fechar mesmo
-                    quando a conta não tem nenhuma ação disponível (ex:
-                    conta paga/cancelada, sem permissão de edição). */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  <X className="h-4 w-4" />
-                  Fechar
-                </Button>
+                {/* Secundárias no "⋯" — 1 linha fixa em vez de até 6
+                    botões empilhando (Editar/Cancelar/Excluir/2x WhatsApp).
+                    "Fechar" foi removido de propósito: já existe o ✕ no
+                    canto do Sheet, e arrastar pra baixo/tocar fora também
+                    fecha — era um botão de largura total fazendo o que
+                    três gestos já fazem. */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={canPayThis ? "shrink-0" : "flex-1"}
+                      size={canPayThis ? "icon" : "default"}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                      {canPayThis ? (
+                        <span className="sr-only">Mais ações</span>
+                      ) : (
+                        "Mais ações"
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {canEditThis && (
+                      <DropdownMenuItem onClick={() => onEdit?.(payable)}>
+                        <Pencil className="h-4 w-4" />
+                        Editar conta
+                      </DropdownMenuItem>
+                    )}
+                    {/* `onSelect` com preventDefault mantém o menu aberto
+                        — sem isso, o feedback visual desses dois botões
+                        (ícone "Copiado!"/spinner de envio) some junto com
+                        o menu antes do usuário conseguir ver. */}
+                    <DropdownMenuItem
+                      asChild
+                      onSelect={(event) => event.preventDefault()}
+                    >
+                      <CopyToWhatsAppButton
+                        payable={payable}
+                        supplierName={supplierName ?? payable.description}
+                        variant="full"
+                        className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
+                      />
+                    </DropdownMenuItem>
+                    {canPayThis && (
+                      <DropdownMenuItem
+                        asChild
+                        onSelect={(event) => event.preventDefault()}
+                      >
+                        <SendWhatsAppReminderButton
+                          payable={payable}
+                          className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
+                        />
+                      </DropdownMenuItem>
+                    )}
+                    {canCancelThis && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={onCancelClick}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Cancelar
+                      </DropdownMenuItem>
+                    )}
+                    {canDeleteThis && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => setDeleting(true)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </>
           )}
