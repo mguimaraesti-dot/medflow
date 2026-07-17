@@ -123,3 +123,70 @@ describe("toAccountsPayableResponseDTO", () => {
     expect(dto.amount).toBe("2000.00");
   });
 });
+
+describe("toAccountsPayableResponseDTO — reminderStatus", () => {
+  it("SENT quando lastReminderSentAt está preenchido", () => {
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({ lastReminderSentAt: new Date("2026-07-01T12:00:00Z") }),
+    );
+
+    expect(dto.reminderStatus).toBe("SENT");
+  });
+
+  it("permanece SENT mesmo depois de a conta ser paga (fato histórico imutável)", () => {
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({
+        status: "PAID",
+        lastReminderSentAt: new Date("2026-07-01T12:00:00Z"),
+      }),
+    );
+
+    expect(dto.reminderStatus).toBe("SENT");
+  });
+
+  it("PENDING_SEND quando dentro da janela, com lembrete habilitado e nunca enviado", () => {
+    // dueDate 05/07, reminderDaysBefore 5 → janela abre em 30/06.
+    const referenceDate = new Date("2026-07-02T12:00:00.000Z");
+    const dto = toAccountsPayableResponseDTO(buildPayable(), referenceDate);
+
+    expect(dto.reminderStatus).toBe("PENDING_SEND");
+  });
+
+  it("NOT_DUE quando ainda fora da janela de antecedência", () => {
+    // dueDate 05/07, reminderDaysBefore 5 → janela só abre em 30/06.
+    const referenceDate = new Date("2026-06-20T12:00:00.000Z");
+    const dto = toAccountsPayableResponseDTO(buildPayable(), referenceDate);
+
+    expect(dto.reminderStatus).toBe("NOT_DUE");
+  });
+
+  it("NOT_APPLICABLE quando reminderEnabled é false, mesmo dentro da janela", () => {
+    const referenceDate = new Date("2026-07-02T12:00:00.000Z");
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({ reminderEnabled: false }),
+      referenceDate,
+    );
+
+    expect(dto.reminderStatus).toBe("NOT_APPLICABLE");
+  });
+
+  it("NOT_APPLICABLE quando a conta já não está mais PENDING (paga) e nunca teve lembrete enviado", () => {
+    const referenceDate = new Date("2026-07-02T12:00:00.000Z");
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({ status: "PAID" }),
+      referenceDate,
+    );
+
+    expect(dto.reminderStatus).toBe("NOT_APPLICABLE");
+  });
+
+  it("NOT_APPLICABLE quando a conta foi cancelada e nunca teve lembrete enviado", () => {
+    const referenceDate = new Date("2026-07-02T12:00:00.000Z");
+    const dto = toAccountsPayableResponseDTO(
+      buildPayable({ status: "CANCELLED" }),
+      referenceDate,
+    );
+
+    expect(dto.reminderStatus).toBe("NOT_APPLICABLE");
+  });
+});
