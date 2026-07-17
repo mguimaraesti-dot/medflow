@@ -11,6 +11,7 @@ import {
 import { useRequestSangria } from "./use-request-sangria";
 import { ApiError } from "@/shared/lib/api-client";
 import { CurrencyInput } from "@/shared/components/currency-input";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
@@ -23,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import { toast } from "sonner";
 
 /**
@@ -30,8 +32,19 @@ import { toast } from "sonner";
  * dinheiro do caixa aberto e credita o Cofre), só que sem expor o termo
  * técnico na interface (Refinamento UX/UI Tesouraria). Continua exigindo
  * um caixa aberto no momento.
+ *
+ * `disabled` (novo): true enquanto existir um `CASH_REGISTER_HANDOFF`
+ * `PENDING` — prevenção real do erro já ocorrido 2x (clicar aqui
+ * querendo confirmar o handoff pendente cria uma sangria duplicada). Em
+ * vez de deixar clicar e barrar com erro, o botão nem fica clicável;
+ * o tooltip explica o porquê (desktop). `span.contents` em volta do
+ * `DialogTrigger` é o que permite o tooltip disparar no hover mesmo com
+ * o botão `disabled` (que por si só bloqueia pointer-events).
  */
-export function SangriaDialog() {
+export function SangriaDialog({
+  compact,
+  disabled,
+}: { compact?: boolean; disabled?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const requestSangria = useRequestSangria();
@@ -70,16 +83,41 @@ export function SangriaDialog() {
         if (!next) setServerError(null);
       }}
     >
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-10 flex-1 border-green-600/40 text-green-600 hover:bg-green-600/10 hover:text-green-600 sm:flex-none dark:text-green-500"
-        >
-          <ArrowDownCircle className="h-4 w-4" />
-          Receber do Caixa
-        </Button>
-      </DialogTrigger>
+      {(() => {
+        const trigger = (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled}
+            className={cn(
+              "h-10 flex-1 border-green-600/40 text-green-600 hover:bg-green-600/10 hover:text-green-600 sm:flex-none dark:text-green-500",
+              // Compacto: gap e padding menores dão folga extra pro rótulo
+              // curto não cortar em telas de ~360px (grade de 3 colunas).
+              compact && "gap-1.5 px-2",
+            )}
+          >
+            <ArrowDownCircle className="h-4 w-4" />
+            {compact ? "Receber" : "Receber do Caixa"}
+          </Button>
+        );
+
+        if (!disabled) {
+          return <DialogTrigger asChild>{trigger}</DialogTrigger>;
+        }
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="contents">
+                <DialogTrigger asChild>{trigger}</DialogTrigger>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              Confirme o recebimento pendente antes de registrar um novo.
+            </TooltipContent>
+          </Tooltip>
+        );
+      })()}
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <DialogHeader>

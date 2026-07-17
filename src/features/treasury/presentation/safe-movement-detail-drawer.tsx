@@ -12,6 +12,7 @@ import { Button } from "@/shared/ui/button";
 import {
   formatCurrencyBRL,
   formatDateOnlyLocalBR,
+  formatDateTimeBR,
   formatTimeBR,
 } from "@/shared/lib/format";
 import { Field } from "@/shared/components/detail-field";
@@ -63,7 +64,10 @@ export function SafeMovementDetailDrawer({
                   value={formatDateOnlyLocalBR(movement.createdAt)}
                 />
                 <Field label="Hora" value={formatTimeBR(movement.createdAt)} />
-                <Field label="Usuário" value={movement.performedByUserName} />
+                <Field
+                  label="Criado por"
+                  value={movement.performedByUserName}
+                />
                 <Field
                   label="Valor"
                   value={
@@ -81,6 +85,20 @@ export function SafeMovementDetailDrawer({
                 />
               </div>
 
+              {movement.confirmedByUserName && (
+                <Field
+                  label="Confirmado por"
+                  value={
+                    <span className="text-success">
+                      {movement.confirmedByUserName}
+                      <span className="text-muted-foreground ml-2 text-xs font-normal">
+                        em {formatDateTimeBR(movement.confirmedAt!)}
+                      </span>
+                    </span>
+                  }
+                />
+              )}
+
               <Field label="Descrição" value={describeMovement(movement)} />
             </div>
           )}
@@ -89,7 +107,7 @@ export function SafeMovementDetailDrawer({
             <div className="flex gap-2 border-t p-4">
               <Button
                 type="button"
-                className="flex-1"
+                className="flex-1 bg-amber-600 hover:bg-amber-700"
                 onClick={() => setConfirming(true)}
               >
                 <CheckCircle2 className="h-4 w-4" />

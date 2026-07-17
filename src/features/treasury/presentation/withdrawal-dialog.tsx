@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useManualAdjustment } from "./use-manual-adjustment";
 import { ApiError } from "@/shared/lib/api-client";
 import { CurrencyInput } from "@/shared/components/currency-input";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
@@ -26,7 +27,7 @@ import {
  * despesa emergencial etc.), sem o operador precisar entender o
  * conceito de "ajuste com sinal" (Refinamento UX/UI Tesouraria).
  */
-export function WithdrawalDialog() {
+export function WithdrawalDialog({ compact }: { compact?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number>(0);
   const [reason, setReason] = useState("");
@@ -72,10 +73,13 @@ export function WithdrawalDialog() {
         <Button
           type="button"
           variant="outline"
-          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive h-10 flex-1 sm:flex-none"
+          className={cn(
+            "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive h-10 flex-1 sm:flex-none",
+            compact && "gap-1.5 px-2",
+          )}
         >
           <ArrowUpCircle className="h-4 w-4" />
-          Nova Saída
+          {compact ? "Saída" : "Nova Saída"}
         </Button>
       </DialogTrigger>
       <DialogContent>
