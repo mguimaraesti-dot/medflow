@@ -838,7 +838,7 @@ export async function renderStatusReportSafeImage(
 
       {/* Semanal */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <SectionTitle title="Saldo dia a dia" count="fim de cada semana" />
+        <SectionTitle title="Saldo por semana" count="fim de cada semana" />
         <ReportCard style={{ padding: "24px 24px 14px" }}>
           <WeeklyBalanceChart weeks={input.weeks} />
         </ReportCard>

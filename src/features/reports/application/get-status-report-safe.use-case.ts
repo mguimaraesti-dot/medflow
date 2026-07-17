@@ -27,25 +27,57 @@ function formatShortDayMonth(date: Date): string {
   return `${day}/${month}`;
 }
 
-/** Janelas de 7 dias dentro do período (a última pode ser mais curta) — mesmo padrão de `get-status-report-contas-pagas.use-case.ts`. */
-function buildWeekBuckets(
+/**
+ * Semanas de CALENDÁRIO (domingo a sábado) dentro do período — não
+ * blocos de 7 dias contados a partir de `dateFrom` (bug corrigido:
+ * um período que começa numa quarta gerava "semanas" tipo 01-07,
+ * 08-14..., quando o rótulo "Saldo por semana" implica semana de
+ * calendário de verdade). A primeira e a última semana podem ser
+ * PARCIAIS quando o período não começa num domingo ou não termina
+ * num sábado — isso é esperado, não um erro, e o rótulo indica
+ * "(parcial)" pra não parecer bug.
+ *
+ * `dateFrom`/`dateTo` já chegam como rótulos de dia corretos no fuso
+ * da organização — `computePeriodRange` (`period-selector.tsx`)
+ * converteu o instante real (`new Date()`) uma única vez lá; a partir
+ * daqui é só aritmética de calendário sobre esse rótulo, igual ao
+ * preset "WEEK" do próprio `period-selector.tsx` (mesma técnica de
+ * alinhar ao domingo via `getUTCDay()`). NUNCA criar um `new Date()`
+ * aqui e ler getters UTC dele pra achar "hoje" — essa classe de bug
+ * de fuso (já eliminada do projeto, ver `business-day.ts`) não pode
+ * voltar.
+ */
+function buildCalendarWeekBuckets(
   dateFrom: Date,
   dateTo: Date,
 ): { start: Date; end: Date; label: string }[] {
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const buckets: { start: Date; end: Date; label: string }[] = [];
-  let start = new Date(dateFrom);
-  while (start.getTime() <= dateTo.getTime()) {
-    const end = new Date(
-      Math.min(start.getTime() + 7 * ONE_DAY_MS - 1, dateTo.getTime()),
-    );
+
+  const firstSunday = new Date(dateFrom);
+  firstSunday.setUTCDate(firstSunday.getUTCDate() - firstSunday.getUTCDay());
+
+  let weekStart = firstSunday;
+  while (weekStart.getTime() <= dateTo.getTime()) {
+    const weekEnd = new Date(weekStart.getTime() + 6 * ONE_DAY_MS);
+    weekEnd.setUTCHours(23, 59, 59, 999);
+
+    const clippedStart =
+      weekStart.getTime() < dateFrom.getTime() ? dateFrom : weekStart;
+    const clippedEnd = weekEnd.getTime() > dateTo.getTime() ? dateTo : weekEnd;
+    const isPartial =
+      clippedStart.getTime() !== weekStart.getTime() ||
+      clippedEnd.getTime() !== weekEnd.getTime();
+
     buckets.push({
-      start,
-      end,
-      label: `${formatShortDayMonth(start)} a ${formatShortDayMonth(end)}`,
+      start: clippedStart,
+      end: clippedEnd,
+      label: `${formatShortDayMonth(clippedStart)} a ${formatShortDayMonth(clippedEnd)}${isPartial ? " (parcial)" : ""}`,
     });
-    start = new Date(end.getTime() + 1);
+
+    weekStart = new Date(weekStart.getTime() + 7 * ONE_DAY_MS);
   }
+
   return buckets;
 }
 
@@ -189,7 +221,7 @@ export async function getStatusReportSafeUseCase(
   ];
 
   const weeks: StatusReportSafeWeek[] = await Promise.all(
-    buildWeekBuckets(dateFrom, dateTo).map(async (bucket) => ({
+    buildCalendarWeekBuckets(dateFrom, dateTo).map(async (bucket) => ({
       label: bucket.label,
       balance: (
         await deps.safeRepository.getBalanceAsOf(

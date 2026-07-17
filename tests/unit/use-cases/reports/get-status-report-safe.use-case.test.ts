@@ -180,14 +180,17 @@ describe("getStatusReportSafeUseCase", () => {
     expect(result.pendingSum).toBe("340.00");
   });
 
-  it("gera uma semana por bucket de 7 dias do período, com o saldo (getBalanceAsOf) ao fim de cada uma", async () => {
+  it("gera semanas de CALENDÁRIO (domingo a sábado), não blocos de 7 dias a partir do início do período", async () => {
     const deps = buildDeps({ openingBalance: new Prisma.Decimal("100.00") });
     vi.mocked(deps.safeRepository.getBalanceAsOf)
       .mockResolvedValueOnce(new Prisma.Decimal("100.00")) // saldo inicial do período
-      .mockResolvedValueOnce(new Prisma.Decimal("150.00")) // fim da semana 1
-      .mockResolvedValueOnce(new Prisma.Decimal("200.00")) // fim da semana 2
+      .mockResolvedValueOnce(new Prisma.Decimal("150.00")) // fim da semana 1 (parcial)
+      .mockResolvedValueOnce(new Prisma.Decimal("200.00")) // fim da semana 2 (cheia)
       .mockResolvedValueOnce(new Prisma.Decimal("250.00")); // fim da semana 3 (parcial)
 
+    // DATE_FROM = 01/07/2026 é uma QUARTA-feira; DATE_TO = 17/07/2026 é
+    // uma SEXTA-feira — nem o período começa num domingo, nem termina
+    // num sábado, então a 1ª e a última semana devem sair parciais.
     const result = await getStatusReportSafeUseCase(
       "org-1",
       DATE_FROM,
@@ -195,12 +198,35 @@ describe("getStatusReportSafeUseCase", () => {
       deps,
     );
 
-    // 01/07 a 17/07 = 17 dias -> 3 buckets de 7 dias (a última mais curta).
     expect(result.weeks).toHaveLength(3);
+    expect(result.weeks.map((week) => week.label)).toEqual([
+      "01/07 a 04/07 (parcial)", // domingo 28/06 a sábado 04/07, clipada em 01/07 (início do período)
+      "05/07 a 11/07", // domingo a sábado cheios, dentro do período
+      "12/07 a 17/07 (parcial)", // domingo 12/07 a sábado 18/07, clipada em 17/07 (fim do período)
+    ]);
     expect(result.weeks.map((week) => week.balance)).toEqual([
       "150.00",
       "200.00",
       "250.00",
     ]);
+  });
+
+  it("não marca a semana como parcial quando o período já começa num domingo e termina num sábado", async () => {
+    const deps = buildDeps({ openingBalance: new Prisma.Decimal("0.00") });
+    vi.mocked(deps.safeRepository.getBalanceAsOf).mockResolvedValue(
+      new Prisma.Decimal("0.00"),
+    );
+
+    // 05/07/2026 é domingo; 11/07/2026 é sábado — semana cheia.
+    const result = await getStatusReportSafeUseCase(
+      "org-1",
+      new Date("2026-07-05T00:00:00.000Z"),
+      new Date("2026-07-11T23:59:59.999Z"),
+      deps,
+    );
+
+    expect(result.weeks).toHaveLength(1);
+    expect(result.weeks[0].label).toBe("05/07 a 11/07");
+    expect(result.weeks[0].label).not.toContain("parcial");
   });
 });
