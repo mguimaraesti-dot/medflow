@@ -152,7 +152,7 @@ export function SafeMovementCards({
             <Button
               type="button"
               size="sm"
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1 bg-amber-600 hover:bg-amber-700"
               onClick={() => setConfirmTarget(movement)}
             >
               Confirmar
@@ -174,17 +174,6 @@ export function SafeMovementCards({
 
   return (
     <>
-      {pendingData && pendingData.items.length > 0 && (
-        <div className="mb-4 space-y-2">
-          <h3 className="text-sm font-medium text-amber-700 dark:text-amber-500">
-            Aguardando confirmação ({pendingData.total})
-          </h3>
-          <div className="flex flex-col gap-2">
-            {pendingData.items.map((movement) => renderCard(movement))}
-          </div>
-        </div>
-      )}
-
       {isLoading && (
         <div className="space-y-2">
           <Skeleton className="h-24 w-full" />

@@ -107,7 +107,7 @@ export function SafeMovementDetailDrawer({
             <div className="flex gap-2 border-t p-4">
               <Button
                 type="button"
-                className="flex-1"
+                className="flex-1 bg-amber-600 hover:bg-amber-700"
                 onClick={() => setConfirming(true)}
               >
                 <CheckCircle2 className="h-4 w-4" />

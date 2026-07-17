@@ -194,7 +194,7 @@ export function SafeMovementsTable({
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
+                  className="bg-amber-600 hover:bg-amber-700"
                   onClick={() => setConfirmTarget(movement)}
                 >
                   Confirmar
@@ -218,22 +218,6 @@ export function SafeMovementsTable({
 
   return (
     <>
-      {pendingData && pendingData.items.length > 0 && (
-        <div className="mb-4 space-y-2">
-          <h3 className="text-sm font-medium text-amber-700 dark:text-amber-500">
-            Aguardando confirmação ({pendingData.total})
-          </h3>
-          <div className="overflow-x-auto rounded-lg border border-amber-500/25">
-            <Table>
-              <TableHeader>{columns}</TableHeader>
-              <TableBody>
-                {pendingData.items.map((movement) => renderRow(movement))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-
       {isLoading && (
         <div className="space-y-2">
           <Skeleton className="h-9 w-full" />

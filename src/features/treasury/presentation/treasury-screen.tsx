@@ -15,6 +15,7 @@ import { useSafeMovements } from "./use-safe-movements";
 import { useTreasuryDashboardSummary } from "./use-treasury-dashboard-summary";
 import { SafeMovementsTable } from "./safe-movements-table";
 import { SafeMovementCards } from "./safe-movement-cards";
+import { PendingHandoffsSection } from "./pending-handoffs-section";
 import { SangriaDialog } from "./sangria-dialog";
 import { WithdrawalDialog } from "./withdrawal-dialog";
 import { ManualAdjustmentDialog } from "./manual-adjustment-dialog";
@@ -84,6 +85,14 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
   };
 
   const { data: dashboard } = useTreasuryDashboardSummary();
+  /**
+   * Único tipo de SafeMovement que nasce PENDING é CASH_REGISTER_HANDOFF
+   * (confirmado via investigação de código), então pendingCount aqui é
+   * exatamente "existe handoff aguardando confirmação" — usado pra
+   * desabilitar "Receber do Caixa" (Etapa 3b: previne o erro real já
+   * ocorrido 2x em vez de só barrar depois com um erro).
+   */
+  const hasPendingHandoff = (dashboard?.pendingCount ?? 0) > 0;
   const { data: totalsOnly } = useSafeMovements({
     ...filter,
     page: 1,
@@ -176,16 +185,30 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
         </div>
       </div>
 
-      <div
-        className={
-          isMobile
-            ? "grid grid-cols-3 gap-2"
-            : "flex flex-col gap-3 sm:flex-row"
-        }
-      >
-        {canReceive && <SangriaDialog compact={isMobile} />}
-        {canManualAdjustment && <WithdrawalDialog compact={isMobile} />}
-        {canManualAdjustment && <ManualAdjustmentDialog compact={isMobile} />}
+      <PendingHandoffsSection canConfirm={canConfirm} />
+
+      <div>
+        <div
+          className={
+            isMobile
+              ? "grid grid-cols-3 gap-2"
+              : "flex flex-col gap-3 sm:flex-row"
+          }
+        >
+          {canReceive && (
+            <SangriaDialog compact={isMobile} disabled={hasPendingHandoff} />
+          )}
+          {canManualAdjustment && <WithdrawalDialog compact={isMobile} />}
+          {canManualAdjustment && <ManualAdjustmentDialog compact={isMobile} />}
+        </div>
+        {/* Tooltip não funciona em mobile (sem hover) — legenda inline
+            cumpre o mesmo papel de explicar por que o botão está
+            desabilitado. */}
+        {isMobile && canReceive && hasPendingHandoff && (
+          <p className="text-muted-foreground mt-1.5 text-xs">
+            Confirme o recebimento pendente antes de registrar um novo.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
