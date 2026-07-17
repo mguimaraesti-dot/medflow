@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Receipt, Vault, type LucideIcon } from "lucide-react";
+import {
+  FileText,
+  Landmark,
+  Receipt,
+  Vault,
+  type LucideIcon,
+} from "lucide-react";
 import { Card, CardContent } from "@/shared/ui/card";
 
 interface ReportCatalogItem {
@@ -33,6 +39,13 @@ const REPORTS: ReportCatalogItem[] = [
     description:
       "Conferência lançamento a lançamento das entradas do período, com paciente e frascos, em PDF.",
     icon: FileText,
+  },
+  {
+    href: "/reports/status-report-safe",
+    title: "Relatório Executivo do Cofre",
+    description:
+      "Posição e movimentação do dinheiro no Cofre da Tesouraria — waterfall, saldo semanal e composição, em imagem.",
+    icon: Landmark,
   },
 ];
 
