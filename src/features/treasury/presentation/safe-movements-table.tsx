@@ -4,8 +4,6 @@ import { useState } from "react";
 import { Landmark } from "lucide-react";
 import { useSafeMovements } from "./use-safe-movements";
 import { SafeMovementDetailDrawer } from "./safe-movement-detail-drawer";
-import { ConfirmSafeMovementDialog } from "./confirm-safe-movement-dialog";
-import { CancelSafeMovementDialog } from "./cancel-safe-movement-dialog";
 import {
   describeMovement,
   isMovementIn,
@@ -57,10 +55,6 @@ export function SafeMovementsTable({
   const [selected, setSelected] = useState<SafeMovementResponseDTO | null>(
     null,
   );
-  const [confirmTarget, setConfirmTarget] =
-    useState<SafeMovementResponseDTO | null>(null);
-  const [cancelTarget, setCancelTarget] =
-    useState<SafeMovementResponseDTO | null>(null);
 
   const { data, isLoading } = useSafeMovements({
     ...filter,
@@ -90,7 +84,6 @@ export function SafeMovementsTable({
       <TableHead className="text-right">Valor</TableHead>
       <TableHead>Status</TableHead>
       <TableHead>Responsável</TableHead>
-      {canConfirm && <TableHead className="text-right">Ações</TableHead>}
     </TableRow>
   );
 
@@ -184,34 +177,6 @@ export function SafeMovementsTable({
             </Tooltip>
           )}
         </TableCell>
-        {canConfirm && (
-          <TableCell
-            className="text-right"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {movement.status === "PENDING" && (
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-amber-600 hover:bg-amber-700"
-                  onClick={() => setConfirmTarget(movement)}
-                >
-                  Confirmar
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setCancelTarget(movement)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            )}
-          </TableCell>
-        )}
       </TableRow>
     );
   }
@@ -279,16 +244,6 @@ export function SafeMovementsTable({
         canConfirm={canConfirm}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
-      />
-      <ConfirmSafeMovementDialog
-        movement={confirmTarget}
-        open={confirmTarget !== null}
-        onOpenChange={(open) => !open && setConfirmTarget(null)}
-      />
-      <CancelSafeMovementDialog
-        movement={cancelTarget}
-        open={cancelTarget !== null}
-        onOpenChange={(open) => !open && setCancelTarget(null)}
       />
     </>
   );

@@ -4,8 +4,6 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Landmark } from "lucide-react";
 import { useSafeMovements } from "./use-safe-movements";
 import { SafeMovementDetailDrawer } from "./safe-movement-detail-drawer";
-import { ConfirmSafeMovementDialog } from "./confirm-safe-movement-dialog";
-import { CancelSafeMovementDialog } from "./cancel-safe-movement-dialog";
 import {
   describeMovement,
   isMovementIn,
@@ -42,9 +40,11 @@ const DIRECTION_BORDER_CLASS: Record<string, string> = {
 /**
  * Lista em cards das movimentações do Cofre no mobile — substitui a
  * `SafeMovementsTable` abaixo de `lg` (ver `useMediaQuery` em
- * `treasury-screen.tsx`). Pendente ganha destaque (fundo âmbar +
- * Confirmar/Cancelar direto no card), já que é a única movimentação
- * que pede ação do gerente.
+ * `treasury-screen.tsx`). Nunca mostra `PENDING`: essas ficam sempre
+ * na seção "Aguardando confirmação" (`pending-handoffs-section.tsx`,
+ * acima da linha de ações rápidas) e são excluídas daqui via
+ * `alwaysPendingIds` — é lá que vivem o destaque âmbar e os botões de
+ * Confirmar/Cancelar.
  */
 export function SafeMovementCards({
   filter,
@@ -57,10 +57,6 @@ export function SafeMovementCards({
   const [selected, setSelected] = useState<SafeMovementResponseDTO | null>(
     null,
   );
-  const [confirmTarget, setConfirmTarget] =
-    useState<SafeMovementResponseDTO | null>(null);
-  const [cancelTarget, setCancelTarget] =
-    useState<SafeMovementResponseDTO | null>(null);
 
   const { data, isLoading } = useSafeMovements({
     ...filter,
@@ -90,7 +86,6 @@ export function SafeMovementCards({
   function renderCard(movement: SafeMovementResponseDTO) {
     const isIn = isMovementIn(movement);
     const direction = movementDirection(movement);
-    const isPending = movement.status === "PENDING";
 
     return (
       <div
@@ -98,7 +93,6 @@ export function SafeMovementCards({
         className={cn(
           "bg-card cursor-pointer rounded-xl border p-3.5 shadow-sm",
           DIRECTION_BORDER_CLASS[direction],
-          isPending && "border-amber-500/35 bg-amber-500/[0.06]",
         )}
         onClick={() => setSelected(movement)}
       >
@@ -143,31 +137,6 @@ export function SafeMovementCards({
             </>
           )}
         </div>
-
-        {canConfirm && isPending && (
-          <div
-            className="mt-3 flex gap-2"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Button
-              type="button"
-              size="sm"
-              className="flex-1 bg-amber-600 hover:bg-amber-700"
-              onClick={() => setConfirmTarget(movement)}
-            >
-              Confirmar
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="border-destructive/45 text-destructive flex-1"
-              onClick={() => setCancelTarget(movement)}
-            >
-              Cancelar
-            </Button>
-          </div>
-        )}
       </div>
     );
   }
@@ -231,16 +200,6 @@ export function SafeMovementCards({
         canConfirm={canConfirm}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
-      />
-      <ConfirmSafeMovementDialog
-        movement={confirmTarget}
-        open={confirmTarget !== null}
-        onOpenChange={(open) => !open && setConfirmTarget(null)}
-      />
-      <CancelSafeMovementDialog
-        movement={cancelTarget}
-        open={cancelTarget !== null}
-        onOpenChange={(open) => !open && setCancelTarget(null)}
       />
     </>
   );

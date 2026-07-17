@@ -58,7 +58,7 @@ function matchingOption<T extends { label: string; types: SafeMovementType[] }>(
 
 /**
  * Tesouraria — dashboard de indicadores + tabela rica com Origem/
- * Categoria/Status/Ações, filtros rápidos e conferência gerencial do
+ * Categoria/Status, filtros rápidos e conferência gerencial do
  * fechamento de caixa (Refinamento UX/UI Tesouraria). Abaixo de `lg`,
  * mesmo padrão mobile de Contas a Pagar: KPIs em rolagem horizontal,
  * cards em vez de tabela, painel de filtros em bottom sheet.
