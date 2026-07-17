@@ -38,6 +38,8 @@ import { cn } from "@/shared/lib/utils";
 import { ApiError } from "@/shared/lib/api-client";
 import { EmptyState } from "@/shared/components/empty-state";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
+import { WhatsAppIcon } from "@/shared/components/whatsapp-icon";
+import { reminderWindowStart } from "../domain/reminder-window";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -132,6 +134,79 @@ function SortableHead({
   );
 }
 
+/**
+ * Indicador de `reminderStatus` na coluna com ícone de WhatsApp no
+ * cabeçalho. Critério: PENDING_SEND (o único estado acionável) precisa
+ * saltar aos olhos — badge âmbar sólido, mesma cor já usada em outros
+ * pontos do app pra "precisa de atenção". Os demais são discretos de
+ * propósito: SENT é só um check pequeno, NOT_DUE é o ícone apagado,
+ * NOT_APPLICABLE nem aparece (── igual às outras colunas "vazias" da
+ * tabela, ex: Recorrência).
+ *
+ * Tooltip mostra só a DATA do último envio (já vem em `lastReminderSentAt`,
+ * sem custo extra) — o detalhe completo (automático × manual, por quem)
+ * fica reservado pro Drawer, que já paga o custo de buscar o AuditLog
+ * pra aba Histórico. Adicionar esse join também na listagem paginada
+ * seria uma consulta extra por página só pra alimentar um tooltip.
+ */
+function ReminderStatusIndicator({
+  payable,
+}: {
+  payable: AccountsPayableResponseDTO;
+}) {
+  if (payable.reminderStatus === "SENT") {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-success inline-flex cursor-help">
+            <Check className="h-4 w-4" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          Enviado em{" "}
+          {payable.lastReminderSentAt &&
+            formatDateOnlyBR(payable.lastReminderSentAt)}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  if (payable.reminderStatus === "PENDING_SEND") {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex cursor-help rounded-full bg-amber-500 p-1 text-white">
+            <WhatsAppIcon className="h-3 w-3" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          Dentro da janela do lembrete — ainda não enviado
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  if (payable.reminderStatus === "NOT_DUE") {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-muted-foreground inline-flex cursor-help opacity-40">
+            <WhatsAppIcon className="h-4 w-4" />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          Lembrete será enviado a partir de{" "}
+          {formatDateOnlyBR(
+            reminderWindowStart(payable.dueDate, payable.reminderDaysBefore),
+          )}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return <span className="text-muted-foreground text-sm">—</span>;
+}
+
 export function AccountsPayableTable({
   canPay,
   canCreate,
@@ -143,6 +218,7 @@ export function AccountsPayableTable({
   search,
   dueDateFrom,
   dueDateTo,
+  pendingReminderOnly,
   visibleColumns,
   onView,
   onEdit,
@@ -159,6 +235,7 @@ export function AccountsPayableTable({
   search?: string;
   dueDateFrom?: Date;
   dueDateTo?: Date;
+  pendingReminderOnly?: boolean;
   visibleColumns: VisibleColumns;
   onView: (
     payable: AccountsPayableResponseDTO,
@@ -193,6 +270,7 @@ export function AccountsPayableTable({
     search,
     dueDateFrom,
     dueDateTo,
+    pendingReminderOnly,
     page,
     pageSize,
   });
@@ -386,6 +464,16 @@ export function AccountsPayableTable({
                       className="hidden w-16 lg:table-cell"
                     />
                   )}
+                  <TableHead className="hidden w-10 lg:table-cell">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help">
+                          <WhatsAppIcon className="text-muted-foreground h-4 w-4" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Lembrete de WhatsApp</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
                   <TableHead className="pr-4 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -590,6 +678,9 @@ export function AccountsPayableTable({
                           )}
                         </TableCell>
                       )}
+                      <TableCell className="hidden text-center lg:table-cell">
+                        <ReminderStatusIndicator payable={payable} />
+                      </TableCell>
                       <TableCell
                         className="pr-4 text-right"
                         onClick={(event) => event.stopPropagation()}

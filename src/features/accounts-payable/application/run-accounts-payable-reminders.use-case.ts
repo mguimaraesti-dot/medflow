@@ -1,5 +1,6 @@
 import { logger } from "@/core/logger/logger";
 import { getBusinessDay } from "@/shared/lib/business-day";
+import { reminderWindowStart } from "../domain/reminder-window";
 import type { AccountsPayableRepository } from "../domain/accounts-payable.repository";
 import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
 import type { SupplierRepository } from "@/features/suppliers/domain/supplier.repository";
@@ -41,22 +42,6 @@ function currentHourInTimezone(timezone: string): number {
     hourCycle: "h23",
   });
   return Number(formatter.format(new Date()));
-}
-
-/**
- * `dueDate` já é meia-noite UTC (campo `@db.Date`) — subtrair dias em
- * UTC preserva isso, sem risco do fuso deslocar o dia (mesmo cuidado
- * de `formatDateOnlyBR`/`toAccountsPayableResponseDTO`). Exportada:
- * também usada por `toAccountsPayableResponseDTO` pra calcular
- * `reminderStatus` — mesma regra de janela do cron, não duplicada.
- */
-export function reminderWindowStart(
-  dueDate: Date,
-  reminderDaysBefore: number,
-): Date {
-  const start = new Date(dueDate);
-  start.setUTCDate(start.getUTCDate() - reminderDaysBefore);
-  return start;
 }
 
 /**

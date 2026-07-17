@@ -1,6 +1,6 @@
 import { toMoneyString } from "@/shared/lib/money";
 import { todayDateOnlyBR } from "@/shared/lib/format";
-import { reminderWindowStart } from "../run-accounts-payable-reminders.use-case";
+import { reminderWindowStart } from "../../domain/reminder-window";
 import type {
   AccountsPayable,
   PayableStatus,

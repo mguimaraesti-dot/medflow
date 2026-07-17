@@ -44,7 +44,9 @@ import {
   FilterSearchList,
 } from "@/shared/components/mobile-filter-sheet";
 import { KpiCard } from "@/shared/components/kpi-card";
+import { WhatsAppIcon } from "@/shared/components/whatsapp-icon";
 import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
+import { cn } from "@/shared/lib/utils";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
@@ -119,6 +121,7 @@ export function AccountsPayableScreen({
   const [recurringOnly, setRecurringOnly] = useState<
     "RECURRING" | "NON_RECURRING" | undefined
   >();
+  const [pendingReminderOnly, setPendingReminderOnly] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     category: true,
     recurring: true,
@@ -191,6 +194,7 @@ export function AccountsPayableScreen({
     setCategoryId(undefined);
     setSupplierId(undefined);
     setRecurringOnly(undefined);
+    setPendingReminderOnly(false);
   }
 
   const supplierName = suppliers?.find((s) => s.id === supplierId)?.name;
@@ -218,13 +222,15 @@ export function AccountsPayableScreen({
     Boolean(supplierId),
     Boolean(recurringOnly),
     Boolean(search.trim()),
+    pendingReminderOnly,
   ].filter(Boolean).length;
   const hasNonDefaultFilters =
     status !== "ALL" ||
     Boolean(categoryId) ||
     Boolean(supplierId) ||
     Boolean(recurringOnly) ||
-    Boolean(search.trim());
+    Boolean(search.trim()) ||
+    pendingReminderOnly;
 
   // Cards de resumo como atalhos de filtro (Sprint UX/UI 11) — "ativo" é
   // derivado de {status, periodPreset}, nunca um estado novo duplicado.
@@ -470,6 +476,23 @@ export function AccountsPayableScreen({
                 }
               />
             </FilterAccordionGroup>
+            <FilterAccordionGroup
+              groupKey="pendingReminder"
+              label="Lembrete de WhatsApp"
+              summary={pendingReminderOnly ? "Pendentes de envio" : "Todas"}
+              isActive={pendingReminderOnly}
+            >
+              <FilterChipGroup
+                value={pendingReminderOnly ? "PENDING_SEND" : undefined}
+                onChange={(value) =>
+                  setPendingReminderOnly(value === "PENDING_SEND")
+                }
+                allLabel="Todas"
+                options={[
+                  { value: "PENDING_SEND", label: "Pendentes de envio" },
+                ]}
+              />
+            </FilterAccordionGroup>
           </MobileFilterSheet>
         </div>
       ) : (
@@ -582,6 +605,21 @@ export function AccountsPayableScreen({
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              "w-full lg:w-auto",
+              pendingReminderOnly &&
+                "border-transparent bg-amber-500 text-white hover:bg-amber-600 hover:text-white",
+            )}
+            onClick={() => setPendingReminderOnly((prev) => !prev)}
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+            Pendentes de envio
+          </Button>
 
           <Popover>
             <PopoverTrigger asChild>
@@ -722,6 +760,18 @@ export function AccountsPayableScreen({
               </button>
             </Badge>
           )}
+          {pendingReminderOnly && (
+            <Badge variant="secondary" className="gap-1">
+              Lembrete: Pendentes de envio
+              <button
+                type="button"
+                aria-label="Remover filtro de pendentes de envio"
+                onClick={() => setPendingReminderOnly(false)}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -750,6 +800,7 @@ export function AccountsPayableScreen({
             search={debouncedSearch.trim() || undefined}
             dueDateFrom={range.from}
             dueDateTo={range.to}
+            pendingReminderOnly={pendingReminderOnly}
             onView={handleView}
             onEdit={setEditing}
             onDuplicate={handleDuplicate}
@@ -769,6 +820,7 @@ export function AccountsPayableScreen({
             search={debouncedSearch.trim() || undefined}
             dueDateFrom={range.from}
             dueDateTo={range.to}
+            pendingReminderOnly={pendingReminderOnly}
             visibleColumns={visibleColumns}
             onView={handleView}
             onEdit={setEditing}

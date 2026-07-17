@@ -50,6 +50,13 @@ export interface ListAccountsPayableFilter {
    * (soft delete), usado exclusivamente pela tela "Contas Excluídas".
    */
   deletedOnly?: boolean;
+  /**
+   * Filtro "Pendentes de envio" — contas com `reminderStatus ===
+   * "PENDING_SEND"` (ver `accounts-payable.response-dto.ts`). NÃO
+   * confundir com "não enviados": exclui contas fora da janela de
+   * antecedência (essas são normais, não pendências).
+   */
+  pendingReminderOnly?: boolean;
 }
 
 /**

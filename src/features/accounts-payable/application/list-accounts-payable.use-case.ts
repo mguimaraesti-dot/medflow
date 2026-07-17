@@ -24,6 +24,7 @@ export async function listAccountsPayableUseCase(
       recurringOnly: input.recurringOnly,
       search: input.search,
       deletedOnly: input.deletedOnly,
+      pendingReminderOnly: input.pendingReminderOnly,
     },
     { page: input.page, pageSize: input.pageSize },
   );
