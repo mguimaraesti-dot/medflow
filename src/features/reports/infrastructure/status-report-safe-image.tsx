@@ -354,9 +354,29 @@ function WaterfallColumn({
   );
 }
 
+/** Sublabel curto por categoria — versão resumida da `description` da composição (que tem mais espaço). "Enviado ao caixa" deixa claro que é troco, não pagamento (ver `COMPOSITION_DESCRIPTION` no use case — mesma redação, só mais curta). */
+const WATERFALL_SUBLABEL: Record<string, string> = {
+  "Recebido do caixa": "fechamentos e retiradas",
+  "Enviado ao caixa": "troco para abertura",
+  "Pago a fornecedores": "contas via cofre",
+  "Ajustes manuais": "correções do gerente",
+};
+
 /**
- * "Como o saldo chegou até aqui" — waterfall de 4 colunas (Saldo
- * inicial / Recebido do caixa / Enviado ao caixa / Saldo final).
+ * "Como o saldo chegou até aqui" — waterfall que espelha EXATAMENTE as
+ * mesmas categorias (e valores) da seção "O que entrou e o que saiu"
+ * (`input.composition`), em vez de reagrupar por sinal
+ * (`periodReceived`/`periodSent`) — esse reagrupamento escondia os
+ * Ajustes Manuais dentro de "Recebido"/"Enviado" (bug real: um ajuste
+ * positivo de R$2.372 aparecia como se tivesse vindo do caixa). Cada
+ * coluna de categoria "flutua" entre o saldo ANTES e DEPOIS dela,
+ * acumulando na ordem da composição — a soma de todas bate com
+ * Saldo Final por construção (mesmos dados, sem duplicar cálculo).
+ * Categoria com valor zero (ex.: nenhum pagamento a fornecedor no
+ * período) ainda aparece, com a barra rente à base (nunca some — sumir
+ * mudaria o número de colunas a cada período e esconderia que aquilo
+ * está zerado, que já é informação).
+ *
  * Satori não tem Canvas/D3 — barras "flutuantes" são simuladas com um
  * espaçador invisível (`topGapPx`) acima da barra colorida dentro de
  * um container de altura fixa, mesma técnica de posicionamento usada
@@ -367,23 +387,32 @@ function WaterfallChart({
   dateFrom,
   dateTo,
   openingBalance,
-  periodReceived,
-  periodSent,
+  composition,
   finalBalance,
 }: {
   dateFrom: Date;
   dateTo: Date;
   openingBalance: string;
-  periodReceived: string;
-  periodSent: string;
+  composition: StatusReportSafeCompositionRow[];
   finalBalance: string;
 }) {
   const opening = Number(openingBalance);
-  const received = Number(periodReceived);
-  const sent = Number(periodSent);
   const final = Number(finalBalance);
 
-  const max = Math.max(opening, opening + received, final, 1);
+  let running = opening;
+  const steps = composition.map((row) => {
+    const delta = Number(row.amount);
+    const before = running;
+    running += delta;
+    return { row, before, after: running, delta };
+  });
+
+  const allLevels = [
+    opening,
+    final,
+    ...steps.flatMap((step) => [step.before, step.after]),
+  ];
+  const max = Math.max(...allLevels, 1);
   const scale = WATERFALL_CHART_HEIGHT / max;
 
   return (
@@ -397,24 +426,25 @@ function WaterfallChart({
         valueLabel={formatCurrencyBRL(openingBalance)}
         valueColor={TEXT_DARK}
       />
-      <WaterfallColumn
-        label="Recebido do caixa"
-        sublabel="fechamentos e retiradas"
-        bottomPx={opening * scale}
-        heightPx={received * scale}
-        color={GREEN}
-        valueLabel={`+ ${formatCurrencyBRL(periodReceived)}`}
-        valueColor={GREEN_DARK}
-      />
-      <WaterfallColumn
-        label="Enviado ao caixa"
-        sublabel="fundos e pagamentos"
-        bottomPx={final * scale}
-        heightPx={sent * scale}
-        color={RED}
-        valueLabel={`− ${formatCurrencyBRL(periodSent)}`}
-        valueColor={RED}
-      />
+      {steps.map(({ row, before, after, delta }) => {
+        const isZero = delta === 0;
+        const color = delta > 0 ? GREEN : delta < 0 ? RED : SLATE;
+        const valueColor =
+          delta > 0 ? GREEN_DARK : delta < 0 ? RED : TEXT_MUTED;
+        const sign = delta > 0 ? "+ " : delta < 0 ? "− " : "";
+        return (
+          <WaterfallColumn
+            key={row.label}
+            label={row.label}
+            sublabel={WATERFALL_SUBLABEL[row.label] ?? ""}
+            bottomPx={isZero ? 0 : Math.min(before, after) * scale}
+            heightPx={isZero ? 0 : Math.abs(after - before) * scale}
+            color={color}
+            valueLabel={`${sign}${formatCurrencyBRL(String(Math.abs(delta)))}`}
+            valueColor={valueColor}
+          />
+        );
+      })}
       <WaterfallColumn
         label="Saldo final"
         sublabel={formatDateOnlyBR(dateTo)}
@@ -800,8 +830,7 @@ export async function renderStatusReportSafeImage(
             dateFrom={input.dateFrom}
             dateTo={input.dateTo}
             openingBalance={input.openingBalance}
-            periodReceived={input.periodReceived}
-            periodSent={input.periodSent}
+            composition={input.composition}
             finalBalance={input.finalBalance}
           />
         </ReportCard>
