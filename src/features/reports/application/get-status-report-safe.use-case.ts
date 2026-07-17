@@ -202,7 +202,7 @@ export async function getStatusReportSafeUseCase(
     },
     {
       label: "Enviado ao caixa",
-      description: `Fundos de abertura da recepção · ${describeMovementCount(sentToRegister.count)}`,
+      description: `Troco para abertura do caixa da recepção · ${describeMovementCount(sentToRegister.count)}`,
       count: sentToRegister.count,
       amount: sentToRegister.amount.negated().toFixed(2),
     },
