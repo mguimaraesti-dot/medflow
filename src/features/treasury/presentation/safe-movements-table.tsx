@@ -170,6 +170,19 @@ export function SafeMovementsTable({
             </TooltipTrigger>
             <TooltipContent>{movement.performedByUserName}</TooltipContent>
           </Tooltip>
+          {movement.confirmedByUserName && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-success cursor-help text-xs">
+                  ✓ {firstName(movement.confirmedByUserName)}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent>
+                Confirmado por {movement.confirmedByUserName} em{" "}
+                {formatDateTimeBR(movement.confirmedAt!)}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </TableCell>
         {canConfirm && (
           <TableCell

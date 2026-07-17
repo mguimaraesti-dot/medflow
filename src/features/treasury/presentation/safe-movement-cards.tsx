@@ -134,6 +134,14 @@ export function SafeMovementCards({
           </Badge>
           <span className="opacity-40">·</span>
           <span>{movement.performedByUserName.split(" ")[0]}</span>
+          {movement.confirmedByUserName && (
+            <>
+              <span className="opacity-40">·</span>
+              <span className="text-success">
+                ✓ {movement.confirmedByUserName.split(" ")[0]}
+              </span>
+            </>
+          )}
         </div>
 
         {canConfirm && isPending && (
