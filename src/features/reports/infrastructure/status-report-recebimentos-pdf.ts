@@ -60,8 +60,31 @@ export function renderStatusReportRecebimentosPdf(
 
   let y = MARGIN;
 
+  // Espaço reservado pro logo (32x14mm) — a imagem é encaixada dentro
+  // dele preservando a proporção original (nunca assumir a proporção
+  // atual: o logo é enviado pela organização e pode ser quadrado, largo
+  // ou alto). `getImageProperties` lê as dimensões reais do arquivo;
+  // sobra espaço dentro do box em vez de esticar a imagem.
+  const LOGO_BOX_WIDTH = 32;
+  const LOGO_BOX_HEIGHT = 14;
   try {
-    doc.addImage(loadOrganizationLogoDataUri(), "JPEG", MARGIN, y, 32, 14);
+    const logoDataUri = loadOrganizationLogoDataUri();
+    const { width: logoWidth, height: logoHeight } =
+      doc.getImageProperties(logoDataUri);
+    const scale = Math.min(
+      LOGO_BOX_WIDTH / logoWidth,
+      LOGO_BOX_HEIGHT / logoHeight,
+    );
+    const drawWidth = logoWidth * scale;
+    const drawHeight = logoHeight * scale;
+    doc.addImage(
+      logoDataUri,
+      "JPEG",
+      MARGIN + (LOGO_BOX_WIDTH - drawWidth) / 2,
+      y + (LOGO_BOX_HEIGHT - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
   } catch {
     // Sem logo, segue sem quebrar o relatório.
   }
