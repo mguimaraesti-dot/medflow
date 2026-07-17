@@ -53,6 +53,90 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
   return y;
 }
 
+type KpiIconKind = "cash" | "pix" | "count" | "kit";
+
+/**
+ * Ícones dos 4 KPIs — desenhados nativamente com as primitivas do jsPDF
+ * (retângulo/círculo/`lines` como polígono), não os `ICON_PATHS` de
+ * `report-image-kit.tsx`: aqueles são paths de SVG feitos pra Satori
+ * (usado pelos outros 2 Status Reports), e o jsPDF não tem parser de
+ * path SVG sem um plugin extra (`svg2pdf.js`, não instalado). Decisão
+ * confirmada com o usuário antes de criar ícones novos. Cada um cabe
+ * numa caixa de ~5mm de altura a partir de `topY`, centralizado em `centerX`.
+ */
+function renderKpiIcon(
+  doc: jsPDF,
+  kind: KpiIconKind,
+  centerX: number,
+  topY: number,
+  color: Rgb,
+): void {
+  const [r, g, b] = color;
+  switch (kind) {
+    case "cash": {
+      // Nota de dinheiro: retângulo arredondado + selo (círculo) central.
+      const width = 6;
+      const height = 3.6;
+      doc.setDrawColor(r, g, b);
+      doc.setLineWidth(0.35);
+      doc.roundedRect(centerX - width / 2, topY, width, height, 0.6, 0.6);
+      doc.setFillColor(r, g, b);
+      doc.circle(centerX, topY + height / 2, 0.9, "F");
+      break;
+    }
+    case "pix": {
+      // Raio — hexágono via `lines()` (deltas fecham em 0,0 por construção).
+      doc.setFillColor(r, g, b);
+      doc.lines(
+        [
+          [-1.5, 2.6],
+          [0.9, 0],
+          [-1.2, 2.4],
+          [2.0, -2.9],
+          [-0.9, 0],
+          [0.7, -2.1],
+        ],
+        centerX + 0.8,
+        topY,
+        [1, 1],
+        "F",
+        true,
+      );
+      break;
+    }
+    case "count": {
+      // Linhas de recibo/lista.
+      doc.setDrawColor(r, g, b);
+      doc.setLineWidth(0.5);
+      const widths = [4.4, 3.4, 3.9];
+      widths.forEach((width, index) => {
+        const lineY = topY + 0.6 + index * 1.4;
+        doc.line(centerX - width / 2, lineY, centerX + width / 2, lineY);
+      });
+      break;
+    }
+    case "kit": {
+      // Frasco: gargalo (retângulo) + corpo (trapézio via `lines()`).
+      doc.setFillColor(r, g, b);
+      doc.rect(centerX - 0.6, topY, 1.2, 1.4, "F");
+      doc.lines(
+        [
+          [1.2, 0],
+          [1.1, 3.2],
+          [-3.4, 0],
+          [1.1, -3.2],
+        ],
+        centerX - 0.6,
+        topY + 1.4,
+        [1, 1],
+        "F",
+        true,
+      );
+      break;
+    }
+  }
+}
+
 export function renderStatusReportRecebimentosPdf(
   input: StatusReportRecebimentosSummary,
 ): Buffer {
@@ -60,8 +144,31 @@ export function renderStatusReportRecebimentosPdf(
 
   let y = MARGIN;
 
+  // Espaço reservado pro logo (32x14mm) — a imagem é encaixada dentro
+  // dele preservando a proporção original (nunca assumir a proporção
+  // atual: o logo é enviado pela organização e pode ser quadrado, largo
+  // ou alto). `getImageProperties` lê as dimensões reais do arquivo;
+  // sobra espaço dentro do box em vez de esticar a imagem.
+  const LOGO_BOX_WIDTH = 32;
+  const LOGO_BOX_HEIGHT = 14;
   try {
-    doc.addImage(loadOrganizationLogoDataUri(), "JPEG", MARGIN, y, 32, 14);
+    const logoDataUri = loadOrganizationLogoDataUri();
+    const { width: logoWidth, height: logoHeight } =
+      doc.getImageProperties(logoDataUri);
+    const scale = Math.min(
+      LOGO_BOX_WIDTH / logoWidth,
+      LOGO_BOX_HEIGHT / logoHeight,
+    );
+    const drawWidth = logoWidth * scale;
+    const drawHeight = logoHeight * scale;
+    doc.addImage(
+      logoDataUri,
+      "JPEG",
+      MARGIN + (LOGO_BOX_WIDTH - drawWidth) / 2,
+      y + (LOGO_BOX_HEIGHT - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
   } catch {
     // Sem logo, segue sem quebrar o relatório.
   }
@@ -139,12 +246,14 @@ export function renderStatusReportRecebimentosPdf(
     note: string;
     color: Rgb;
     bg?: Rgb;
+    icon: KpiIconKind;
   }[] = [
     {
       label: "DINHEIRO",
       value: formatCurrencyBRL(input.cashTotal),
       note: "fica em caixa",
       color: GREEN,
+      icon: "cash",
     },
     {
       label: "PIX",
@@ -152,12 +261,14 @@ export function renderStatusReportRecebimentosPdf(
       note: "direto p/ conta bancária",
       color: BLUE,
       bg: BLUE_LIGHT,
+      icon: "pix",
     },
     {
       label: "LANÇAMENTOS",
       value: String(input.totalCount),
       note: `${input.cashCount} dinheiro · ${input.pixCount} PIX`,
       color: TEXT_DARK,
+      icon: "count",
     },
     {
       label: "FRASCOS",
@@ -165,33 +276,37 @@ export function renderStatusReportRecebimentosPdf(
       note: `${totalKits} kit${totalKits === 1 ? "" : "s"} vendido${totalKits === 1 ? "" : "s"}`,
       color: AMBER,
       bg: AMBER_LIGHT,
+      icon: "kit",
     },
   ];
   const kpiGap = 3;
   const kpiWidth = (CONTENT_WIDTH - kpiGap * 3) / 4;
+  const KPI_CARD_HEIGHT = 27;
   kpis.forEach((kpi, index) => {
     const x = MARGIN + index * (kpiWidth + kpiGap);
+    const centerX = x + kpiWidth / 2;
     if (kpi.bg) {
       doc.setFillColor(...kpi.bg);
-      doc.rect(x, y, kpiWidth, 20, "F");
+      doc.rect(x, y, kpiWidth, KPI_CARD_HEIGHT, "F");
     }
     doc.setDrawColor(...BORDER);
-    doc.rect(x, y, kpiWidth, 20);
+    doc.rect(x, y, kpiWidth, KPI_CARD_HEIGHT);
+    renderKpiIcon(doc, kpi.icon, centerX, y + 3, kpi.color);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(...TEXT_MUTED);
-    doc.text(kpi.label, x + kpiWidth / 2, y + 5, { align: "center" });
+    doc.text(kpi.label, centerX, y + 11.5, { align: "center" });
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
+    doc.setFontSize(16);
     doc.setTextColor(...kpi.color);
-    doc.text(kpi.value, x + kpiWidth / 2, y + 12, { align: "center" });
+    doc.text(kpi.value, centerX, y + 19, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6);
     doc.setTextColor(...TEXT_MUTED);
-    doc.text(kpi.note, x + kpiWidth / 2, y + 17, { align: "center" });
+    doc.text(kpi.note, centerX, y + 24, { align: "center" });
   });
 
-  y += 26;
+  y += KPI_CARD_HEIGHT + 6;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
@@ -313,14 +428,84 @@ export function renderStatusReportRecebimentosPdf(
   const pageCount = doc.getNumberOfPages();
   for (let page = 1; page <= pageCount; page++) {
     doc.setPage(page);
+
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.2);
+    doc.line(MARGIN, FOOTER_Y - 6, PAGE_WIDTH - MARGIN, FOOTER_Y - 6);
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(...TEXT_MUTED);
     doc.text("Relatório gerado pelo MedFlow", MARGIN, FOOTER_Y);
+
+    renderFooterBrand(doc);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...TEXT_MUTED);
     doc.text(`Página ${page} de ${pageCount}`, PAGE_WIDTH - MARGIN, FOOTER_Y, {
       align: "right",
     });
   }
 
   return Buffer.from(doc.output("arraybuffer"));
+}
+
+/**
+ * Marca MedFlow no rodapé — mesmo padrão dos outros dois Status Reports
+ * (ícone das 3 barras + "MedFlow" + tagline), adaptado pro contexto do
+ * jsPDF: as barras do `MedFlowIcon` (`report-image-kit.tsx`) são só 3
+ * `rect` arredondados, então dá pra desenhar direto com `roundedRect`
+ * em vez de precisar de um parser de path SVG (jsPDF não tem um sem
+ * plugin extra). DISCRETO de propósito — fonte pequena, cores neutras,
+ * nada compete com o conteúdo do relatório. Centralizada na página, com
+ * os dois textos existentes (esquerda/direita) mantidos — larguras reais
+ * medidas via `getTextWidth`, cabem os 3 elementos sem apertar.
+ */
+function renderFooterBrand(doc: jsPDF): void {
+  const wordmarkY = FOOTER_Y - 2;
+  const taglineY = FOOTER_Y + 1.8;
+  const tagline = "Gestão financeira inteligente para clínicas";
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.5);
+  const taglineWidth = doc.getTextWidth(tagline);
+  const textBlockX = PAGE_WIDTH / 2 - taglineWidth / 2;
+
+  const barGap = 1.5;
+  const barWidth = 1.1;
+  const barSpacing = 0.6;
+  const barHeights: number[] = [2.4, 3.8, 5.2];
+  const barColors: Rgb[] = [
+    [96, 165, 250],
+    [37, 99, 235],
+    [30, 58, 138],
+  ];
+  const barsWidth =
+    barHeights.length * barWidth + (barHeights.length - 1) * barSpacing;
+  const barsStartX = textBlockX - barGap - barsWidth;
+  const barBaseY = taglineY;
+
+  barHeights.forEach((height, index) => {
+    doc.setFillColor(...barColors[index]);
+    doc.roundedRect(
+      barsStartX + index * (barWidth + barSpacing),
+      barBaseY - height,
+      barWidth,
+      height,
+      0.3,
+      0.3,
+      "F",
+    );
+  });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...BLUE);
+  doc.text("MedFlow", textBlockX, wordmarkY);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.5);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text(tagline, textBlockX, taglineY);
 }
