@@ -81,6 +81,24 @@ export class CashRegisterNotOpenError extends DomainError {
 }
 
 /**
+ * Rede de segurança contra o erro real já ocorrido 2x: gerente clica em
+ * "Receber do Caixa" (sangria) querendo confirmar o handoff do fechamento
+ * pendente, e cria uma sangria duplicada. A mensagem aponta o caminho
+ * certo em vez de sugerir abrir o caixa.
+ */
+export class PendingHandoffExistsError extends DomainError {
+  readonly code = "PENDING_HANDOFF_EXISTS";
+  readonly httpStatus = 409;
+
+  constructor(organizationId: string) {
+    super(
+      "Existe um recebimento do caixa aguardando confirmação. Confirme-o antes de registrar um novo recebimento.",
+      { organizationId },
+    );
+  }
+}
+
+/**
  * Existe um `CashRegisterDay` `OPEN` de uma data anterior à de hoje —
  * abrir um novo por cima deixaria o dinheiro daquele dia no limbo
  * (incidente real: caixa de 14/07 esquecido aberto, novo caixa aberto
