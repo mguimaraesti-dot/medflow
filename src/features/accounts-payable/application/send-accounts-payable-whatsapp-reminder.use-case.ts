@@ -70,10 +70,34 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
     });
     messageId = result.messageId;
   } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
     logger.error("Falha ao enviar lembrete de WhatsApp", {
       accountsPayableId: payable.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: reason,
     });
+
+    // Só a mensagem 1 (cartão + botão) é crítica — é ela que cai aqui.
+    // Registrar a falha é best-effort de propósito: se o próprio
+    // AuditLog falhar, isso não pode mascarar o WhatsAppSendError
+    // original (por isso o catch aninhado só loga, nunca relança).
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: triggeredByUserId,
+          entity: "AccountsPayable",
+          entityId: payable.id,
+          action: "WHATSAPP_REMINDER_FAILED",
+          reason,
+        },
+      });
+    } catch (auditError) {
+      logger.error("Falha ao registrar WHATSAPP_REMINDER_FAILED no AuditLog", {
+        accountsPayableId: payable.id,
+        error:
+          auditError instanceof Error ? auditError.message : String(auditError),
+      });
+    }
+
     throw new WhatsAppSendError(payable.id);
   }
 

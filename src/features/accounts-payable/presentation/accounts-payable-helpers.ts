@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Clock,
   FilePlus,
+  MessageCircle,
+  MessageCircleWarning,
   Pencil,
   Repeat as RepeatIcon,
   RotateCcw,
@@ -512,6 +514,39 @@ export function toAccountsPayableEvents(
             icon: RepeatIcon,
           });
         }
+        break;
+      }
+
+      case "WHATSAPP_REMINDER_SENT": {
+        // Automático = cron (userId null); manual = clique em "Enviar
+        // WhatsApp agora" (userId do usuário logado). `actor` já resolve
+        // pra "Sistema" no automático, mas "enviado por Sistema" lê mal —
+        // por isso a redação muda por completo em vez de só trocar o nome.
+        const isAutomatic = entry.userId === null;
+        events.push({
+          id: entry.id,
+          label: isAutomatic
+            ? "Lembrete enviado automaticamente"
+            : `Lembrete enviado por ${actor}`,
+          actor,
+          date,
+          icon: MessageCircle,
+        });
+        break;
+      }
+
+      case "WHATSAPP_REMINDER_FAILED": {
+        const isAutomatic = entry.userId === null;
+        events.push({
+          id: entry.id,
+          label: isAutomatic
+            ? "Falha ao enviar lembrete automaticamente"
+            : `Falha ao enviar lembrete (tentativa de ${actor})`,
+          actor,
+          detail: entry.reason ?? undefined,
+          date,
+          icon: MessageCircleWarning,
+        });
         break;
       }
 
