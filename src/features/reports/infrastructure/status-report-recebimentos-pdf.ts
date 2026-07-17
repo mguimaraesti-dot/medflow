@@ -336,14 +336,84 @@ export function renderStatusReportRecebimentosPdf(
   const pageCount = doc.getNumberOfPages();
   for (let page = 1; page <= pageCount; page++) {
     doc.setPage(page);
+
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.2);
+    doc.line(MARGIN, FOOTER_Y - 6, PAGE_WIDTH - MARGIN, FOOTER_Y - 6);
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(...TEXT_MUTED);
     doc.text("Relatório gerado pelo MedFlow", MARGIN, FOOTER_Y);
+
+    renderFooterBrand(doc);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...TEXT_MUTED);
     doc.text(`Página ${page} de ${pageCount}`, PAGE_WIDTH - MARGIN, FOOTER_Y, {
       align: "right",
     });
   }
 
   return Buffer.from(doc.output("arraybuffer"));
+}
+
+/**
+ * Marca MedFlow no rodapé — mesmo padrão dos outros dois Status Reports
+ * (ícone das 3 barras + "MedFlow" + tagline), adaptado pro contexto do
+ * jsPDF: as barras do `MedFlowIcon` (`report-image-kit.tsx`) são só 3
+ * `rect` arredondados, então dá pra desenhar direto com `roundedRect`
+ * em vez de precisar de um parser de path SVG (jsPDF não tem um sem
+ * plugin extra). DISCRETO de propósito — fonte pequena, cores neutras,
+ * nada compete com o conteúdo do relatório. Centralizada na página, com
+ * os dois textos existentes (esquerda/direita) mantidos — larguras reais
+ * medidas via `getTextWidth`, cabem os 3 elementos sem apertar.
+ */
+function renderFooterBrand(doc: jsPDF): void {
+  const wordmarkY = FOOTER_Y - 2;
+  const taglineY = FOOTER_Y + 1.8;
+  const tagline = "Gestão financeira inteligente para clínicas";
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.5);
+  const taglineWidth = doc.getTextWidth(tagline);
+  const textBlockX = PAGE_WIDTH / 2 - taglineWidth / 2;
+
+  const barGap = 1.5;
+  const barWidth = 1.1;
+  const barSpacing = 0.6;
+  const barHeights: number[] = [2.4, 3.8, 5.2];
+  const barColors: Rgb[] = [
+    [96, 165, 250],
+    [37, 99, 235],
+    [30, 58, 138],
+  ];
+  const barsWidth =
+    barHeights.length * barWidth + (barHeights.length - 1) * barSpacing;
+  const barsStartX = textBlockX - barGap - barsWidth;
+  const barBaseY = taglineY;
+
+  barHeights.forEach((height, index) => {
+    doc.setFillColor(...barColors[index]);
+    doc.roundedRect(
+      barsStartX + index * (barWidth + barSpacing),
+      barBaseY - height,
+      barWidth,
+      height,
+      0.3,
+      0.3,
+      "F",
+    );
+  });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...BLUE);
+  doc.text("MedFlow", textBlockX, wordmarkY);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.5);
+  doc.setTextColor(...TEXT_MUTED);
+  doc.text(tagline, textBlockX, taglineY);
 }
