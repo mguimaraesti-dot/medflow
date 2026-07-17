@@ -8,6 +8,7 @@ import {
   Receipt,
   Repeat,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/shared/components/whatsapp-icon";
 import { useAccountsPayable } from "./use-accounts-payable";
 import { useCancelAccountsPayable } from "./use-cancel-accounts-payable";
 import { PayAccountsPayableDialog } from "./pay-accounts-payable-dialog";
@@ -61,6 +62,7 @@ export function AccountsPayableCards({
   search,
   dueDateFrom,
   dueDateTo,
+  pendingReminderOnly,
   onView,
   onEdit,
   onDuplicate,
@@ -76,6 +78,7 @@ export function AccountsPayableCards({
   search?: string;
   dueDateFrom?: Date;
   dueDateTo?: Date;
+  pendingReminderOnly?: boolean;
   onView: (
     payable: AccountsPayableResponseDTO,
     tab?: "account" | "history" | "attachments",
@@ -102,6 +105,7 @@ export function AccountsPayableCards({
     search,
     dueDateFrom,
     dueDateTo,
+    pendingReminderOnly,
     page,
     pageSize: 20,
   });
@@ -233,6 +237,23 @@ export function AccountsPayableCards({
                         <Repeat className="h-3 w-3" />
                         Recorrente
                       </Badge>
+                    )}
+                    {/* Sem hover no mobile — só mostra o lembrete quando
+                        há algo a fazer (PENDING_SEND) ou já resolvido
+                        (SENT). NOT_DUE/NOT_APPLICABLE ficam de fora de
+                        propósito: não acrescentam informação útil num
+                        card já compacto. */}
+                    {payable.reminderStatus === "PENDING_SEND" && (
+                      <Badge className="border-transparent bg-amber-500 text-white">
+                        <WhatsAppIcon className="h-3 w-3" />
+                        Enviar lembrete
+                      </Badge>
+                    )}
+                    {payable.reminderStatus === "SENT" && (
+                      <span className="text-success inline-flex items-center gap-1">
+                        <WhatsAppIcon className="h-3 w-3" />
+                        Lembrete enviado
+                      </span>
                     )}
                   </div>
 

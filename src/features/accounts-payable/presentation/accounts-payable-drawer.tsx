@@ -134,6 +134,19 @@ export function AccountsPayableDrawer({
         isRecurring: payable?.recurringBillId != null,
       })
     : [];
+  /**
+   * "Último envio: ... — automático/manual, por quem" no campo abaixo —
+   * o AuditLog já foi buscado pra aba Histórico (Etapa 1b), então achar
+   * o evento WHATSAPP_REMINDER_SENT mais recente aqui não custa nenhuma
+   * consulta extra (diferente da coluna da lista, que não tem esse
+   * join — ver `ReminderStatusIndicator` em accounts-payable-table.tsx).
+   */
+  const lastReminderSentEvent = auditLog
+    ?.filter((entry) => entry.action === "WHATSAPP_REMINDER_SENT")
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
 
   const badge = payable ? STATUS_META[payable.displayStatus] : null;
   const dueDateDisplay = payable
@@ -299,9 +312,20 @@ export function AccountsPayableDrawer({
                       <Field
                         label="Último lembrete de WhatsApp"
                         value={
-                          payable.lastReminderSentAt
-                            ? formatDateTimeBR(payable.lastReminderSentAt)
-                            : "—"
+                          payable.lastReminderSentAt ? (
+                            <span>
+                              {formatDateTimeBR(payable.lastReminderSentAt)}
+                              <span className="text-muted-foreground block text-xs font-normal">
+                                {lastReminderSentEvent?.userId === null
+                                  ? "Automático"
+                                  : lastReminderSentEvent?.userName
+                                    ? `Manual, por ${lastReminderSentEvent.userName}`
+                                    : "Manual"}
+                              </span>
+                            </span>
+                          ) : (
+                            "—"
+                          )
                         }
                       />
                     </div>

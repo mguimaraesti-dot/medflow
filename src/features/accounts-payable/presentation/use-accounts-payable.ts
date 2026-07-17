@@ -21,6 +21,8 @@ export interface AccountsPayableFilter {
   pageSize?: number;
   /** Só usado pela tela "Contas Excluídas" (requer payable:delete no backend). */
   deletedOnly?: boolean;
+  /** Filtro "Pendentes de envio" (reminderStatus === PENDING_SEND). */
+  pendingReminderOnly?: boolean;
 }
 
 export function useAccountsPayable(filter: AccountsPayableFilter) {
@@ -36,6 +38,7 @@ export function useAccountsPayable(filter: AccountsPayableFilter) {
   if (filter.recurringOnly) params.set("recurringOnly", filter.recurringOnly);
   if (filter.search) params.set("search", filter.search);
   if (filter.deletedOnly) params.set("deletedOnly", "true");
+  if (filter.pendingReminderOnly) params.set("pendingReminderOnly", "true");
   params.set("page", String(filter.page ?? 1));
   params.set("pageSize", String(filter.pageSize ?? 20));
 

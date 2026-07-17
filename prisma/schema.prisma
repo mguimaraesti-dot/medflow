@@ -179,6 +179,7 @@ enum AuditAction {
   SAFE_SANGRIA
   SAFE_MANUAL_ADJUSTMENT
   WHATSAPP_REMINDER_SENT
+  WHATSAPP_REMINDER_FAILED
 }
 
 model AuditLog {
@@ -467,9 +468,9 @@ model AccountsPayable {
   // reminderDaysBefore "mágico" pra significar "nunca" (nenhum valor
   // numérico fecha isso, já que o cron usa `>=`, nunca `=`). Default
   // true preserva o comportamento atual de todas as contas existentes.
-  reminderEnabled      Boolean   @default(true)
-  reminderDaysBefore   Int       @default(5)
-  lastReminderSentAt   DateTime?
+  reminderEnabled       Boolean   @default(true)
+  reminderDaysBefore    Int       @default(5)
+  lastReminderSentAt    DateTime?
   lastReminderMessageId String?
 
   // Soft delete (Sprint 05) — nunca DELETE físico; conta some da listagem

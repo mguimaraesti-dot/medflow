@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 import { sendAccountsPayableWhatsAppReminderUseCase } from "@/features/accounts-payable/application/send-accounts-payable-whatsapp-reminder.use-case";
+import { prisma } from "@/core/database/prisma.client";
 import {
   NotFoundError,
   PayableAlreadyProcessedError,
@@ -133,6 +134,58 @@ describe("sendAccountsPayableWhatsAppReminderUseCase", () => {
   });
 
   it("traduz falha no envio em WhatsAppSendError e nunca marca lastReminderSentAt", async () => {
+    const deps = buildDeps({
+      sendPaymentReminder: vi
+        .fn()
+        .mockRejectedValue(new Error("Z-API fora do ar")),
+    });
+
+    await expect(
+      sendAccountsPayableWhatsAppReminderUseCase(
+        "payable-1",
+        "org-1",
+        "user-1",
+        deps,
+      ),
+    ).rejects.toThrow(WhatsAppSendError);
+    expect(
+      deps.accountsPayableRepository.touchReminderSent,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("na falha, grava WHATSAPP_REMINDER_FAILED no AuditLog com o motivo e o userId de quem disparou", async () => {
+    vi.mocked(prisma.auditLog.create).mockClear();
+    const deps = buildDeps({
+      sendPaymentReminder: vi
+        .fn()
+        .mockRejectedValue(new Error("Z-API fora do ar")),
+    });
+
+    await expect(
+      sendAccountsPayableWhatsAppReminderUseCase(
+        "payable-1",
+        "org-1",
+        "user-1",
+        deps,
+      ),
+    ).rejects.toThrow(WhatsAppSendError);
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        entity: "AccountsPayable",
+        entityId: "payable-1",
+        action: "WHATSAPP_REMINDER_FAILED",
+        reason: "Z-API fora do ar",
+      },
+    });
+  });
+
+  it("se o próprio AuditLog da falha falhar, o WhatsAppSendError original ainda propaga (não fica mascarado)", async () => {
+    vi.mocked(prisma.auditLog.create).mockClear();
+    vi.mocked(prisma.auditLog.create).mockRejectedValueOnce(
+      new Error("Banco fora do ar"),
+    );
     const deps = buildDeps({
       sendPaymentReminder: vi
         .fn()

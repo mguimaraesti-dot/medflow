@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { buildPaginatedResult } from "@/shared/lib/pagination";
 import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
 import { todayDateOnlyBR } from "@/shared/lib/format";
+import { reminderWindowStart } from "../domain/reminder-window";
 import type {
   AccountsPayableRepository,
   CreateAccountsPayableInput,
@@ -131,7 +132,42 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
           { digitableLine: { contains: filter.search, mode: "insensitive" } },
         ],
       }),
+      // "Pendentes de envio" = reminderStatus PENDING_SEND. status +
+      // reminderEnabled + nunca enviado dão pra filtrar no `where`; só a
+      // janela (dueDate - reminderDaysBefore <= hoje) não dá, por
+      // comparar duas colunas da própria linha — Prisma não expressa
+      // isso sem SQL cru. Ver o filtro em código logo abaixo.
+      ...(filter.pendingReminderOnly && {
+        status: "PENDING",
+        reminderEnabled: true,
+        lastReminderSentAt: null,
+      }),
     };
+
+    if (filter.pendingReminderOnly) {
+      // Mesmo padrão já usado no cron (run-accounts-payable-reminders.
+      // use-case.ts): busca os candidatos (já bem restritos pelo `where`
+      // acima — uma única organização, PENDING, habilitado, nunca
+      // enviado) e filtra a janela em código, paginando depois. Seguro
+      // porque esse universo é pequeno por natureza (contas pendentes
+      // de uma única clínica).
+      const candidates = await prisma.accountsPayable.findMany({
+        where,
+        include: USER_NAMES_INCLUDE,
+        orderBy: { dueDate: "asc" },
+      });
+      const due = candidates.filter(
+        (row) =>
+          today >= reminderWindowStart(row.dueDate, row.reminderDaysBefore),
+      );
+      const start = (pagination.page - 1) * pagination.pageSize;
+      const pageRows = due.slice(start, start + pagination.pageSize);
+      return buildPaginatedResult(
+        pageRows.map(toDomain),
+        due.length,
+        pagination,
+      );
+    }
 
     const [rows, total] = await Promise.all([
       prisma.accountsPayable.findMany({
