@@ -497,7 +497,7 @@ export function AccountsPayableDrawer({
                 {canPayThis && (
                   <Button
                     type="button"
-                    className="flex-1"
+                    className="flex-1 bg-green-600 hover:bg-green-700"
                     onClick={() => setPaying(true)}
                   >
                     <CheckCircle2 className="h-4 w-4" />
