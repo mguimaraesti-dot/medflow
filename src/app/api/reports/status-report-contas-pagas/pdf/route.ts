@@ -6,14 +6,14 @@ import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
 import { getStatusReportContasPagasSchema } from "@/features/reports/application/dtos/get-status-report-contas-pagas.dto";
 import { getStatusReportContasPagasUseCase } from "@/features/reports/application/get-status-report-contas-pagas.use-case";
-import { renderStatusReportContasPagasImage } from "@/features/reports/infrastructure/status-report-contas-pagas-image";
+import { renderStatusReportContasPagasPdf } from "@/features/reports/infrastructure/status-report-contas-pagas-pdf";
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 import { PrismaCategoryRepository } from "@/features/categories/infrastructure/prisma-category.repository";
 
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
 const categoryRepository = new PrismaCategoryRepository();
 
-/** Serve o Status Report: Contas Pagas como PNG (1080x1920) — mesmo padrão do Status Report genérico (preview + download na mesma URL). */
+/** Serve o Relatório de Contas Pagas como PDF de múltiplas páginas — preview e download na mesma URL, mesmo padrão do Relatório de Recebimentos. */
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId();
 
@@ -41,18 +41,25 @@ export async function GET(request: NextRequest) {
       },
     );
 
-    const imageBuffer = await renderStatusReportContasPagasImage(summary);
+    const pdfBuffer = renderStatusReportContasPagasPdf(summary);
 
-    return new NextResponse(imageBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": "application/pdf",
         "Cache-Control": "no-store",
+        // `inline` mantém o preview embutido (`<embed>`) funcionando —
+        // só sugere o nome do arquivo pra quando o usuário exportar/
+        // salvar (nosso botão "Baixar PDF" já usa esse nome via `download`,
+        // mas o próprio visualizador de PDF do navegador tem sua própria
+        // ação de salvar, que sem isso sugeria "pdf" — o último trecho
+        // da URL, sem `Content-Disposition` nenhum).
+        "Content-Disposition": 'inline; filename="relatorio-contas-pagas.pdf"',
       },
     });
   } catch (error) {
     return handleApiError(error, {
       requestId,
-      route: "/api/reports/status-report-contas-pagas/image",
+      route: "/api/reports/status-report-contas-pagas/pdf",
     });
   }
 }

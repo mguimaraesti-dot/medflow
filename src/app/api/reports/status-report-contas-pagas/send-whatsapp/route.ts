@@ -15,7 +15,7 @@ const categoryRepository = new PrismaCategoryRepository();
 const organizationSettingsRepository =
   new PrismaOrganizationSettingsRepository();
 
-/** Botão "Enviar por WhatsApp" da tela do Status Report: Contas Pagas — gera a imagem e envia via Z-API. */
+/** Botão "Enviar por WhatsApp" da tela do Relatório de Contas Pagas — gera o PDF e envia via Z-API como anexo de documento. */
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
 

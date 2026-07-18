@@ -5,8 +5,8 @@ import {
 } from "@/core/errors/domain-error";
 import { formatDateOnlyBR } from "@/shared/lib/format";
 import { getStatusReportContasPagasUseCase } from "./get-status-report-contas-pagas.use-case";
-import { renderStatusReportContasPagasImage } from "../infrastructure/status-report-contas-pagas-image";
-import { sendImageMessage } from "@/core/whatsapp/zapi-client";
+import { renderStatusReportContasPagasPdf } from "../infrastructure/status-report-contas-pagas-pdf";
+import { sendDocumentMessage } from "@/core/whatsapp/zapi-client";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { CategoryRepository } from "@/features/categories/domain/category.repository";
 import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
@@ -18,9 +18,10 @@ interface Deps {
 }
 
 /**
- * Gera a imagem do Status Report: Contas Pagas e envia por WhatsApp via
- * Z-API `/send-image` — mesmo padrão do Status Report genérico
- * (`send-status-report-whatsapp.use-case.ts`). Não persiste nada.
+ * Gera o PDF do Relatório de Contas Pagas e envia por WhatsApp via Z-API
+ * `/send-document/pdf` — mesmo padrão do Relatório de Recebimentos
+ * (anexo de documento, não mais imagem — ver `sendDocumentMessage`). Não
+ * persiste nada.
  */
 export async function sendStatusReportContasPagasWhatsAppUseCase(
   organizationId: string,
@@ -43,24 +44,25 @@ export async function sendStatusReportContasPagasWhatsAppUseCase(
     deps,
   );
 
-  const imageBuffer = await renderStatusReportContasPagasImage(summary);
-  const base64Image = `data:image/png;base64,${Buffer.from(imageBuffer).toString("base64")}`;
+  const pdfBuffer = renderStatusReportContasPagasPdf(summary);
+  const base64Document = `data:application/pdf;base64,${pdfBuffer.toString("base64")}`;
 
   try {
-    await sendImageMessage({
+    await sendDocumentMessage({
       phone: settings.whatsapp,
-      image: base64Image,
+      document: base64Document,
+      fileName: "relatorio-contas-pagas.pdf",
       caption: `Relatório de Contas Pagas — ${formatDateOnlyBR(dateFrom)} a ${formatDateOnlyBR(dateTo)}`,
     });
   } catch (error) {
-    logger.error("Falha ao enviar Status Report: Contas Pagas por WhatsApp", {
+    logger.error("Falha ao enviar Relatório de Contas Pagas por WhatsApp", {
       organizationId,
       error: error instanceof Error ? error.message : String(error),
     });
     throw new ReportWhatsAppSendError("status-report-contas-pagas");
   }
 
-  logger.info("Status Report: Contas Pagas enviado por WhatsApp", {
+  logger.info("Relatório de Contas Pagas enviado por WhatsApp", {
     organizationId,
   });
 }
