@@ -175,88 +175,85 @@ function PeriodBox({
 }
 
 /**
- * Hero em azul-marinho (`NAVY`, `#1E3A8A` do brand kit) — nunca
- * verde/vermelho aqui: o Hero mostra uma POSIÇÃO (saldo), não um
- * FLUXO. Verde no MedFlow significa "dinheiro entrando" (convenção já
- * usada em Entradas/Saídas); usar verde num saldo afirmaria "é bom",
- * o que nem sempre é verdade (saldo alto pode ser ocioso, saldo baixo
- * pode ser saudável). O delta (badge) é o único lugar com cor
- * direcional, porque ali sim é uma variação no período.
+ * Hero — mesmo tratamento visual do Hero do Relatório do Caixa Recepção
+ * (`status-report-cofre-image.tsx`, apesar do nome é outro relatório):
+ * fundo/borda/texto em VERDE quando `isSurplus`, VERMELHO quando não.
+ * Consistência entre os três relatórios da família vence — os dois
+ * mostram uma POSIÇÃO (saldo), então usam a mesma convenção.
+ *
+ * O saldo do Cofre PODE ficar negativo: `MANUAL_ADJUSTMENT` aceita
+ * `amount` negativo sem piso nenhum (`manual-adjustment.use-case.ts`
+ * não valida o resultado da soma) — um ajuste manual negativo grande o
+ * bastante derruba o saldo abaixo de zero. Por isso `isSurplus` (já
+ * calculado no use case como `finalBalance >= 0`) pinta o Hero de
+ * vermelho nesse caso, em vez de afirmar "positivo" com uma cor que
+ * sempre foi verde.
  */
 function HeroCard({
   finalBalance,
-  periodReceived,
-  periodSent,
+  isSurplus,
 }: {
   finalBalance: string;
-  periodReceived: string;
-  periodSent: string;
+  isSurplus: boolean;
 }) {
-  const delta = Number(periodReceived) - Number(periodSent);
-  const isPositiveDelta = delta >= 0;
+  const color = isSurplus ? GREEN : RED;
+  const bg = isSurplus ? "#ECFDF5" : "#FEF2F2";
+  const textColor = isSurplus ? "#166534" : "#991B1B";
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        backgroundColor: NAVY,
+        backgroundColor: bg,
+        border: `3px solid ${color}`,
         borderRadius: 36,
         padding: "28px 36px",
-        gap: 10,
+        gap: 8,
       }}
     >
       <div
         style={{
           display: "flex",
-          fontSize: 20,
-          fontWeight: 700,
-          color: "#FFFFFF",
-          opacity: 0.75,
-          letterSpacing: 1.5,
-          textTransform: "uppercase",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        Saldo do Cofre
+        <div
+          style={{
+            display: "flex",
+            fontSize: 22,
+            fontWeight: 800,
+            color: textColor,
+            letterSpacing: 1,
+          }}
+        >
+          SALDO DO COFRE
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            backgroundColor: color,
+            color: "#FFFFFF",
+            fontSize: 18,
+            fontWeight: 800,
+            padding: "6px 18px",
+            borderRadius: 40,
+          }}
+        >
+          <Icon
+            path={isSurplus ? ICON_PATHS.arrowUp : ICON_PATHS.arrowDown}
+            color="#FFFFFF"
+            size={16}
+          />
+          {isSurplus ? "SUPERÁVIT" : "DÉFICIT"}
+        </div>
       </div>
-      <div
-        style={{
-          display: "flex",
-          fontSize: 84,
-          fontWeight: 900,
-          color: "#FFFFFF",
-        }}
-      >
+      <div style={{ display: "flex", fontSize: 84, fontWeight: 900, color }}>
         {formatCurrencyBRL(finalBalance)}
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          backgroundColor: "rgba(255,255,255,0.16)",
-          color: isPositiveDelta ? "#BBF7D0" : "#FECACA",
-          fontSize: 19,
-          fontWeight: 700,
-          padding: "7px 16px",
-          borderRadius: 999,
-          alignSelf: "flex-start",
-        }}
-      >
-        <Icon
-          path={isPositiveDelta ? ICON_PATHS.arrowUp : ICON_PATHS.arrowDown}
-          color={isPositiveDelta ? "#BBF7D0" : "#FECACA"}
-          size={16}
-        />
-        {formatCurrencyBRL(String(Math.abs(delta)))} no período
-      </div>
-      <div
-        style={{
-          display: "flex",
-          fontSize: 18,
-          color: "#FFFFFF",
-          opacity: 0.7,
-        }}
-      >
+      <div style={{ display: "flex", fontSize: 20, color: textColor }}>
         Dinheiro guardado no cofre da tesouraria
       </div>
     </div>
@@ -436,16 +433,29 @@ function WaterfallChart({
     final,
     ...steps.flatMap((step) => [step.before, step.after]),
   ];
-  const max = Math.max(...allLevels, 1);
-  const scale = WATERFALL_CHART_HEIGHT / max;
+  /**
+   * O saldo do Cofre PODE ficar negativo (ver `HeroCard` — ajuste
+   * manual sem piso). O range do gráfico precisa cobrir esse
+   * território negativo também: escalar só pelo `max` (como antes)
+   * faz um nível negativo virar `bottomPx`/`heightPx` negativo, que o
+   * Satori não sabe desenhar — vira uma barra gigante vazando pra fora
+   * do container (bug real, achado testando o cenário de déficit).
+   * `minLevel` sempre inclui 0 (o "chão" continua visível mesmo num
+   * período 100% positivo) e `levelToBottomPx` converte um nível
+   * absoluto na posição em px a partir da base do container.
+   */
+  const minLevel = Math.min(0, ...allLevels);
+  const maxLevel = Math.max(0, ...allLevels, 1);
+  const scale = WATERFALL_CHART_HEIGHT / (maxLevel - minLevel);
+  const levelToBottomPx = (value: number) => (value - minLevel) * scale;
 
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 0 }}>
       <WaterfallColumn
         label="Saldo inicial"
         sublabel={formatDateOnlyBR(dateFrom)}
-        bottomPx={0}
-        heightPx={opening * scale}
+        bottomPx={levelToBottomPx(Math.min(0, opening))}
+        heightPx={Math.abs(opening) * scale}
         color={SLATE}
         valueLabel={formatCurrencyBRL(openingBalance)}
         valueColor={TEXT_DARK}
@@ -461,7 +471,7 @@ function WaterfallChart({
             key={row.label}
             label={row.label}
             sublabel={WATERFALL_SUBLABEL[row.label] ?? ""}
-            bottomPx={isZero ? 0 : Math.min(before, after) * scale}
+            bottomPx={isZero ? 0 : levelToBottomPx(Math.min(before, after))}
             heightPx={isZero ? 0 : Math.abs(after - before) * scale}
             color={color}
             valueLabel={`${sign}${formatCurrencyBRL(String(Math.abs(delta)))}`}
@@ -472,8 +482,8 @@ function WaterfallChart({
       <WaterfallColumn
         label="Saldo final"
         sublabel={formatDateOnlyBR(dateTo)}
-        bottomPx={0}
-        heightPx={final * scale}
+        bottomPx={levelToBottomPx(Math.min(0, final))}
+        heightPx={Math.abs(final) * scale}
         color={NAVY}
         valueLabel={formatCurrencyBRL(finalBalance)}
         valueColor={NAVY}
@@ -858,11 +868,7 @@ export async function renderStatusReportSafeImage(
         generatedAt={input.generatedAt}
       />
 
-      <HeroCard
-        finalBalance={input.finalBalance}
-        periodReceived={input.periodReceived}
-        periodSent={input.periodSent}
-      />
+      <HeroCard finalBalance={input.finalBalance} isSurplus={input.isSurplus} />
 
       {/* Waterfall */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
