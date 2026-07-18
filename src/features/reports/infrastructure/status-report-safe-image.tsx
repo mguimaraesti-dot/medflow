@@ -383,7 +383,25 @@ const WATERFALL_SUBLABEL: Record<string, string> = {
  * um container de altura fixa, mesma técnica de posicionamento usada
  * pelo `WeeklyColumnChart` de `status-report-contas-pagas-image.tsx`,
  * só que aqui com um espaçador adicional pra "flutuar" a barra.
+ *
+ * A ORDEM das colunas aqui é só de EXIBIÇÃO (`WATERFALL_ORDER`) — os
+ * valores continuam os mesmos 4 de `input.composition`, só reordenados
+ * localmente antes de acumular. "Ajustes manuais" vem logo após "Saldo
+ * inicial" (antes do fluxo operacional): um ajuste manual é uma
+ * correção à LINHA DE BASE, não algo que a operação do dia gerou —
+ * colocá-lo por último sugeriria que foi uma correção posterior a um
+ * fluxo já fechado, quando na prática ele pode ser o próprio ponto de
+ * partida do cofre. A lista "O que entrou e o que saiu" mantém sua
+ * própria ordem (não precisa espelhar a ordem visual do waterfall,
+ * só os valores — que continuam reconciliando 1:1).
  */
+const WATERFALL_ORDER = [
+  "Ajustes manuais",
+  "Recebido do caixa",
+  "Enviado ao caixa",
+  "Pago a fornecedores",
+];
+
 function WaterfallChart({
   dateFrom,
   dateTo,
@@ -400,8 +418,13 @@ function WaterfallChart({
   const opening = Number(openingBalance);
   const final = Number(finalBalance);
 
+  const orderedComposition = [...composition].sort(
+    (a, b) =>
+      WATERFALL_ORDER.indexOf(a.label) - WATERFALL_ORDER.indexOf(b.label),
+  );
+
   let running = opening;
-  const steps = composition.map((row) => {
+  const steps = orderedComposition.map((row) => {
     const delta = Number(row.amount);
     const before = running;
     running += delta;
