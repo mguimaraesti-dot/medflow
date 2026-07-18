@@ -266,108 +266,98 @@ export function AccountsPayableScreen({
   return (
     <div className="space-y-5">
       {summary && (
-        <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
-          <div className="w-[150px] shrink-0 lg:contents">
-            <KpiCard
-              label="Total do período"
-              value={formatCurrencyBRL(summary.total.amount)}
-              comparison={
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+          <KpiCard
+            label="Total do período"
+            value={formatCurrencyBRL(summary.total.amount)}
+            comparison={
+              <TrendComparison
+                count={summary.total.count}
+                changePercent={trend?.total ?? null}
+              />
+            }
+            icon={Wallet}
+            iconTone="blue"
+            compact
+            onClick={filterByTotal}
+            active={isTotalActive}
+          />
+          <KpiCard
+            label="Hoje"
+            value={formatCurrencyBRL(summary.dueToday.amount)}
+            comparison={
+              <TrendComparison
+                count={summary.dueToday.count}
+                countLabel={
+                  summary.dueToday.count === 0
+                    ? "Nenhum vencimento"
+                    : `${formatCardSubtitle(summary.dueToday.count)} ${
+                        summary.dueToday.count === 1 ? "vence" : "vencem"
+                      } hoje`
+                }
+                changePercent={trend?.dueToday ?? null}
+                comparisonLabel="ontem"
+              />
+            }
+            icon={CalendarClock}
+            iconTone="blue"
+            compact
+            onClick={filterByDueToday}
+            active={isDueTodayActive}
+            emphasized={summary.dueToday.count > 0}
+          />
+          <KpiCard
+            label="A vencer"
+            value={formatCurrencyBRL(summary.upcoming.amount)}
+            comparison={
+              <TrendComparison
+                count={summary.upcoming.count}
+                changePercent={trend?.upcoming ?? null}
+              />
+            }
+            icon={Clock}
+            iconTone="green"
+            compact
+            onClick={filterByUpcoming}
+            active={isUpcomingActive}
+          />
+          <KpiCard
+            label="Vencidas"
+            value={formatCurrencyBRL(summary.overdue.amount)}
+            comparison={
+              <TrendComparison
+                count={summary.overdue.count}
+                changePercent={trend?.overdue ?? null}
+              />
+            }
+            icon={AlertTriangle}
+            iconTone="red"
+            compact
+            onClick={filterByOverdue}
+            active={isOverdueActive}
+            emphasized={summary.overdue.count > 0}
+          />
+          <KpiCard
+            label="Pagas"
+            value={formatCurrencyBRL(summary.paid.amount)}
+            comparison={
+              <div className="space-y-0.5">
                 <TrendComparison
-                  count={summary.total.count}
-                  changePercent={trend?.total ?? null}
+                  count={summary.paid.count}
+                  countLabel={formatCardSubtitle(summary.paid.count, "pagas")}
+                  changePercent={trend?.paid ?? null}
                 />
-              }
-              icon={Wallet}
-              iconTone="blue"
-              compact
-              onClick={filterByTotal}
-              active={isTotalActive}
-            />
-          </div>
-          <div className="w-[150px] shrink-0 lg:contents">
-            <KpiCard
-              label="Hoje"
-              value={formatCurrencyBRL(summary.dueToday.amount)}
-              comparison={
-                <TrendComparison
-                  count={summary.dueToday.count}
-                  countLabel={
-                    summary.dueToday.count === 0
-                      ? "Nenhum vencimento"
-                      : `${formatCardSubtitle(summary.dueToday.count)} ${
-                          summary.dueToday.count === 1 ? "vence" : "vencem"
-                        } hoje`
-                  }
-                  changePercent={trend?.dueToday ?? null}
-                  comparisonLabel="ontem"
-                />
-              }
-              icon={CalendarClock}
-              iconTone="blue"
-              compact
-              onClick={filterByDueToday}
-              active={isDueTodayActive}
-              emphasized={summary.dueToday.count > 0}
-            />
-          </div>
-          <div className="w-[150px] shrink-0 lg:contents">
-            <KpiCard
-              label="A vencer"
-              value={formatCurrencyBRL(summary.upcoming.amount)}
-              comparison={
-                <TrendComparison
-                  count={summary.upcoming.count}
-                  changePercent={trend?.upcoming ?? null}
-                />
-              }
-              icon={Clock}
-              iconTone="green"
-              compact
-              onClick={filterByUpcoming}
-              active={isUpcomingActive}
-            />
-          </div>
-          <div className="w-[150px] shrink-0 lg:contents">
-            <KpiCard
-              label="Vencidas"
-              value={formatCurrencyBRL(summary.overdue.amount)}
-              comparison={
-                <TrendComparison
-                  count={summary.overdue.count}
-                  changePercent={trend?.overdue ?? null}
-                />
-              }
-              icon={AlertTriangle}
-              iconTone="red"
-              compact
-              onClick={filterByOverdue}
-              active={isOverdueActive}
-              emphasized={summary.overdue.count > 0}
-            />
-          </div>
-          <div className="w-[150px] shrink-0 lg:contents">
-            <KpiCard
-              label="Pagas"
-              value={formatCurrencyBRL(summary.paid.amount)}
-              comparison={
-                <div className="space-y-0.5">
-                  <TrendComparison
-                    count={summary.paid.count}
-                    countLabel={formatCardSubtitle(summary.paid.count, "pagas")}
-                    changePercent={trend?.paid ?? null}
-                  />
-                  {paidPercentOfPeriod !== null && (
-                    <p>{paidPercentOfPeriod.toFixed(0)}% do período</p>
-                  )}
-                </div>
-              }
-              icon={CheckCircle2}
-              iconTone="violet"
-              compact
-              onClick={filterByPaid}
-              active={isPaidActive}
-            />
-          </div>
+                {paidPercentOfPeriod !== null && (
+                  <p>{paidPercentOfPeriod.toFixed(0)}% do período</p>
+                )}
+              </div>
+            }
+            icon={CheckCircle2}
+            iconTone="violet"
+            compact
+            onClick={filterByPaid}
+            active={isPaidActive}
+          />
         </div>
       )}
 
