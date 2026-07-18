@@ -36,7 +36,12 @@ export interface StatusReportContasPagasBeneficiary {
 }
 
 export interface StatusReportContasPagasWeek {
-  /** Ex: "01/07 a 07/07". */
+  /**
+   * Semana de CALENDÁRIO (domingo a sábado) — mesma regra do
+   * "Saldo por semana" do Relatório Executivo do Cofre
+   * (`buildCalendarWeekBuckets`). Ex.: "05/07 a 11/07"; nas pontas do
+   * período, "01/07 a 04/07 (parcial)".
+   */
   label: string;
   amount: string;
 }
@@ -63,6 +68,6 @@ export interface StatusReportContasPagasSummary {
   /** Até 5 beneficiários, maior valor total primeiro. */
   topBeneficiaries: StatusReportContasPagasBeneficiary[];
 
-  /** 4-5 semanas dentro do período selecionado. */
+  /** Semanas de calendário (domingo a sábado) dentro do período selecionado — 4-5 pra um período mensal típico, primeira/última podem vir "(parcial)". */
   weeks: StatusReportContasPagasWeek[];
 }
