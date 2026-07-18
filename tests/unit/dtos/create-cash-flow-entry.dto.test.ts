@@ -50,4 +50,16 @@ describe("createCashFlowEntrySchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("normaliza o nome do paciente para maiúsculo, digitado como for", () => {
+    const result = createCashFlowEntrySchema.safeParse({
+      ...baseInput,
+      type: "IN",
+      patientName: "maria souza",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.patientName).toBe("MARIA SOUZA");
+    }
+  });
 });

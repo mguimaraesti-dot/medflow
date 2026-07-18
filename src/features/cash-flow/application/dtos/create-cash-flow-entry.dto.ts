@@ -13,7 +13,16 @@ export const baseCreateCashFlowEntrySchema = z.object({
   categoryId: cuidSchema,
   paymentMethodId: cuidSchema,
   description: z.string().trim().max(500).optional(),
-  patientName: z.string().trim().max(200).optional(),
+  // Sempre maiúsculo — cada secretária digitava de um jeito (maiúsculo,
+  // minúsculo, misto) e isso deixava o Relatório de Caixa Recepção
+  // inconsistente. Normalizado aqui (schema compartilhado com o
+  // frontend) para não depender de disciplina de digitação.
+  patientName: z
+    .string()
+    .trim()
+    .max(200)
+    .transform((value) => value.toUpperCase())
+    .optional(),
   withdrawalReason: z.string().trim().max(500).optional(),
   // Se omitido, o use case usa o horário atual do servidor.
   occurredAt: z.coerce.date().optional(),
