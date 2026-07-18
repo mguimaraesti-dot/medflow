@@ -7,10 +7,26 @@ export interface StatusReportSafeCompositionRow {
   amount: string;
 }
 
-/** Saldo do Cofre ao fim de uma semana do período — usado no gráfico "Saldo dia a dia". */
-export interface StatusReportSafeWeek {
+/**
+ * Granularidade do gráfico de evolução do saldo — escolhida conforme o
+ * tamanho do período (`determineGranularity` em
+ * `get-status-report-safe.use-case.ts`), pra sempre caber num número de
+ * barras legível (período curto = diário, médio = semanal, longo =
+ * mensal).
+ */
+export type StatusReportSafeGranularity = "DAILY" | "WEEKLY" | "MONTHLY";
+
+/**
+ * Saldo do Cofre ao fim de um ponto do período (dia, semana ou mês,
+ * conforme `granularity`) — usado no gráfico de evolução do saldo.
+ * `showLabel` degrada com elegância quando há barras demais pro rótulo
+ * caber sem sobrepor (sempre a primeira e a última, mais pontos
+ * igualmente espaçados no meio).
+ */
+export interface StatusReportSafeBalancePoint {
   label: string;
   balance: string;
+  showLabel: boolean;
 }
 
 /**
@@ -35,5 +51,8 @@ export interface StatusReportSafeSummary {
   pendingSum: string;
 
   composition: StatusReportSafeCompositionRow[];
-  weeks: StatusReportSafeWeek[];
+  granularity: StatusReportSafeGranularity;
+  /** "Saldo por dia" / "Saldo por semana" / "Saldo por mês", conforme `granularity`. */
+  balanceHistoryTitle: string;
+  balanceHistory: StatusReportSafeBalancePoint[];
 }

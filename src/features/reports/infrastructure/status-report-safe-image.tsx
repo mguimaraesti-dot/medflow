@@ -5,9 +5,10 @@ import {
   formatTimeBR,
 } from "@/shared/lib/format";
 import type {
+  StatusReportSafeBalancePoint,
   StatusReportSafeCompositionRow,
+  StatusReportSafeGranularity,
   StatusReportSafeSummary,
-  StatusReportSafeWeek,
 } from "../domain/status-report-safe.entity";
 import {
   BLUE,
@@ -29,7 +30,7 @@ const HEADER_HEIGHT = 100;
 const PERIOD_BOX_HEIGHT = 90;
 const HERO_HEIGHT = 260;
 const WATERFALL_SECTION_HEIGHT = 330;
-const WEEKLY_SECTION_HEIGHT = 250;
+const BALANCE_HISTORY_SECTION_HEIGHT = 250;
 const COMPOSITION_HEADER_HEIGHT = 56;
 const COMPOSITION_ROW_HEIGHT = 92;
 const COMPOSITION_ROW_COUNT = 4;
@@ -58,7 +59,7 @@ function calculateImageHeight(input: StatusReportSafeSummary): number {
     PERIOD_BOX_HEIGHT +
     HERO_HEIGHT +
     WATERFALL_SECTION_HEIGHT +
-    WEEKLY_SECTION_HEIGHT +
+    BALANCE_HISTORY_SECTION_HEIGHT +
     COMPOSITION_HEADER_HEIGHT +
     COMPOSITION_ROW_HEIGHT * COMPOSITION_ROW_COUNT +
     (hasPendingNote ? PENDING_NOTE_HEIGHT : 0) +
@@ -458,26 +459,44 @@ function WaterfallChart({
   );
 }
 
-const WEEK_CHART_HEIGHT = 120;
+const BALANCE_HISTORY_CHART_HEIGHT = 120;
+
+/** "fim de cada dia/semana/mês" — acompanha `granularity` (ver `GRANULARITY_TITLE` no use case). */
+const GRANULARITY_COUNT_LABEL: Record<StatusReportSafeGranularity, string> = {
+  DAILY: "fim de cada dia",
+  WEEKLY: "fim de cada semana",
+  MONTHLY: "fim de cada mês",
+};
 
 /**
- * "Saldo dia a dia" (Opção B — semanal, escolhida em vez da diária):
- * poucas barras, todas rotuladas com folga. Mostra POSIÇÃO (saldo ao
- * fim de cada semana), não fluxo — por isso cor única (não
- * verde/vermelho por semana).
+ * "Saldo por dia/semana/mês" — granularidade adaptativa conforme o
+ * tamanho do período (`determineGranularity` no use case), pra nunca
+ * desenhar barras demais com rótulo ilegível. Mostra POSIÇÃO (saldo ao
+ * fim de cada ponto), não fluxo — por isso cor única (não
+ * verde/vermelho por ponto).
+ *
+ * Quando o período é tão longo que mesmo a granularidade mais grossa
+ * (mensal) ainda gera barras demais, `point.showLabel` degrada os
+ * RÓTULOS (valor + data) de parte das colunas — a barra em si sempre
+ * aparece (a altura já é informação), só o texto some pra nunca
+ * sobrepor a coluna vizinha.
  */
-function WeeklyBalanceChart({ weeks }: { weeks: StatusReportSafeWeek[] }) {
-  const max = Math.max(...weeks.map((week) => Number(week.balance)), 1);
+function BalanceHistoryChart({
+  points,
+}: {
+  points: StatusReportSafeBalancePoint[];
+}) {
+  const max = Math.max(...points.map((point) => Number(point.balance)), 1);
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 20 }}>
-      {weeks.map((week) => {
+      {points.map((point, index) => {
         const heightPx = Math.max(
-          (Number(week.balance) / max) * WEEK_CHART_HEIGHT,
+          (Number(point.balance) / max) * BALANCE_HISTORY_CHART_HEIGHT,
           6,
         );
         return (
           <div
-            key={week.label}
+            key={`${point.label}-${index}`}
             style={{
               display: "flex",
               flexDirection: "column",
@@ -494,13 +513,13 @@ function WeeklyBalanceChart({ weeks }: { weeks: StatusReportSafeWeek[] }) {
                 color: NAVY,
               }}
             >
-              {formatCurrencyBRL(week.balance)}
+              {point.showLabel ? formatCurrencyBRL(point.balance) : ""}
             </div>
             <div
               style={{
                 display: "flex",
                 width: "100%",
-                height: WEEK_CHART_HEIGHT,
+                height: BALANCE_HISTORY_CHART_HEIGHT,
                 alignItems: "flex-end",
               }}
             >
@@ -522,7 +541,7 @@ function WeeklyBalanceChart({ weeks }: { weeks: StatusReportSafeWeek[] }) {
                 textAlign: "center",
               }}
             >
-              {week.label}
+              {point.showLabel ? point.label : ""}
             </div>
           </div>
         );
@@ -836,11 +855,14 @@ export async function renderStatusReportSafeImage(
         </ReportCard>
       </div>
 
-      {/* Semanal */}
+      {/* Evolução do saldo (diária/semanal/mensal conforme o período) */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <SectionTitle title="Saldo por semana" count="fim de cada semana" />
+        <SectionTitle
+          title={input.balanceHistoryTitle}
+          count={GRANULARITY_COUNT_LABEL[input.granularity]}
+        />
         <ReportCard style={{ padding: "24px 24px 14px" }}>
-          <WeeklyBalanceChart weeks={input.weeks} />
+          <BalanceHistoryChart points={input.balanceHistory} />
         </ReportCard>
       </div>
 

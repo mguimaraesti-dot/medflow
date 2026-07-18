@@ -180,7 +180,36 @@ describe("getStatusReportSafeUseCase", () => {
     expect(result.pendingSum).toBe("340.00");
   });
 
-  it("gera semanas de CALENDÁRIO (domingo a sábado), não blocos de 7 dias a partir do início do período", async () => {
+  it("período curto (<=14 dias) usa granularidade DIÁRIA", async () => {
+    const deps = buildDeps({ openingBalance: new Prisma.Decimal("0.00") });
+    vi.mocked(deps.safeRepository.getBalanceAsOf).mockResolvedValue(
+      new Prisma.Decimal("100.00"),
+    );
+
+    // 01/07 a 07/07 = 7 dias — bem abaixo do teto diário (14 dias).
+    const result = await getStatusReportSafeUseCase(
+      "org-1",
+      new Date("2026-07-01T00:00:00.000Z"),
+      new Date("2026-07-07T00:00:00.000Z"),
+      deps,
+    );
+
+    expect(result.granularity).toBe("DAILY");
+    expect(result.balanceHistoryTitle).toBe("Saldo por dia");
+    expect(result.balanceHistory).toHaveLength(7);
+    expect(result.balanceHistory.map((point) => point.label)).toEqual([
+      "01/07",
+      "02/07",
+      "03/07",
+      "04/07",
+      "05/07",
+      "06/07",
+      "07/07",
+    ]);
+    expect(result.balanceHistory.every((point) => point.showLabel)).toBe(true);
+  });
+
+  it("período médio (>14 e <=92 dias) usa granularidade SEMANAL com semanas de CALENDÁRIO (domingo a sábado), não blocos de 7 dias a partir do início do período", async () => {
     const deps = buildDeps({ openingBalance: new Prisma.Decimal("100.00") });
     vi.mocked(deps.safeRepository.getBalanceAsOf)
       .mockResolvedValueOnce(new Prisma.Decimal("100.00")) // saldo inicial do período
@@ -189,8 +218,8 @@ describe("getStatusReportSafeUseCase", () => {
       .mockResolvedValueOnce(new Prisma.Decimal("250.00")); // fim da semana 3 (parcial)
 
     // DATE_FROM = 01/07/2026 é uma QUARTA-feira; DATE_TO = 17/07/2026 é
-    // uma SEXTA-feira — nem o período começa num domingo, nem termina
-    // num sábado, então a 1ª e a última semana devem sair parciais.
+    // uma SEXTA-feira (17 dias) — nem o período começa num domingo, nem
+    // termina num sábado, então a 1ª e a última semana devem sair parciais.
     const result = await getStatusReportSafeUseCase(
       "org-1",
       DATE_FROM,
@@ -198,17 +227,20 @@ describe("getStatusReportSafeUseCase", () => {
       deps,
     );
 
-    expect(result.weeks).toHaveLength(3);
-    expect(result.weeks.map((week) => week.label)).toEqual([
+    expect(result.granularity).toBe("WEEKLY");
+    expect(result.balanceHistoryTitle).toBe("Saldo por semana");
+    expect(result.balanceHistory).toHaveLength(3);
+    expect(result.balanceHistory.map((point) => point.label)).toEqual([
       "01/07 a 04/07 (parcial)", // domingo 28/06 a sábado 04/07, clipada em 01/07 (início do período)
       "05/07 a 11/07", // domingo a sábado cheios, dentro do período
       "12/07 a 17/07 (parcial)", // domingo 12/07 a sábado 18/07, clipada em 17/07 (fim do período)
     ]);
-    expect(result.weeks.map((week) => week.balance)).toEqual([
+    expect(result.balanceHistory.map((point) => point.balance)).toEqual([
       "150.00",
       "200.00",
       "250.00",
     ]);
+    expect(result.balanceHistory.every((point) => point.showLabel)).toBe(true);
   });
 
   it("não marca a semana como parcial quando o período já começa num domingo e termina num sábado", async () => {
@@ -217,16 +249,81 @@ describe("getStatusReportSafeUseCase", () => {
       new Prisma.Decimal("0.00"),
     );
 
-    // 05/07/2026 é domingo; 11/07/2026 é sábado — semana cheia.
+    // 05/07/2026 (domingo) a 25/07/2026 (sábado) = 3 semanas cheias
+    // (21 dias, acima do teto diário de 14 — garante granularidade
+    // SEMANAL mesmo com a data final em "fim de dia", como acontece
+    // de verdade em produção via `period-selector.tsx`).
     const result = await getStatusReportSafeUseCase(
       "org-1",
       new Date("2026-07-05T00:00:00.000Z"),
-      new Date("2026-07-11T23:59:59.999Z"),
+      new Date("2026-07-25T23:59:59.999Z"),
       deps,
     );
 
-    expect(result.weeks).toHaveLength(1);
-    expect(result.weeks[0].label).toBe("05/07 a 11/07");
-    expect(result.weeks[0].label).not.toContain("parcial");
+    expect(result.granularity).toBe("WEEKLY");
+    expect(result.balanceHistory).toHaveLength(3);
+    expect(result.balanceHistory.map((point) => point.label)).toEqual([
+      "05/07 a 11/07",
+      "12/07 a 18/07",
+      "19/07 a 25/07",
+    ]);
+    expect(
+      result.balanceHistory.some((point) => point.label.includes("parcial")),
+    ).toBe(false);
+  });
+
+  it("período longo (>92 dias) usa granularidade MENSAL com meses de calendário, evitando o bug real (26 barras semanais viravam sopa ilegível num período de 13/01 a 17/07)", async () => {
+    const deps = buildDeps({ openingBalance: new Prisma.Decimal("0.00") });
+    vi.mocked(deps.safeRepository.getBalanceAsOf).mockResolvedValue(
+      new Prisma.Decimal("1000.00"),
+    );
+
+    // Mesmas datas do bug reportado: 13/01/2026 a 17/07/2026 (~186 dias).
+    const result = await getStatusReportSafeUseCase(
+      "org-1",
+      new Date("2026-01-13T00:00:00.000Z"),
+      new Date("2026-07-17T00:00:00.000Z"),
+      deps,
+    );
+
+    expect(result.granularity).toBe("MONTHLY");
+    expect(result.balanceHistoryTitle).toBe("Saldo por mês");
+    // 7 barras (jan parcial a jul parcial) — nunca as 26 barras semanais do bug.
+    expect(result.balanceHistory.map((point) => point.label)).toEqual([
+      "jan/26 (parcial)",
+      "fev/26",
+      "mar/26",
+      "abr/26",
+      "mai/26",
+      "jun/26",
+      "jul/26 (parcial)",
+    ]);
+    expect(result.balanceHistory.every((point) => point.showLabel)).toBe(true);
+  });
+
+  it("degrada os RÓTULOS com elegância (mantém 1ª, última e pontos espaçados) quando mesmo a granularidade mensal ultrapassa o teto de barras legíveis", async () => {
+    const deps = buildDeps({ openingBalance: new Prisma.Decimal("0.00") });
+    vi.mocked(deps.safeRepository.getBalanceAsOf).mockResolvedValue(
+      new Prisma.Decimal("500.00"),
+    );
+
+    // 01/2020 a 01/2030 = 121 barras mensais — bem acima do teto de 14.
+    const result = await getStatusReportSafeUseCase(
+      "org-1",
+      new Date("2020-01-01T00:00:00.000Z"),
+      new Date("2030-01-01T00:00:00.000Z"),
+      deps,
+    );
+
+    expect(result.granularity).toBe("MONTHLY");
+    expect(result.balanceHistory).toHaveLength(121);
+    // A barra em si nunca some — só o rótulo degrada.
+    expect(result.balanceHistory[0].showLabel).toBe(true);
+    expect(result.balanceHistory[120].showLabel).toBe(true);
+    const labeledCount = result.balanceHistory.filter(
+      (point) => point.showLabel,
+    ).length;
+    expect(labeledCount).toBeLessThanOrEqual(14);
+    expect(labeledCount).toBeLessThan(result.balanceHistory.length);
   });
 });
