@@ -218,7 +218,7 @@ describe("getStatusReportContasPagasUseCase", () => {
     ]);
   });
 
-  it('agrupa a partir da 6ª categoria em "Outros" (top 5 individuais + resto)', async () => {
+  it("retorna TODAS as categorias com pagamento no período, maior valor primeiro (sem corte Top N nem bucket Outros — o PDF pagina sozinho)", async () => {
     const categories = [
       RENT_CATEGORY,
       SALARY_CATEGORY,
@@ -247,23 +247,23 @@ describe("getStatusReportContasPagasUseCase", () => {
     );
 
     expect(result.categories).toHaveLength(6);
-    const outros = result.categories.at(-1);
-    expect(outros).toMatchObject({
-      categoryId: null,
-      label: "Outros",
-      color: "#CBD5E1",
-      amount: "100.00",
-    });
-    expect(result.categories.slice(0, 5).map((c) => c.label)).toEqual([
+    expect(result.categories.map((c) => c.label)).toEqual([
       "Aluguel",
       "Salários",
       "Marketing",
       "Internet",
       "Material Médico",
+      "Limpeza",
     ]);
+    expect(result.categories.at(-1)).toMatchObject({
+      categoryId: CLEANING_CATEGORY.id,
+      label: "Limpeza",
+      color: CLEANING_CATEGORY.color,
+      amount: "100.00",
+    });
   });
 
-  it("agrega Top 5 Beneficiários por valor total pago, maior primeiro", async () => {
+  it("agrega beneficiários por valor total pago, maior primeiro", async () => {
     const deps = buildDeps({
       rows: [
         row({
@@ -291,7 +291,7 @@ describe("getStatusReportContasPagasUseCase", () => {
       deps,
     );
 
-    expect(result.topBeneficiaries).toEqual([
+    expect(result.beneficiaries).toEqual([
       {
         supplierId: "s2",
         name: "Fornecedor B",
@@ -307,7 +307,7 @@ describe("getStatusReportContasPagasUseCase", () => {
     ]);
   });
 
-  it("limita Top 10 Beneficiários mesmo havendo mais de 10 fornecedores", async () => {
+  it("retorna TODOS os beneficiários, sem corte, mesmo havendo mais de 10 fornecedores", async () => {
     const rows = Array.from({ length: 12 }, (_, index) =>
       row({
         supplierId: `s${index}`,
@@ -324,8 +324,9 @@ describe("getStatusReportContasPagasUseCase", () => {
       deps,
     );
 
-    expect(result.topBeneficiaries).toHaveLength(10);
-    expect(result.topBeneficiaries[0].supplierId).toBe("s0");
+    expect(result.beneficiaries).toHaveLength(12);
+    expect(result.beneficiaries[0].supplierId).toBe("s0");
+    expect(result.beneficiaries.at(-1)?.supplierId).toBe("s11");
   });
 
   // Semanas de CALENDÁRIO (domingo a sábado) — mesma regra e mesma

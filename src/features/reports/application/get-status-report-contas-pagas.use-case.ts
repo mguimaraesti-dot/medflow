@@ -16,10 +16,6 @@ interface Deps {
   categoryRepository: CategoryRepository;
 }
 
-const TOP_CATEGORIES_LIMIT = 5;
-const TOP_BENEFICIARIES_LIMIT = 10;
-const OUTROS_COLOR = "#CBD5E1";
-
 /** Cores/rótulos já em uso no resto do app (Drawer de Contas a Pagar: 🟢 Cofre / 🏦 Banco) — reaproveitados aqui, não uma paleta nova. */
 const ORIGIN_COLORS = { BANCO: "#2563EB", COFRE: "#16A34A" } as const;
 const ORIGIN_LABELS = {
@@ -40,12 +36,16 @@ function percentageOf(amount: string, total: string): number {
 }
 
 /**
- * Agregação para o Status Report: Contas Pagas (imagem 1080x1920 — ver
- * `infrastructure/status-report-contas-pagas-image.tsx`). Busca as
+ * Agregação para o Relatório de Contas Pagas (PDF de múltiplas páginas
+ * — ver `infrastructure/status-report-contas-pagas-pdf.ts`). Busca as
  * contas pagas do período uma única vez (`listPaidForReport`) e deriva
  * em código todas as quebras (origem/categoria/beneficiários/semana) —
  * mesmo padrão de agregação em código já usado no projeto (ex:
  * `get-status-report-summary`, `run-accounts-payable-reminders`).
+ * Categorias e beneficiários retornam TODOS os itens do período (sem
+ * corte "Top N" — o PDF pagina sozinho via `jspdf-autotable`, então
+ * esconder itens só pra caber num canvas de altura fixa deixou de fazer
+ * sentido).
  * Tendência vs. período anterior usa `sumPaidByDateRange` sobre uma
  * janela de mesma duração imediatamente anterior a `dateFrom`; `null`
  * quando não há nenhum pagamento nessa janela (esconde a tendência).
@@ -119,38 +119,20 @@ export async function getStatusReportContasPagasUseCase(
   const categoryById = new Map(
     categories.map((category) => [category.id, category]),
   );
-  const sortedCategoryEntries = [...categoryTotals.entries()].sort(
-    (a, b) => Number(b[1]) - Number(a[1]),
-  );
-  const topCategoryEntries = sortedCategoryEntries.slice(
-    0,
-    TOP_CATEGORIES_LIMIT,
-  );
-  const restCategoryEntries = sortedCategoryEntries.slice(TOP_CATEGORIES_LIMIT);
-
-  const categoryBreakdown: StatusReportContasPagasCategory[] =
-    topCategoryEntries.map(([categoryId, amount]) => {
+  const categoryBreakdown: StatusReportContasPagasCategory[] = [
+    ...categoryTotals.entries(),
+  ]
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
+    .map(([categoryId, amount]) => {
       const category = categoryById.get(categoryId);
       return {
         categoryId,
         label: category?.name ?? "Sem categoria",
-        color: category?.color ?? OUTROS_COLOR,
+        color: category?.color ?? "#CBD5E1",
         amount,
         percentage: percentageOf(amount, totalPaid),
       };
     });
-  if (restCategoryEntries.length > 0) {
-    const outrosAmount = sumDecimalStrings(
-      restCategoryEntries.map(([, amount]) => amount),
-    );
-    categoryBreakdown.push({
-      categoryId: null,
-      label: "Outros",
-      color: OUTROS_COLOR,
-      amount: outrosAmount,
-      percentage: percentageOf(outrosAmount, totalPaid),
-    });
-  }
 
   const beneficiaryTotals = new Map<
     string,
@@ -164,11 +146,10 @@ export async function getStatusReportContasPagasUseCase(
       amount: sumDecimalStrings([current?.amount ?? "0.00", row.amount]),
     });
   }
-  const topBeneficiaries: StatusReportContasPagasBeneficiary[] = [
+  const beneficiaries: StatusReportContasPagasBeneficiary[] = [
     ...beneficiaryTotals.entries(),
   ]
     .sort((a, b) => Number(b[1].amount) - Number(a[1].amount))
-    .slice(0, TOP_BENEFICIARIES_LIMIT)
     .map(([supplierId, data]) => ({
       supplierId,
       name: data.name,
@@ -203,7 +184,7 @@ export async function getStatusReportContasPagasUseCase(
     paidCountPreviousPeriod,
     origins,
     categories: categoryBreakdown,
-    topBeneficiaries,
+    beneficiaries,
     weeks,
   };
 }
