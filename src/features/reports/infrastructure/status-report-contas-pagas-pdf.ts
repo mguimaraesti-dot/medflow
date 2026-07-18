@@ -138,8 +138,8 @@ export function renderStatusReportContasPagasPdf(
   // preservando a proporção original (o logo é enviado pela organização e
   // pode ser quadrado, largo ou alto — `getImageProperties` lê as
   // dimensões reais em vez de assumir uma proporção fixa).
-  const LOGO_BOX_WIDTH = 32;
-  const LOGO_BOX_HEIGHT = 14;
+  const LOGO_BOX_WIDTH = 42;
+  const LOGO_BOX_HEIGHT = 18;
   try {
     const logoDataUri = loadOrganizationLogoDataUri();
     const { width: logoWidth, height: logoHeight } =
@@ -313,6 +313,16 @@ export function renderStatusReportContasPagasPdf(
       2: { cellWidth: 32, halign: "right" },
       3: { cellWidth: 18, halign: "right" },
     },
+    // Força o alinhamento do CABEÇALHO a bater com o dos valores da coluna
+    // (`columnStyles.halign` já deveria valer pros dois, mas o rótulo
+    // "Valor"/"%" saía desalinhado do número/percentual abaixo dele —
+    // `didParseCell` roda depois de toda a mesclagem de estilo do
+    // autoTable, então é a forma garantida de igualar os dois).
+    didParseCell: (data) => {
+      if (data.column.index === 2 || data.column.index === 3) {
+        data.cell.styles.halign = "right";
+      }
+    },
     didDrawCell: (data) => {
       if (data.section === "body" && data.column.index === 0) {
         const category = input.categories[data.row.index];
@@ -358,6 +368,16 @@ export function renderStatusReportContasPagasPdf(
     columnStyles: {
       1: { cellWidth: 28, halign: "center" },
       2: { cellWidth: 32, halign: "right" },
+    },
+    // Mesmo motivo da tabela de Categorias — garante que o cabeçalho
+    // "Pagamentos"/"Valor" alinhe com os números abaixo.
+    didParseCell: (data) => {
+      if (data.column.index === 1) {
+        data.cell.styles.halign = "center";
+      }
+      if (data.column.index === 2) {
+        data.cell.styles.halign = "right";
+      }
     },
   });
 

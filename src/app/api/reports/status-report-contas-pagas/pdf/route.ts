@@ -47,6 +47,13 @@ export async function GET(request: NextRequest) {
       headers: {
         "Content-Type": "application/pdf",
         "Cache-Control": "no-store",
+        // `inline` mantém o preview embutido (`<embed>`) funcionando —
+        // só sugere o nome do arquivo pra quando o usuário exportar/
+        // salvar (nosso botão "Baixar PDF" já usa esse nome via `download`,
+        // mas o próprio visualizador de PDF do navegador tem sua própria
+        // ação de salvar, que sem isso sugeria "pdf" — o último trecho
+        // da URL, sem `Content-Disposition` nenhum).
+        "Content-Disposition": 'inline; filename="relatorio-contas-pagas.pdf"',
       },
     });
   } catch (error) {
