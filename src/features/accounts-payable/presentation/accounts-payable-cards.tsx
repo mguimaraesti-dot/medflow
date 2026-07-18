@@ -19,6 +19,7 @@ import { AccountsPayableRowMenu } from "./accounts-payable-row-menu";
 import {
   CATEGORY_COLOR_OVERRIDES,
   getDueDateDisplay,
+  STATUS_META,
 } from "./accounts-payable-helpers";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import { useCategories } from "@/features/categories/presentation/use-categories";
@@ -272,14 +273,25 @@ export function AccountsPayableCards({
                         Pagar
                       </Button>
                     ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onView(payable)}
+                      // Sem botão "Ver" aqui de propósito: o card inteiro já
+                      // é clicável (onClick no <div> raiz), e um botão extra
+                      // nesta zona é o que o dedão pressiona sem querer ao
+                      // rolar a lista. Mostra o status real em vez disso —
+                      // também deixa claro que a conta já foi paga/cancelada
+                      // em vez do "Ver" ambíguo de antes.
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium",
+                          STATUS_META[payable.displayStatus].badgeClassName,
+                        )}
                       >
-                        Ver
-                      </Button>
+                        {(() => {
+                          const StatusIcon =
+                            STATUS_META[payable.displayStatus].icon;
+                          return <StatusIcon className="h-3 w-3" />;
+                        })()}
+                        {STATUS_META[payable.displayStatus].label}
+                      </span>
                     )}
                     <AccountsPayableRowMenu
                       payable={payable}
