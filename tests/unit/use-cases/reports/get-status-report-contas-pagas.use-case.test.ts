@@ -328,39 +328,68 @@ describe("getStatusReportContasPagasUseCase", () => {
     expect(result.topBeneficiaries[0].supplierId).toBe("s0");
   });
 
-  it("divide o período em semanas de 7 dias, a última podendo ser mais curta", async () => {
-    const deps = buildDeps({ rows: [] });
+  // Semanas de CALENDÁRIO (domingo a sábado) — mesma regra e mesma
+  // função (`buildCalendarWeekBuckets`) do "Saldo por semana" do
+  // Relatório Executivo do Cofre. Fixture fixo (não o banco ao vivo) e
+  // asserção por RÓTULO EXATO — foi justamente uma asserção fraca (só
+  // contagem de buckets) que deixou passar o bug antigo de blocos
+  // fixos de 7 dias a partir de `dateFrom`, divergente do Cofre.
+  describe("semanas de calendário (mesma regra do Relatório Executivo do Cofre)", () => {
+    // 01/07/2026 é quarta-feira; 05, 12, 19 e 26/07/2026 são domingos.
+    const WEEKS_DATE_FROM = new Date("2026-07-01T00:00:00.000Z");
+    const WEEKS_DATE_TO = new Date("2026-07-31T23:59:59.999Z");
 
-    const result = await getStatusReportContasPagasUseCase(
-      "org-1",
-      DATE_FROM,
-      DATE_TO,
-      deps,
-    );
+    it("julho/2026 gera exatamente os 5 rótulos do Cofre, com as pontas marcadas (parcial)", async () => {
+      const deps = buildDeps({ rows: [] });
 
-    // Junho/2026 tem 30 dias -> 4 semanas de 7 dias + 1 de 2 dias.
-    expect(result.weeks).toHaveLength(5);
-    expect(result.weeks[0].label).toBe("01/06 a 07/06");
-    expect(result.weeks.at(-1)?.label).toBe("29/06 a 30/06");
-  });
+      const result = await getStatusReportContasPagasUseCase(
+        "org-1",
+        WEEKS_DATE_FROM,
+        WEEKS_DATE_TO,
+        deps,
+      );
 
-  it("soma cada pagamento na semana correta", async () => {
-    const deps = buildDeps({
-      rows: [
-        row({ paidAt: new Date("2026-06-03T12:00:00.000Z"), amount: "100.00" }),
-        row({ paidAt: new Date("2026-06-10T12:00:00.000Z"), amount: "50.00" }),
-      ],
+      expect(result.weeks.map((week) => week.label)).toEqual([
+        "01/07 a 04/07 (parcial)",
+        "05/07 a 11/07",
+        "12/07 a 18/07",
+        "19/07 a 25/07",
+        "26/07 a 31/07 (parcial)",
+      ]);
     });
 
-    const result = await getStatusReportContasPagasUseCase(
-      "org-1",
-      DATE_FROM,
-      DATE_TO,
-      deps,
-    );
+    it("soma cada pagamento na semana de calendário correta, inclusive nas semanas parciais das pontas", async () => {
+      const deps = buildDeps({
+        rows: [
+          row({
+            paidAt: new Date("2026-07-02T12:00:00.000Z"), // quinta, cai na 1ª semana (parcial)
+            amount: "100.00",
+          }),
+          row({
+            paidAt: new Date("2026-07-15T12:00:00.000Z"), // quarta, semana cheia do meio
+            amount: "50.00",
+          }),
+          row({
+            paidAt: new Date("2026-07-30T12:00:00.000Z"), // quinta, cai na última semana (parcial)
+            amount: "25.00",
+          }),
+        ],
+      });
 
-    expect(result.weeks[0].amount).toBe("100.00");
-    expect(result.weeks[1].amount).toBe("50.00");
-    expect(result.weeks[2].amount).toBe("0.00");
+      const result = await getStatusReportContasPagasUseCase(
+        "org-1",
+        WEEKS_DATE_FROM,
+        WEEKS_DATE_TO,
+        deps,
+      );
+
+      expect(result.weeks).toEqual([
+        { label: "01/07 a 04/07 (parcial)", amount: "100.00" },
+        { label: "05/07 a 11/07", amount: "0.00" },
+        { label: "12/07 a 18/07", amount: "50.00" },
+        { label: "19/07 a 25/07", amount: "0.00" },
+        { label: "26/07 a 31/07 (parcial)", amount: "25.00" },
+      ]);
+    });
   });
 });

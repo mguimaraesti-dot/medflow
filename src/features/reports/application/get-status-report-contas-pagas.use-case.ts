@@ -9,6 +9,7 @@ import type {
   StatusReportContasPagasSummary,
   StatusReportContasPagasWeek,
 } from "../domain/status-report-contas-pagas.entity";
+import { buildCalendarWeekBuckets } from "./build-calendar-week-buckets";
 
 interface Deps {
   accountsPayableRepository: AccountsPayableRepository;
@@ -38,34 +39,6 @@ function percentageOf(amount: string, total: string): number {
   return (Number(amount) / totalNumber) * 100;
 }
 
-function formatShortDayMonth(date: Date): string {
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${day}/${month}`;
-}
-
-/** Janelas de 7 dias dentro do período (a última pode ser mais curta) — 4-5 semanas pra um período mensal típico. */
-function buildWeekBuckets(
-  dateFrom: Date,
-  dateTo: Date,
-): { start: Date; end: Date; label: string }[] {
-  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const buckets: { start: Date; end: Date; label: string }[] = [];
-  let start = new Date(dateFrom);
-  while (start.getTime() <= dateTo.getTime()) {
-    const end = new Date(
-      Math.min(start.getTime() + 7 * ONE_DAY_MS - 1, dateTo.getTime()),
-    );
-    buckets.push({
-      start,
-      end,
-      label: `${formatShortDayMonth(start)} a ${formatShortDayMonth(end)}`,
-    });
-    start = new Date(end.getTime() + 1);
-  }
-  return buckets;
-}
-
 /**
  * Agregação para o Status Report: Contas Pagas (imagem 1080x1920 — ver
  * `infrastructure/status-report-contas-pagas-image.tsx`). Busca as
@@ -76,6 +49,12 @@ function buildWeekBuckets(
  * Tendência vs. período anterior usa `sumPaidByDateRange` sobre uma
  * janela de mesma duração imediatamente anterior a `dateFrom`; `null`
  * quando não há nenhum pagamento nessa janela (esconde a tendência).
+ *
+ * "Semana" usa `buildCalendarWeekBuckets` (mesma função do "Saldo por
+ * semana" do Relatório Executivo do Cofre) — domingo a sábado, com
+ * recorte e rótulo "(parcial)" nas pontas do período. Antes tinha uma
+ * cópia local (`buildWeekBuckets`) com blocos fixos de 7 dias a partir
+ * de `dateFrom`, que divergia da regra do Cofre (bug real, corrigido).
  */
 export async function getStatusReportContasPagasUseCase(
   organizationId: string,
@@ -197,7 +176,7 @@ export async function getStatusReportContasPagasUseCase(
       amount: data.amount,
     }));
 
-  const weeks: StatusReportContasPagasWeek[] = buildWeekBuckets(
+  const weeks: StatusReportContasPagasWeek[] = buildCalendarWeekBuckets(
     dateFrom,
     dateTo,
   ).map((bucket) => ({
