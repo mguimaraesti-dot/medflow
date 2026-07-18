@@ -1,0 +1,172 @@
+<!--
+  Template "Invite user" do Supabase Auth — cole isto direto em
+  Authentication → Email Templates → Invite user, no painel do Supabase
+  (Project Settings do projeto MedFlow). NÃO é um arquivo consumido pela
+  aplicação Next.js — vive só aqui como referência/versionamento, porque
+  o Supabase não guarda histórico de edições desse template.
+
+  Variáveis do GoTrue (Supabase Auth) usadas abaixo — substituídas pelo
+  próprio Supabase no envio, não mexer no nome:
+    {{ .ConfirmationURL }} — link de aceitar convite (mesmo link que já
+      funciona hoje: cai em /reset-password, onde o usuário define a
+      senha — ver reset-password-form.tsx).
+
+  Logo: <img> aponta pra
+  https://medflow-finance.vercel.app/brand/medflow-logo-email.png
+  (arquivo em public/brand/medflow-logo-email.png deste repo, servido
+  estaticamente pela Vercel). Se o domínio de produção mudar, atualizar
+  a URL abaixo — e-mail não tem "URL relativa".
+-->
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Você foi convidado para o MedFlow</title>
+  </head>
+  <body
+    style="margin:0; padding:0; background-color:#F1F5F9; font-family:Arial, Helvetica, sans-serif;"
+  >
+    <!-- Preheader (some texto escondido, é o resumo que aparece na caixa de entrada) -->
+    <div
+      style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#F1F5F9;"
+    >
+      Você foi convidado para acessar o MedFlow — defina sua senha para
+      começar.
+    </div>
+
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="background-color:#F1F5F9;"
+    >
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table
+            role="presentation"
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="width:600px; max-width:100%; background-color:#FFFFFF; border-radius:12px; overflow:hidden;"
+          >
+            <!-- Logo -->
+            <tr>
+              <td align="center" style="padding:40px 40px 24px 40px;">
+                <img
+                  src="https://medflow-finance.vercel.app/brand/medflow-logo-email.png"
+                  width="200"
+                  height="53"
+                  alt="MedFlow"
+                  style="display:block; border:0; width:200px; height:53px;"
+                />
+              </td>
+            </tr>
+
+            <!-- Barrinha de destaque -->
+            <tr>
+              <td style="padding:0 40px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td height="3" style="background-color:#2563EB; font-size:0; line-height:0;">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Conteúdo -->
+            <tr>
+              <td style="padding:32px 40px 8px 40px;">
+                <h1
+                  style="margin:0 0 12px 0; font-family:Arial, Helvetica, sans-serif; font-size:22px; line-height:28px; color:#0F172A; font-weight:bold;"
+                >
+                  Você foi convidado para o MedFlow
+                </h1>
+                <p
+                  style="margin:0 0 20px 0; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#64748B;"
+                >
+                  Gestão financeira inteligente para clínicas
+                </p>
+                <p
+                  style="margin:0 0 24px 0; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:24px; color:#334155;"
+                >
+                  Você foi convidado a acessar o MedFlow, o sistema de
+                  gestão financeira da sua clínica. Para começar, defina
+                  sua senha e entre na plataforma.
+                </p>
+              </td>
+            </tr>
+
+            <!-- Botão -->
+            <tr>
+              <td align="center" style="padding:0 40px 32px 40px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td
+                      align="center"
+                      bgcolor="#2563EB"
+                      style="border-radius:8px;"
+                    >
+                      <a
+                        href="{{ .ConfirmationURL }}"
+                        target="_blank"
+                        style="display:inline-block; padding:14px 32px; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; color:#FFFFFF; text-decoration:none; border-radius:8px;"
+                      >
+                        Aceitar convite e criar minha senha
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Nota de segurança -->
+            <tr>
+              <td style="padding:0 40px 32px 40px;">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  style="background-color:#F8FAFC; border-radius:8px;"
+                >
+                  <tr>
+                    <td style="padding:14px 16px;">
+                      <p
+                        style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#64748B;"
+                      >
+                        Se você não esperava este convite, ignore este
+                        e-mail — nenhuma ação será tomada e nenhuma conta
+                        será criada.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Rodapé -->
+            <tr>
+              <td
+                style="padding:24px 40px; border-top:1px solid #E2E8F0;"
+              >
+                <p
+                  style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#94A3B8; text-align:center;"
+                >
+                  MedFlow — Gestão financeira inteligente para clínicas
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
