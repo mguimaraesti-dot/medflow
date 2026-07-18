@@ -54,6 +54,60 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
   return y;
 }
 
+const WEEK_CHART_VALUE_SPACE = 6; // espaço reservado pro valor em R$ acima da barra mais alta
+const WEEK_CHART_BAR_HEIGHT = 28; // altura máxima de barra (semana com maior valor)
+const WEEK_CHART_LABEL_SPACE = 9; // até 2 linhas de rótulo (ex.: "01/07 a 04/07 (parcial)") abaixo da barra
+const WEEK_CHART_GAP = 3;
+
+/**
+ * "Pagamentos por Semana" como gráfico de barras — jsPDF não tem uma lib
+ * de charts, então cada barra é um `roundedRect` com altura proporcional
+ * ao maior valor do período, mesma técnica já usada pros cards de KPI/
+ * origem deste arquivo. Rótulo da semana pode quebrar em 2 linhas
+ * (`splitTextToSize`) pra caber "(parcial)" sem estourar a coluna.
+ */
+function renderWeeklyBarChart(
+  doc: jsPDF,
+  top: number,
+  weeks: { label: string; amount: string }[],
+): void {
+  const columnWidth =
+    (CONTENT_WIDTH - WEEK_CHART_GAP * (weeks.length - 1)) / weeks.length;
+  const maxAmount = Math.max(...weeks.map((week) => Number(week.amount)), 1);
+  const baseline = top + WEEK_CHART_VALUE_SPACE + WEEK_CHART_BAR_HEIGHT;
+
+  weeks.forEach((week, index) => {
+    const x = MARGIN + index * (columnWidth + WEEK_CHART_GAP);
+    const centerX = x + columnWidth / 2;
+    const amount = Number(week.amount);
+    const barHeight = Math.max(
+      (amount / maxAmount) * WEEK_CHART_BAR_HEIGHT,
+      1.5,
+    );
+    const barTop = baseline - barHeight;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...TEXT_DARK);
+    doc.text(formatCurrencyBRL(week.amount), centerX, barTop - 2, {
+      align: "center",
+    });
+
+    doc.setFillColor(...BLUE);
+    doc.roundedRect(x + 1, barTop, columnWidth - 2, barHeight, 1, 1, "F");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...TEXT_MUTED);
+    const labelLines = doc.splitTextToSize(week.label, columnWidth);
+    labelLines.forEach((line: string, lineIndex: number) => {
+      doc.text(line, centerX, baseline + 4 + lineIndex * 3, {
+        align: "center",
+      });
+    });
+  });
+}
+
 /**
  * Sinal "+"/"-" em vez de glifo de seta (▲/▼/↑/↓): a fonte padrão do
  * jsPDF (Helvetica, WinAnsi) não tem esses glifos Unicode e os
@@ -227,14 +281,14 @@ export function renderStatusReportContasPagasPdf(
 
   y += ORIGIN_HEIGHT + 8;
 
-  // "Onde o dinheiro foi gasto" — TODAS as categorias com pagamento no
-  // período (sem corte "Top 5 + Outros", ver doc do use case). Bolinha
-  // colorida (mesma cor cadastrada em `Category.color`) desenhada via
-  // `didDrawCell` — `autoTable` não tem coluna de "swatch" nativa.
+  // Categorias — TODAS as categorias com pagamento no período (sem corte
+  // "Top 5 + Outros", ver doc do use case). Bolinha colorida (mesma cor
+  // cadastrada em `Category.color`) desenhada via `didDrawCell` —
+  // `autoTable` não tem coluna de "swatch" nativa.
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...TEXT_DARK);
-  doc.text("Onde o dinheiro foi gasto", MARGIN, y);
+  doc.text("Categorias", MARGIN, y);
   y += 4;
 
   autoTable(doc, {
@@ -309,35 +363,26 @@ export function renderStatusReportContasPagasPdf(
 
   y = getFinalY(doc) + 8;
 
-  // Pagamentos por Semana — semanas de CALENDÁRIO (domingo a sábado, com
-  // "(parcial)" nas pontas), mesma função compartilhada do "Saldo por
-  // semana" do Relatório Executivo do Cofre (`buildCalendarWeekBuckets`).
-  y = ensureSpace(doc, y, 20 + input.weeks.length * 7);
+  // Pagamentos por Semana — gráfico de barras (não tabela): semanas de
+  // CALENDÁRIO (domingo a sábado, com "(parcial)" nas pontas), mesma
+  // função compartilhada do "Saldo por semana" do Relatório Executivo
+  // do Cofre (`buildCalendarWeekBuckets`).
+  y = ensureSpace(
+    doc,
+    y,
+    10 +
+      WEEK_CHART_VALUE_SPACE +
+      WEEK_CHART_BAR_HEIGHT +
+      WEEK_CHART_LABEL_SPACE,
+  );
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...TEXT_DARK);
   doc.text("Pagamentos por Semana", MARGIN, y);
-  y += 4;
+  y += 6;
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: MARGIN, right: MARGIN, bottom: 16 },
-    head: [["Semana", "Valor"]],
-    body: input.weeks.map((week) => [
-      week.label,
-      formatCurrencyBRL(week.amount),
-    ]),
-    headStyles: {
-      fillColor: HEAD_BG,
-      textColor: TEXT_MUTED,
-      fontStyle: "bold",
-      fontSize: 7,
-    },
-    bodyStyles: { fontSize: 8, textColor: TEXT_DARK },
-    columnStyles: {
-      1: { cellWidth: 32, halign: "right" },
-    },
-  });
+  renderWeeklyBarChart(doc, y, input.weeks);
+  y += WEEK_CHART_VALUE_SPACE + WEEK_CHART_BAR_HEIGHT + WEEK_CHART_LABEL_SPACE;
 
   const pageCount = doc.getNumberOfPages();
   for (let page = 1; page <= pageCount; page++) {
