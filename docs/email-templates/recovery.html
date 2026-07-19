@@ -1,34 +1,29 @@
 <!--
-  Template "Invite user" do Supabase Auth — cole isto direto em
-  Authentication → Email Templates → Invite user, no painel do Supabase
-  (Project Settings do projeto MedFlow). NÃO é um arquivo consumido pela
-  aplicação Next.js — vive só aqui como referência/versionamento, porque
-  o Supabase não guarda histórico de edições desse template.
+  Template "Reset Password" (recuperação de senha) do Supabase Auth —
+  cole isto em Authentication → Email Templates → Reset Password, no
+  painel do Supabase do projeto MedFlow. Igual a invite-user.html
+  (mesmo repo, mesma marca), só o conteúdo/variáveis mudam pro cenário
+  de recuperação em vez de convite. NÃO é consumido pela aplicação
+  Next.js — vive só aqui como referência/versionamento.
 
-  Variáveis do GoTrue (Supabase Auth) usadas abaixo — substituídas pelo
-  próprio Supabase no envio, não mexer no nome:
-    {{ .SiteURL }} / {{ .TokenHash }} — juntos montam o link de aceitar
-      convite, apontando DIRETO pra nossa página (/reset-password?
-      token_hash=...&type=invite), não para {{ .ConfirmationURL }}.
+  Variáveis do GoTrue usadas abaixo:
+    {{ .SiteURL }} / {{ .TokenHash }} — juntos montam o link de
+      redefinir senha, apontando DIRETO pra nossa página
+      (/reset-password?token_hash=...&type=recovery), não para
+      {{ .ConfirmationURL }}.
 
-  ⚠️ Por que não usar {{ .ConfirmationURL }} (o padrão do Supabase):
-  esse link aponta pro PRÓPRIO servidor do Supabase
-  (.../auth/v1/verify?token=...), que consome o token de uso único já
-  no primeiro GET — se qualquer scanner de segurança de e-mail (Gmail,
-  Outlook/Defender, antivírus/VPN corporativo) abrir esse link
-  automaticamente pra verificar phishing ANTES do clique real do
-  usuário, o token já queima e ele cai em "link expirado" mesmo tendo
-  acabado de receber o e-mail — bug real visto em produção. Apontando
-  direto pra nossa própria página (que só chama verifyOtp() quando o
-  JavaScript roda de verdade no navegador do usuário, não numa
-  pré-busca de scanner), esse risco desaparece. reset-password-form.tsx
-  já sabe processar esse formato (?token_hash=...&type=...).
+  ⚠️ Mesmo motivo do invite-user.html: {{ .ConfirmationURL }} aponta
+  pro próprio servidor do Supabase e consome o token de uso único já
+  no primeiro GET — um scanner de segurança de e-mail abrindo esse
+  link antes do clique real do usuário queima o token e ele cai em
+  "link expirado" na hora, mesmo com o e-mail recém-chegado (bug real
+  visto em produção com este exato template ainda usando o padrão do
+  Supabase). Apontando direto pra nossa página, o token só é consumido
+  quando o JavaScript roda de verdade no navegador do usuário
+  (reset-password-form.tsx já sabe processar esse formato).
 
-  Logo: <img> aponta pra
+  Logo: mesmo arquivo de invite-user.html —
   https://medflow-finance.vercel.app/brand/medflow-logo-email.png
-  (arquivo em public/brand/medflow-logo-email.png deste repo, servido
-  estaticamente pela Vercel). Se o domínio de produção mudar, atualizar
-  a URL abaixo — e-mail não tem "URL relativa".
 -->
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml">
@@ -38,17 +33,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="color-scheme" content="light" />
     <meta name="supported-color-schemes" content="light" />
-    <title>Você foi convidado para o MedFlow</title>
+    <title>Redefinir sua senha do MedFlow</title>
   </head>
   <body
     style="margin:0; padding:0; background-color:#F1F5F9; font-family:Arial, Helvetica, sans-serif;"
   >
-    <!-- Preheader (some texto escondido, é o resumo que aparece na caixa de entrada) -->
     <div
       style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#F1F5F9;"
     >
-      Você foi convidado para acessar o MedFlow — defina sua senha para
-      começar.
+      Recebemos um pedido para redefinir sua senha no MedFlow.
     </div>
 
     <table
@@ -99,7 +92,7 @@
                 <h1
                   style="margin:0 0 12px 0; font-family:Arial, Helvetica, sans-serif; font-size:22px; line-height:28px; color:#0F172A; font-weight:bold;"
                 >
-                  Você foi convidado para o MedFlow
+                  Redefinir sua senha
                 </h1>
                 <p
                   style="margin:0 0 20px 0; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#64748B;"
@@ -109,9 +102,9 @@
                 <p
                   style="margin:0 0 24px 0; font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:24px; color:#334155;"
                 >
-                  Você foi convidado a acessar o MedFlow, o sistema de
-                  gestão financeira da sua clínica. Para começar, defina
-                  sua senha e entre na plataforma.
+                  Recebemos um pedido para redefinir a senha da sua
+                  conta no MedFlow. Clique no botão abaixo para
+                  escolher uma nova senha.
                 </p>
               </td>
             </tr>
@@ -127,11 +120,11 @@
                       style="border-radius:8px;"
                     >
                       <a
-                        href="{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=invite"
+                        href="{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery"
                         target="_blank"
                         style="display:inline-block; padding:14px 32px; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; color:#FFFFFF; text-decoration:none; border-radius:8px;"
                       >
-                        Aceitar convite e criar minha senha
+                        Redefinir minha senha
                       </a>
                     </td>
                   </tr>
@@ -155,9 +148,9 @@
                       <p
                         style="margin:0; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#64748B;"
                       >
-                        Se você não esperava este convite, ignore este
-                        e-mail — nenhuma ação será tomada e nenhuma conta
-                        será criada.
+                        Se você não pediu essa redefinição de senha,
+                        ignore este e-mail — sua senha atual continua
+                        válida e nenhuma ação será tomada.
                       </p>
                     </td>
                   </tr>
