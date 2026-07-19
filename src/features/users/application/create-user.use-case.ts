@@ -12,6 +12,13 @@ import type { CreateUserInput } from "./dtos/create-user.dto";
 interface Deps {
   userManagementRepository: UserManagementRepository;
   supabaseAdmin: SupabaseClient;
+  /**
+   * Origem da requisição (ex.: `https://medflow-finance.vercel.app`),
+   * extraída da própria request (mesmo padrão de `/api/auth/callback`)
+   * — nunca hardcoded, nunca uma env var nova. Usada só para montar o
+   * `redirectTo` abaixo.
+   */
+  appOrigin: string;
 }
 
 /**
@@ -19,6 +26,13 @@ interface Deps {
  * pra ele definir a própria senha). O trigger `handle_new_auth_user`
  * já cria a linha PENDING em `users` assim que o convite é emitido —
  * aqui só enriquecemos essa linha (nome/perfil) e a ativamos.
+ *
+ * `redirectTo` explícito para `/reset-password` — sem isso, o Supabase
+ * usa o "Site URL" configurado no painel como destino do link, que
+ * pode apontar (ou ser alterado) para qualquer lugar; já vimos isso
+ * quebrar em produção (link caindo em `/login`, sem tela pra definir
+ * senha, usuário preso em loop). `/reset-password` já sabe processar
+ * esse tipo de link — ver `reset-password-form.tsx`.
  */
 export async function createUserUseCase(
   input: CreateUserInput,
@@ -40,6 +54,7 @@ export async function createUserUseCase(
 
   const { data, error } = await deps.supabaseAdmin.auth.admin.inviteUserByEmail(
     input.email,
+    { redirectTo: `${deps.appOrigin}/reset-password` },
   );
 
   if (error || !data.user) {
