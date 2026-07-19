@@ -8,7 +8,7 @@ import {
   resetPasswordSchema,
   type ResetPasswordInput,
 } from "../application/dtos/reset-password.dto";
-import { createSupabaseBrowserClient } from "@/core/auth/supabase-browser.client";
+import { createIsolatedSupabaseClient } from "@/core/auth/supabase-isolated.client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -16,21 +16,42 @@ import { Label } from "@/shared/ui/label";
 type SessionStatus = "checking" | "ready" | "invalid";
 
 /**
+ * Lê `access_token`/`refresh_token` direto do fragmento da URL
+ * (`#access_token=...&refresh_token=...`) em vez de deixar o SDK do
+ * Supabase detectar sozinho — ver o comentário de
+ * `createIsolatedSupabaseClient` sobre o porquê de não usar o client
+ * normal (`detectSessionInUrl`) aqui.
+ */
+function parseHashTokens(): {
+  accessToken: string;
+  refreshToken: string;
+} | null {
+  if (typeof window === "undefined") return null;
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return null;
+  return { accessToken, refreshToken };
+}
+
+/**
  * O link de convite/recuperação chega com o token de sessão no
- * FRAGMENTO da URL (`#access_token=...`), processado de forma
- * assíncrona pelo SDK do Supabase — não dá pra assumir que a sessão já
- * está pronta assim que o componente monta. Antes, `onSubmit` criava o
- * client e chamava `updateUser` de uma vez só; se a sessão ainda não
- * tivesse sido estabelecida nesse instante, a troca de senha podia
- * rodar sem sessão válida, sem nenhum erro visível na tela (bug real
- * encontrado em produção — usuário "definia" a senha, mas ela nunca
- * era gravada). Aqui a sessão é confirmada (via `getSession` +
- * `onAuthStateChange`) antes de liberar o formulário, com um limite de
- * tempo pra avisar claramente se o link expirou ou já foi usado.
+ * fragmento da URL. Usávamos o client "normal" (`createSupabaseBrowserClient`),
+ * que grava a sessão em cookies compartilhados por TODAS as abas do
+ * mesmo navegador — bug real encontrado em produção: um admin já
+ * logado, ao abrir (no mesmo navegador) o link de convite de outra
+ * conta, tinha sua própria sessão contaminada pela sessão do link
+ * (ou vice-versa), e a troca de senha às vezes não "pegava" pra
+ * ninguém, sem erro visível. Agora a sessão do link é estabelecida
+ * manualmente (`setSession`) num client ISOLADO, que nunca escreve em
+ * cookies/localStorage — não interfere com nenhuma outra aba.
  */
 export function ResetPasswordForm() {
   const router = useRouter();
-  const [supabase] = useState(() => createSupabaseBrowserClient());
+  const [supabase] = useState(() => createIsolatedSupabaseClient());
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("checking");
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,32 +67,35 @@ export function ResetPasswordForm() {
   useEffect(() => {
     let cancelled = false;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!cancelled && session) {
-        setSessionStatus("ready");
+    async function establishSession() {
+      const tokens = parseHashTokens();
+      if (!tokens) {
+        if (!cancelled) setSessionStatus("invalid");
+        return;
       }
-    });
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled && data.session) {
-        setSessionStatus("ready");
-      }
-    });
+      const { error } = await supabase.auth.setSession({
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+      });
 
-    const timeout = setTimeout(() => {
-      if (!cancelled) {
-        setSessionStatus((current) =>
-          current === "ready" ? current : "invalid",
-        );
+      if (cancelled) return;
+
+      if (error) {
+        setSessionStatus("invalid");
+        return;
       }
-    }, 5000);
+
+      // Limpa o fragmento da URL — o token não precisa mais ficar
+      // visível ali (evita reexposição em copiar/recarregar a página).
+      window.history.replaceState(null, "", window.location.pathname);
+      setSessionStatus("ready");
+    }
+
+    establishSession();
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, [supabase]);
 
@@ -88,7 +112,6 @@ export function ResetPasswordForm() {
         );
         return;
       }
-      await supabase.auth.signOut();
       router.push("/login");
       router.refresh();
     } catch {
