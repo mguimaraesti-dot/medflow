@@ -20,7 +20,8 @@ type SessionStatus = "checking" | "ready" | "invalid";
  * (`#access_token=...&refresh_token=...`) em vez de deixar o SDK do
  * Supabase detectar sozinho — ver o comentário de
  * `createIsolatedSupabaseClient` sobre o porquê de não usar o client
- * normal (`detectSessionInUrl`) aqui.
+ * normal (`detectSessionInUrl`) aqui. Esse formato é o que o convite
+ * de novo usuário usa (`inviteUserByEmail`).
  */
 function parseHashTokens(): {
   accessToken: string;
@@ -35,6 +36,23 @@ function parseHashTokens(): {
   const refreshToken = params.get("refresh_token");
   if (!accessToken || !refreshToken) return null;
   return { accessToken, refreshToken };
+}
+
+/**
+ * "Esqueci minha senha" (`resetPasswordForEmail`) usa um formato
+ * DIFERENTE do convite: `?token_hash=...&type=recovery` na query
+ * string, não no fragmento — bug real encontrado em produção (o link
+ * de recuperação sempre caía direto em "link expirado", porque só
+ * checávamos o fragmento). Esse token precisa de `verifyOtp`, não
+ * `setSession`.
+ */
+function parseQueryTokenHash(): { tokenHash: string; type: string } | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const tokenHash = params.get("token_hash");
+  const type = params.get("type");
+  if (!tokenHash || !type) return null;
+  return { tokenHash, type };
 }
 
 /**
@@ -68,16 +86,23 @@ export function ResetPasswordForm() {
     let cancelled = false;
 
     async function establishSession() {
-      const tokens = parseHashTokens();
-      if (!tokens) {
+      const hashTokens = parseHashTokens();
+      const queryTokens = hashTokens ? null : parseQueryTokenHash();
+
+      if (!hashTokens && !queryTokens) {
         if (!cancelled) setSessionStatus("invalid");
         return;
       }
 
-      const { error } = await supabase.auth.setSession({
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken,
-      });
+      const { error } = hashTokens
+        ? await supabase.auth.setSession({
+            access_token: hashTokens.accessToken,
+            refresh_token: hashTokens.refreshToken,
+          })
+        : await supabase.auth.verifyOtp({
+            token_hash: queryTokens!.tokenHash,
+            type: queryTokens!.type as "recovery",
+          });
 
       if (cancelled) return;
 
@@ -86,8 +111,9 @@ export function ResetPasswordForm() {
         return;
       }
 
-      // Limpa o fragmento da URL — o token não precisa mais ficar
-      // visível ali (evita reexposição em copiar/recarregar a página).
+      // Limpa o fragmento/query da URL — o token não precisa mais
+      // ficar visível ali (evita reexposição em copiar/recarregar a
+      // página).
       window.history.replaceState(null, "", window.location.pathname);
       setSessionStatus("ready");
     }
