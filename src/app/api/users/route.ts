@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const input = createUserSchema.parse(body);
 
+    const { origin } = new URL(request.url);
     const result = await createUserUseCase(
       input,
       user.id,
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       {
         userManagementRepository,
         supabaseAdmin: createSupabaseAdminClient(),
+        appOrigin: origin,
       },
     );
 

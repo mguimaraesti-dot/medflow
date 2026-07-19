@@ -45,6 +45,7 @@ describe("createUserUseCase", () => {
           userManagementRepository,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           supabaseAdmin: buildSupabaseAdmin() as any,
+          appOrigin: "https://medflow-finance.vercel.app",
         },
       ),
     ).rejects.toThrow(UserEmailAlreadyExistsError);
@@ -64,6 +65,7 @@ describe("createUserUseCase", () => {
           userManagementRepository,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           supabaseAdmin: buildSupabaseAdmin() as any,
+          appOrigin: "https://medflow-finance.vercel.app",
         },
       ),
     ).rejects.toThrow(NotFoundError);
@@ -87,12 +89,17 @@ describe("createUserUseCase", () => {
       { name: "Ana", email: "ana@medflow.com", roleId: "role-1" },
       "admin-1",
       "org-1",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { userManagementRepository, supabaseAdmin: supabaseAdmin as any },
+      {
+        userManagementRepository,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supabaseAdmin: supabaseAdmin as any,
+        appOrigin: "https://medflow-finance.vercel.app",
+      },
     );
 
     expect(supabaseAdmin.auth.admin.inviteUserByEmail).toHaveBeenCalledWith(
       "ana@medflow.com",
+      { redirectTo: "https://medflow-finance.vercel.app/reset-password" },
     );
     expect(finalizeInvite).toHaveBeenCalledWith("auth-1", {
       name: "Ana",
@@ -120,8 +127,12 @@ describe("createUserUseCase", () => {
         { name: "Ana", email: "ana@medflow.com", roleId: "role-1" },
         "admin-1",
         "org-1",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        { userManagementRepository, supabaseAdmin: supabaseAdmin as any },
+        {
+          userManagementRepository,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          supabaseAdmin: supabaseAdmin as any,
+          appOrigin: "https://medflow-finance.vercel.app",
+        },
       ),
     ).rejects.toThrow("Falha ao convidar usuário");
   });
