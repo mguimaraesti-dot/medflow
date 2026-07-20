@@ -6,9 +6,13 @@ import { toast } from "sonner";
 import { useUsers } from "./use-users";
 import { useSetUserStatus } from "./use-set-user-status";
 import { UsersTable } from "./users-table";
+import { UsersCards } from "./users-cards";
 import { UserFormDialog } from "./user-form-dialog";
 import { ApiError } from "@/shared/lib/api-client";
+import { cn } from "@/shared/lib/utils";
 import { EmptyState } from "@/shared/components/empty-state";
+import { FilterChipGroup } from "@/shared/components/mobile-filter-sheet";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Skeleton } from "@/shared/ui/skeleton";
@@ -30,6 +34,7 @@ const STATUS_LABEL: Record<"ALL" | UserResponseDTO["status"], string> = {
 };
 
 export function UsersScreen({ currentUserId }: { currentUserId: string }) {
+  const isMobile = useMediaQuery("(max-width: 1023px)");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"ALL" | UserResponseDTO["status"]>(
     "ALL",
@@ -77,7 +82,13 @@ export function UsersScreen({ currentUserId }: { currentUserId: string }) {
   const users = data?.items ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", isMobile && "pb-20")}>
+      {isMobile && data && (
+        <p className="text-muted-foreground text-sm">
+          {data.total} cadastrado{data.total === 1 ? "" : "s"}
+        </p>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row">
           <div className="relative w-full sm:max-w-xs">
@@ -92,30 +103,48 @@ export function UsersScreen({ currentUserId }: { currentUserId: string }) {
               }}
             />
           </div>
-          <Select
-            value={status}
-            onValueChange={(value) => {
-              setStatus(value as typeof status);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isMobile && (
+            <Select
+              value={status}
+              onValueChange={(value) => {
+                setStatus(value as typeof status);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
-        <Button type="button" onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          Novo Usuário
-        </Button>
+        {!isMobile && (
+          <Button type="button" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            Novo Usuário
+          </Button>
+        )}
       </div>
+
+      {isMobile && (
+        <FilterChipGroup
+          options={[
+            { value: "ACTIVE", label: "Ativos" },
+            { value: "INACTIVE", label: "Inativos" },
+          ]}
+          value={status === "ALL" ? undefined : status}
+          onChange={(value) => {
+            setStatus(value ?? "ALL");
+            setPage(1);
+          }}
+        />
+      )}
 
       <Card>
         <CardContent>
@@ -144,12 +173,21 @@ export function UsersScreen({ currentUserId }: { currentUserId: string }) {
 
           {!isLoading && users.length > 0 && (
             <>
-              <UsersTable
-                users={users}
-                currentUserId={currentUserId}
-                onEdit={openEdit}
-                onToggleStatus={handleToggleStatus}
-              />
+              {isMobile ? (
+                <UsersCards
+                  users={users}
+                  currentUserId={currentUserId}
+                  onEdit={openEdit}
+                  onToggleStatus={handleToggleStatus}
+                />
+              ) : (
+                <UsersTable
+                  users={users}
+                  currentUserId={currentUserId}
+                  onEdit={openEdit}
+                  onToggleStatus={handleToggleStatus}
+                />
+              )}
               {data && data.totalPages > 1 && (
                 <div className="text-muted-foreground flex items-center justify-between pt-4 text-sm">
                   <span>
@@ -182,6 +220,18 @@ export function UsersScreen({ currentUserId }: { currentUserId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {isMobile && (
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-5 bottom-5 z-20 h-14 w-14 rounded-full shadow-lg"
+          onClick={openCreate}
+        >
+          <Plus className="h-6 w-6" />
+          <span className="sr-only">Novo Usuário</span>
+        </Button>
+      )}
 
       <UserFormDialog
         open={formOpen}
