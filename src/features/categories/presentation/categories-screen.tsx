@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, Tags } from "lucide-react";
+import { Plus, Search, Tags } from "lucide-react";
 import { toast } from "sonner";
 import { useCategories } from "./use-categories";
 import { useCreateCategory } from "./use-create-category";
@@ -9,11 +9,14 @@ import { useDeleteCategory } from "./use-delete-category";
 import { useCategoryFormState } from "./use-category-form-state";
 import { CategoryColorPicker } from "./category-color-picker";
 import { CategoriesTable } from "./categories-table";
+import { CategoryCreateSheet } from "./category-create-sheet";
 import { CategoryEditDialog } from "./category-edit-dialog";
 import { CategoryDeleteBlockedDialog } from "./category-delete-blocked-dialog";
 import { ApiError } from "@/shared/lib/api-client";
+import { cn } from "@/shared/lib/utils";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { EmptyState } from "@/shared/components/empty-state";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -34,8 +37,10 @@ export function CategoriesScreen({ canCreate }: { canCreate: boolean }) {
   const createCategory = useCreateCategory();
   const deleteCategory = useDeleteCategory();
   const createForm = useCategoryFormState();
+  const isMobile = useMediaQuery("(max-width: 1023px)");
 
   const [search, setSearch] = useState("");
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [editingTarget, setEditingTarget] =
     useState<CategoryResponseDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CategoryResponseDTO | null>(
@@ -97,8 +102,8 @@ export function CategoriesScreen({ canCreate }: { canCreate: boolean }) {
   }
 
   return (
-    <div className="space-y-4">
-      {canCreate && (
+    <div className={cn("space-y-4", isMobile && "pb-20")}>
+      {canCreate && !isMobile && (
         <Card>
           <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-end">
@@ -211,6 +216,23 @@ export function CategoriesScreen({ canCreate }: { canCreate: boolean }) {
           )}
         </CardContent>
       </Card>
+
+      {isMobile && canCreate && (
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-5 bottom-5 z-20 h-14 w-14 rounded-full shadow-lg"
+          onClick={() => setCreateSheetOpen(true)}
+        >
+          <Plus className="h-6 w-6" />
+          <span className="sr-only">Nova Categoria</span>
+        </Button>
+      )}
+
+      <CategoryCreateSheet
+        open={createSheetOpen}
+        onOpenChange={setCreateSheetOpen}
+      />
 
       <CategoryEditDialog
         category={editingTarget}
