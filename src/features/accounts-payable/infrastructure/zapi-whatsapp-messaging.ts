@@ -55,8 +55,12 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
         `Descrição: *${input.description}*\n` +
         `Valor: *${input.amount}*\n` +
         `Vencimento: *${input.dueDate}*`,
+      // Label "Pagar" (era "Pago") — só o texto visível muda. O `id` do
+      // botão continua `pago_<accountsPayableId>` (payButtonId acima),
+      // que é o que o webhook casa via regex — mudar o id quebraria a
+      // baixa automática.
       buttonId: payButtonId(input.accountsPayableId),
-      buttonLabel: "Pago",
+      buttonLabel: "Pagar",
       delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
     });
 
