@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import type { DashboardTimelineEventResponseDTO } from "../application/dtos/dashboard-overview.response-dto";
 import type { DashboardTimelineTone } from "../domain/dashboard-overview.entity";
 
-const TONE_ICON_CLASSES: Record<DashboardTimelineTone, string> = {
+export const TONE_ICON_CLASSES: Record<DashboardTimelineTone, string> = {
   green: "bg-green-500/10 text-green-600 dark:text-green-500",
   red: "bg-red-500/10 text-red-600 dark:text-red-500",
   blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
@@ -22,7 +22,7 @@ const TONE_ICON_CLASSES: Record<DashboardTimelineTone, string> = {
   neutral: "bg-muted text-muted-foreground",
 };
 
-const TONE_VALUE_CLASSES: Record<DashboardTimelineTone, string> = {
+export const TONE_VALUE_CLASSES: Record<DashboardTimelineTone, string> = {
   green: "text-green-600 dark:text-green-500",
   red: "text-red-600 dark:text-red-500",
   blue: "text-blue-600 dark:text-blue-400",
@@ -30,7 +30,9 @@ const TONE_VALUE_CLASSES: Record<DashboardTimelineTone, string> = {
   neutral: "text-foreground",
 };
 
-function eventIcon(event: DashboardTimelineEventResponseDTO): LucideIcon {
+export function eventIcon(
+  event: DashboardTimelineEventResponseDTO,
+): LucideIcon {
   if (event.title.includes("fechado")) return Lock;
   if (event.title.includes("aberto") || event.title.includes("reaberto"))
     return Unlock;

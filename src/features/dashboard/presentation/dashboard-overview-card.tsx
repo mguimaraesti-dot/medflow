@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import type { DashboardPendencyResponseDTO } from "../application/dtos/dashboard-overview.response-dto";
 
-const SEVERITY_ICON_CLASSES: Record<
+export const SEVERITY_ICON_CLASSES: Record<
   DashboardPendencyResponseDTO["severity"],
   string
 > = {
@@ -21,7 +21,9 @@ const SEVERITY_ICON_CLASSES: Record<
   info: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
 };
 
-function pendencySubtitle(pendency: DashboardPendencyResponseDTO): string {
+export function pendencySubtitle(
+  pendency: DashboardPendencyResponseDTO,
+): string {
   switch (pendency.code) {
     case "OVERDUE_PAYABLES":
     case "DUE_TODAY_PAYABLES":
