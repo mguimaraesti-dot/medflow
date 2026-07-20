@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { CalendarDays, Receipt, Search } from "lucide-react";
 import { useCashFlowEntries } from "./use-cash-flow-entries";
 import { CashFlowEntryDetailDrawer } from "./cash-flow-entry-detail-drawer";
+import { CashFlowEntriesCards } from "./cash-flow-entries-cards";
 import { ReverseEntryDialog } from "./reverse-entry-dialog";
 import { usePaymentMethods } from "@/features/payment-methods/presentation/use-payment-methods";
 import { useCategories } from "@/features/categories/presentation/use-categories";
 import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
 import { getPaymentMethodIcon } from "@/shared/lib/lucide-icon-map";
 import { cn } from "@/shared/lib/utils";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { EmptyState } from "@/shared/components/empty-state";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -37,7 +39,7 @@ const QUICK_FILTERS: { value: QuickFilter; label: string }[] = [
 ];
 
 /** Paciente (Entrada) ou Justificativa (Saída) — nunca os dois ao mesmo tempo. */
-function patientOrReason(entry: CashFlowEntryResponseDTO): string {
+export function patientOrReason(entry: CashFlowEntryResponseDTO): string {
   return entry.type === "IN"
     ? entry.patientName || "—"
     : entry.withdrawalReason || "—";
@@ -52,6 +54,7 @@ export function CashFlowEntriesTable({
   isClosedToday: boolean;
   canReverse: boolean;
 }) {
+  const isMobile = useMediaQuery("(max-width: 1023px)");
   const [selectedEntry, setSelectedEntry] =
     useState<CashFlowEntryResponseDTO | null>(null);
   const [reversingEntryId, setReversingEntryId] = useState<string | null>(null);
@@ -182,115 +185,127 @@ export function CashFlowEntriesTable({
             />
           )}
 
-        {!isLoading && !isClosedToday && filteredItems.length > 0 && (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Hora</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Paciente / Justificativa</TableHead>
-                  <TableHead>Forma</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredItems.map((entry) => {
-                  const paymentMethod = paymentMethodById.get(
-                    entry.paymentMethodId,
-                  );
-                  const PaymentMethodIcon = getPaymentMethodIcon(
-                    paymentMethod?.name ?? "",
-                  );
-                  const category = categoryById.get(entry.categoryId);
-                  const canReverseEntry =
-                    canReverse && !entry.isReversed && !entry.reversalOfEntryId;
-                  return (
-                    <TableRow
-                      key={entry.id}
-                      className="hover:bg-muted/50 h-16 cursor-pointer transition-shadow hover:shadow-[inset_3px_0_0_0_var(--primary)]"
-                      onClick={() => setSelectedEntry(entry)}
-                    >
-                      <TableCell className="text-muted-foreground">
-                        {formatTimeBR(entry.occurredAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Badge
-                            variant={
-                              entry.type === "IN" ? "default" : "destructive"
-                            }
-                          >
-                            {entry.type === "IN" ? "Entrada" : "Saída"}
-                          </Badge>
-                          {entry.isReversed && (
-                            <Badge variant="secondary">Estornado</Badge>
-                          )}
-                          {entry.reversalOfEntryId && (
-                            <Badge variant="outline">Estorno</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor: category?.color ?? "#64748B",
-                            }}
-                          />
-                          {category?.name ?? "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {patientOrReason(entry)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <PaymentMethodIcon className="h-3.5 w-3.5" />
-                          {paymentMethod?.name ?? "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell
-                        className={
-                          "text-right text-base font-semibold " +
-                          (entry.type === "IN"
-                            ? "text-green-600 dark:text-green-500"
-                            : "text-destructive")
-                        }
+        {!isLoading &&
+          !isClosedToday &&
+          filteredItems.length > 0 &&
+          (isMobile ? (
+            <CashFlowEntriesCards
+              entries={filteredItems}
+              paymentMethodById={paymentMethodById}
+              categoryById={categoryById}
+              onSelect={setSelectedEntry}
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Hora</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Paciente / Justificativa</TableHead>
+                    <TableHead>Forma</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredItems.map((entry) => {
+                    const paymentMethod = paymentMethodById.get(
+                      entry.paymentMethodId,
+                    );
+                    const PaymentMethodIcon = getPaymentMethodIcon(
+                      paymentMethod?.name ?? "",
+                    );
+                    const category = categoryById.get(entry.categoryId);
+                    const canReverseEntry =
+                      canReverse &&
+                      !entry.isReversed &&
+                      !entry.reversalOfEntryId;
+                    return (
+                      <TableRow
+                        key={entry.id}
+                        className="hover:bg-muted/50 h-16 cursor-pointer transition-shadow hover:shadow-[inset_3px_0_0_0_var(--primary)]"
+                        onClick={() => setSelectedEntry(entry)}
                       >
-                        {entry.type === "IN" ? "+" : "-"}
-                        {formatCurrencyBRL(entry.amount)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {entry.createdByUserName}
-                      </TableCell>
-                      <TableCell
-                        className="text-right"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {canReverseEntry && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setReversingEntryId(entry.id)}
-                          >
-                            Estornar
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                        <TableCell className="text-muted-foreground">
+                          {formatTimeBR(entry.occurredAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Badge
+                              variant={
+                                entry.type === "IN" ? "default" : "destructive"
+                              }
+                            >
+                              {entry.type === "IN" ? "Entrada" : "Saída"}
+                            </Badge>
+                            {entry.isReversed && (
+                              <Badge variant="secondary">Estornado</Badge>
+                            )}
+                            {entry.reversalOfEntryId && (
+                              <Badge variant="outline">Estorno</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor: category?.color ?? "#64748B",
+                              }}
+                            />
+                            {category?.name ?? "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {patientOrReason(entry)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <span className="inline-flex items-center gap-1.5">
+                            <PaymentMethodIcon className="h-3.5 w-3.5" />
+                            {paymentMethod?.name ?? "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell
+                          className={
+                            "text-right text-base font-semibold " +
+                            (entry.type === "IN"
+                              ? "text-green-600 dark:text-green-500"
+                              : "text-destructive")
+                          }
+                        >
+                          {entry.type === "IN" ? "+" : "-"}
+                          {formatCurrencyBRL(entry.amount)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {entry.createdByUserName}
+                        </TableCell>
+                        <TableCell
+                          className="text-right"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {canReverseEntry && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setReversingEntryId(entry.id)}
+                            >
+                              Estornar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ))}
       </CardContent>
 
       <CashFlowEntryDetailDrawer
