@@ -37,7 +37,7 @@ const REMINDER_MESSAGE_DELAY_SECONDS = 5;
  * no aparelho. Depois que o vencedor for escolhido, remover esta chave
  * e o branch perdedor.
  */
-const BARCODE_MESSAGE_MODE: "A" | "B" = "A";
+const BARCODE_MESSAGE_MODE: "A" | "B" = "B";
 
 /** Id do botão "Pago" — carrega o `accountsPayableId`, lido direto pelo webhook (ver `handle-zapi-webhook.use-case.ts`). */
 function payButtonId(accountsPayableId: string): string {
