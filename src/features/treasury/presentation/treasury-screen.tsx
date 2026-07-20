@@ -133,32 +133,38 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible lg:pb-0">
-        <div className="w-[150px] shrink-0 lg:contents">
+      {/* Mobile: grade 2 colunas (rola com a página, sem faixa própria de
+          scroll horizontal) — 5 KPIs, então a última linha fica com 1
+          card sozinho. Desktop intacto: grid-cols-5, tudo numa linha só. */}
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+        <div className="lg:contents">
           <KpiCard
             label="Saldo Atual do Cofre"
             value={dashboard ? formatCurrencyBRL(dashboard.balance) : "—"}
             icon={Vault}
             iconTone="blue"
+            compact={isMobile}
           />
         </div>
-        <div className="w-[150px] shrink-0 lg:contents">
+        <div className="lg:contents">
           <KpiCard
             label="Entradas do Dia"
             value={dashboard ? formatCurrencyBRL(dashboard.periodIn) : "—"}
             icon={ArrowDownCircle}
             iconTone="green"
+            compact={isMobile}
           />
         </div>
-        <div className="w-[150px] shrink-0 lg:contents">
+        <div className="lg:contents">
           <KpiCard
             label="Saídas do Dia"
             value={dashboard ? formatCurrencyBRL(dashboard.periodOut) : "—"}
             icon={ArrowUpCircle}
             iconTone="red"
+            compact={isMobile}
           />
         </div>
-        <div className="w-[150px] shrink-0 lg:contents">
+        <div className="lg:contents">
           <KpiCard
             label="Pendentes de Confirmação"
             value={dashboard ? String(dashboard.pendingCount) : "—"}
@@ -168,9 +174,10 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
               setStatus(status === "PENDING" ? undefined : "PENDING")
             }
             active={status === "PENDING"}
+            compact={isMobile}
           />
         </div>
-        <div className="w-[150px] shrink-0 lg:contents">
+        <div className="lg:contents">
           <KpiCard
             label="Última Conferência"
             value={
@@ -181,6 +188,7 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
             icon={Clock3}
             iconTone="violet"
             comparison={dashboard?.lastConfirmedByUserName ?? undefined}
+            compact={isMobile}
           />
         </div>
       </div>
