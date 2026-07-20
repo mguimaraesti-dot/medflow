@@ -11,6 +11,7 @@ import { UserFormDialog } from "./user-form-dialog";
 import { ApiError } from "@/shared/lib/api-client";
 import { cn } from "@/shared/lib/utils";
 import { EmptyState } from "@/shared/components/empty-state";
+import { FilterChipGroup } from "@/shared/components/mobile-filter-sheet";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -102,30 +103,48 @@ export function UsersScreen({ currentUserId }: { currentUserId: string }) {
               }}
             />
           </div>
-          <Select
-            value={status}
-            onValueChange={(value) => {
-              setStatus(value as typeof status);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isMobile && (
+            <Select
+              value={status}
+              onValueChange={(value) => {
+                setStatus(value as typeof status);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
-        <Button type="button" onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          Novo Usuário
-        </Button>
+        {!isMobile && (
+          <Button type="button" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            Novo Usuário
+          </Button>
+        )}
       </div>
+
+      {isMobile && (
+        <FilterChipGroup
+          options={[
+            { value: "ACTIVE", label: "Ativos" },
+            { value: "INACTIVE", label: "Inativos" },
+          ]}
+          value={status === "ALL" ? undefined : status}
+          onChange={(value) => {
+            setStatus(value ?? "ALL");
+            setPage(1);
+          }}
+        />
+      )}
 
       <Card>
         <CardContent>
@@ -201,6 +220,18 @@ export function UsersScreen({ currentUserId }: { currentUserId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {isMobile && (
+        <Button
+          type="button"
+          size="icon"
+          className="fixed right-5 bottom-5 z-20 h-14 w-14 rounded-full shadow-lg"
+          onClick={openCreate}
+        >
+          <Plus className="h-6 w-6" />
+          <span className="sr-only">Novo Usuário</span>
+        </Button>
+      )}
 
       <UserFormDialog
         open={formOpen}
