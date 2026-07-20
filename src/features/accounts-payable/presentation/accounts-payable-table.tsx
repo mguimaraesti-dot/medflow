@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -261,6 +261,33 @@ export function AccountsPayableTable({
     field: SortField;
     direction: SortDirection;
   } | null>(null);
+
+  // Reset centralizado: qualquer critério de filtragem (ou o tamanho da
+  // página) que mude aqui volta a lista para a página 1 — único ponto
+  // de reset, em vez de espalhar `setPage(1)` em cada filtro (foi assim
+  // que o bug original nasceu: esqueceram nos KPIs). Datas usam
+  // `.getTime()` em vez do objeto `Date`: o range é recriado a cada
+  // render do componente pai, então a referência muda mesmo quando o
+  // valor não muda — usar o objeto direto disparava o reset à toa.
+  const dueDateFromMs = dueDateFrom?.getTime();
+  const dueDateToMs = dueDateTo?.getTime();
+  const sortField = sort?.field;
+  const sortDirection = sort?.direction;
+  useEffect(() => {
+    setPage(1);
+  }, [
+    status,
+    categoryId,
+    supplierId,
+    recurringOnly,
+    search,
+    dueDateFromMs,
+    dueDateToMs,
+    pendingReminderOnly,
+    pageSize,
+    sortField,
+    sortDirection,
+  ]);
 
   const { data, isLoading } = useAccountsPayable({
     status: status === "ALL" ? undefined : status,
@@ -746,8 +773,9 @@ export function AccountsPayableTable({
               <Select
                 value={String(pageSize)}
                 onValueChange={(value) => {
+                  // Reset da página acontece no useEffect central acima
+                  // (pageSize está nas dependências) — não duplicar aqui.
                   setPageSize(Number(value));
-                  setPage(1);
                 }}
               >
                 <SelectTrigger size="sm" className="w-[130px]">

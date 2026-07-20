@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   ChevronLeft,
@@ -89,6 +89,27 @@ export function AccountsPayableCards({
   onCreateNew: () => void;
 }) {
   const [page, setPage] = useState(1);
+  // Reset centralizado: qualquer critério de filtragem que mude aqui
+  // volta a lista para a página 1. Único ponto de reset (em vez de
+  // espalhar `setPage(1)` em cada filtro) — é assim que o bug original
+  // nasceu (esqueceram de fazer isso nos KPIs). Datas usam `.getTime()`
+  // em vez do objeto `Date` em si: o range é recriado a cada render do
+  // componente pai, então a referência do objeto muda mesmo quando o
+  // valor não muda — usar o objeto direto disparava o reset à toa.
+  const dueDateFromMs = dueDateFrom?.getTime();
+  const dueDateToMs = dueDateTo?.getTime();
+  useEffect(() => {
+    setPage(1);
+  }, [
+    status,
+    categoryId,
+    supplierId,
+    recurringOnly,
+    search,
+    dueDateFromMs,
+    dueDateToMs,
+    pendingReminderOnly,
+  ]);
   const [payingTarget, setPayingTarget] =
     useState<AccountsPayableResponseDTO | null>(null);
   const [cancelScopeTarget, setCancelScopeTarget] =
