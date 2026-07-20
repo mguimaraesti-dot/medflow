@@ -43,7 +43,7 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     vi.mocked(sendButtonPixMessage).mockResolvedValue(undefined);
   });
 
-  it("VERSÃO A (modo padrão): código de barras vira 2 chamadas de sendTextMessage — info sem código, depois o código puro sozinho", async () => {
+  it("código de barras vira 1 chamada de sendTextMessage com SÓ o código puro (sem título/fornecedor/valor)", async () => {
     const messaging = new ZapiWhatsAppMessaging();
 
     const start = Date.now();
@@ -56,13 +56,8 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     expect(sendButtonListMessage).toHaveBeenCalledWith(
       expect.objectContaining({ delayMessage: REMINDER_MESSAGE_DELAY_SECONDS }),
     );
-    expect(sendTextMessage).toHaveBeenCalledTimes(2);
-    expect(sendTextMessage).toHaveBeenNthCalledWith(1, {
-      phone: "11999999999",
-      message: "*Fornecedor Teste*\nR$ 150,00\nCódigo de barras da fatura:",
-      delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
-    });
-    expect(sendTextMessage).toHaveBeenNthCalledWith(2, {
+    expect(sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(sendTextMessage).toHaveBeenCalledWith({
       phone: "11999999999",
       message: "12345",
       delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
