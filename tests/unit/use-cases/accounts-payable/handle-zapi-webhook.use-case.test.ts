@@ -4,6 +4,8 @@ import { payAccountsPayableUseCase } from "@/features/accounts-payable/applicati
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
 import type { UserRepository } from "@/features/auth/domain/user.repository";
+import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
+import type { WhatsAppMessagingPort } from "@/features/accounts-payable/domain/whatsapp-messaging.port";
 
 vi.mock(
   "@/features/accounts-payable/application/pay-accounts-payable.use-case",
@@ -17,6 +19,7 @@ function buildPayable(overrides: Record<string, unknown> = {}) {
     id: "payable-1",
     organizationId: "org-1",
     status: "PENDING",
+    lastReminderMessageId: "msg-999",
     ...overrides,
   };
 }
@@ -24,6 +27,10 @@ function buildPayable(overrides: Record<string, unknown> = {}) {
 function buildDeps(overrides: {
   payable?: Record<string, unknown> | null;
   systemUser?: { id: string } | null;
+  settings?: {
+    whatsapp: string | null;
+    accountsPayableReminderWhatsapp: string | null;
+  } | null;
 }) {
   const payable =
     overrides.payable === undefined ? buildPayable() : overrides.payable;
@@ -41,10 +48,25 @@ function buildDeps(overrides: {
 
   const safeRepository = {} as unknown as SafeRepository;
 
+  const settings =
+    overrides.settings === undefined
+      ? { whatsapp: "5511999999999", accountsPayableReminderWhatsapp: null }
+      : overrides.settings;
+  const organizationSettingsRepository = {
+    findByOrganization: vi.fn().mockResolvedValue(settings),
+  } as unknown as OrganizationSettingsRepository;
+
+  const whatsAppMessaging = {
+    sendPaymentReminder: vi.fn(),
+    reactToPaymentConfirmed: vi.fn().mockResolvedValue(undefined),
+  } as unknown as WhatsAppMessagingPort;
+
   return {
     accountsPayableRepository,
     safeRepository,
     userRepository,
+    organizationSettingsRepository,
+    whatsAppMessaging,
   };
 }
 
@@ -63,6 +85,9 @@ describe("handleZapiWebhookUseCase", () => {
     );
 
     expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
+    expect(
+      deps.whatsAppMessaging.reactToPaymentConfirmed,
+    ).not.toHaveBeenCalled();
   });
 
   it("ignora quando a conta é de outra organização", async () => {
@@ -77,9 +102,12 @@ describe("handleZapiWebhookUseCase", () => {
     );
 
     expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
+    expect(
+      deps.whatsAppMessaging.reactToPaymentConfirmed,
+    ).not.toHaveBeenCalled();
   });
 
-  it("idempotente: não faz nada quando a conta encontrada já não está PENDENTE", async () => {
+  it("idempotente: não faz nada quando a conta encontrada já não está PENDENTE (nem reage de novo)", async () => {
     const deps = buildDeps({ payable: buildPayable({ status: "PAID" }) });
 
     await handleZapiWebhookUseCase(
@@ -89,9 +117,12 @@ describe("handleZapiWebhookUseCase", () => {
     );
 
     expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
+    expect(
+      deps.whatsAppMessaging.reactToPaymentConfirmed,
+    ).not.toHaveBeenCalled();
   });
 
-  it("caminho feliz: confirma o pagamento", async () => {
+  it("caminho feliz: confirma o pagamento e reage 👍 na mensagem do lembrete", async () => {
     vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
       buildPayable({ status: "PAID" }) as never,
     );
@@ -113,6 +144,79 @@ describe("handleZapiWebhookUseCase", () => {
       },
       "WHATSAPP",
     );
+    expect(deps.whatsAppMessaging.reactToPaymentConfirmed).toHaveBeenCalledWith(
+      {
+        phone: "5511999999999",
+        messageId: "msg-999",
+      },
+    );
+  });
+
+  it("usa accountsPayableReminderWhatsapp em vez de whatsapp quando cadastrado (mesmo destino do lembrete)", async () => {
+    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
+      buildPayable({ status: "PAID" }) as never,
+    );
+    const deps = buildDeps({
+      settings: {
+        whatsapp: "5511111111111",
+        accountsPayableReminderWhatsapp: "5511222222222-group",
+      },
+    });
+
+    await handleZapiWebhookUseCase(
+      { accountsPayableId: "payable-1" },
+      "org-1",
+      deps,
+    );
+
+    expect(deps.whatsAppMessaging.reactToPaymentConfirmed).toHaveBeenCalledWith(
+      {
+        phone: "5511222222222-group",
+        messageId: "msg-999",
+      },
+    );
+  });
+
+  it("sem lastReminderMessageId (ex.: baixa manual sem lembrete enviado): baixa acontece sem reagir e sem erro", async () => {
+    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
+      buildPayable({ status: "PAID" }) as never,
+    );
+    const deps = buildDeps({
+      payable: buildPayable({ lastReminderMessageId: null }),
+    });
+
+    await expect(
+      handleZapiWebhookUseCase(
+        { accountsPayableId: "payable-1" },
+        "org-1",
+        deps,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(payAccountsPayableUseCase).toHaveBeenCalled();
+    expect(
+      deps.whatsAppMessaging.reactToPaymentConfirmed,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("reação falha: best-effort, não propaga erro (baixa já confirmada)", async () => {
+    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
+      buildPayable({ status: "PAID" }) as never,
+    );
+    const deps = buildDeps({});
+    vi.mocked(deps.whatsAppMessaging.reactToPaymentConfirmed).mockRejectedValue(
+      new Error("Z-API fora do ar"),
+    );
+
+    await expect(
+      handleZapiWebhookUseCase(
+        { accountsPayableId: "payable-1" },
+        "org-1",
+        deps,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(payAccountsPayableUseCase).toHaveBeenCalled();
   });
 
   it("lança NotFoundError quando o usuário de sistema do WhatsApp não existe", async () => {

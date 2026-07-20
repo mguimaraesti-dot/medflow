@@ -29,9 +29,16 @@ export interface WhatsAppPaymentReminderInput {
   pixKey: string | null;
 }
 
+export interface WhatsAppPaymentConfirmedReactionInput {
+  /** Mesmo destino que recebeu o lembrete (`OrganizationSettings.accountsPayableReminderWhatsapp || whatsapp`) — reage na mesma conversa/grupo. */
+  phone: string;
+  /** `AccountsPayable.lastReminderMessageId` — id da mensagem do cartão-resumo a reagir. */
+  messageId: string;
+}
+
 export interface WhatsAppMessagingPort {
   /**
-   * Dispara o lembrete (cartão-resumo com botão "Pago", código de
+   * Dispara o lembrete (cartão-resumo com botão "Pagar", código de
    * barras e/ou chave Pix com botão de copiar — os 2 últimos só quando
    * o dado correspondente existe). Devolve o id da mensagem do
    * cartão-resumo — só auditoria/depuração, a confirmação em si casa
@@ -40,4 +47,15 @@ export interface WhatsAppMessagingPort {
   sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }>;
+
+  /**
+   * Reage com 👍 na mensagem original do lembrete, para sinalizar "pago"
+   * sem gerar mensagem nova no chat (ver `handle-zapi-webhook.use-case.ts`
+   * — a mensagem de resposta que o próprio clique no botão já gera é do
+   * protocolo do WhatsApp, fora do nosso controle; isso aqui é só o
+   * feedback extra da baixa em si).
+   */
+  reactToPaymentConfirmed(
+    input: WhatsAppPaymentConfirmedReactionInput,
+  ): Promise<void>;
 }

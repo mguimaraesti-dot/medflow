@@ -3,10 +3,12 @@ import {
   sendButtonListMessage,
   sendButtonCodeMessage,
   sendButtonPixMessage,
+  sendMessageReactionMessage,
 } from "@/core/whatsapp/zapi-client";
 import type {
   WhatsAppMessagingPort,
   WhatsAppPaymentReminderInput,
+  WhatsAppPaymentConfirmedReactionInput,
 } from "../domain/whatsapp-messaging.port";
 
 /**
@@ -117,5 +119,15 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     }
 
     return { messageId };
+  }
+
+  async reactToPaymentConfirmed(
+    input: WhatsAppPaymentConfirmedReactionInput,
+  ): Promise<void> {
+    await sendMessageReactionMessage({
+      phone: input.phone,
+      messageId: input.messageId,
+      reaction: "👍",
+    });
   }
 }

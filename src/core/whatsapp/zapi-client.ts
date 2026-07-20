@@ -202,6 +202,32 @@ export async function sendButtonCodeMessage(
   });
 }
 
+export interface SendMessageReactionInput {
+  phone: string;
+  /** Id da mensagem a reagir (ex.: `lastReminderMessageId` do cartão-resumo do lembrete). */
+  messageId: string;
+  /** Emoji da reação (ex.: "👍"). */
+  reaction: string;
+}
+
+/**
+ * Reage com emoji a uma mensagem já enviada — usado pra sinalizar "pago"
+ * na própria mensagem do lembrete, sem gerar mensagem nova no chat (ver
+ * `handle-zapi-webhook.use-case.ts`). Confirmado via
+ * developer.z-api.io/message/send-message-reaction (2026-07-20): corpo
+ * `{ phone, messageId, reaction }`; `phone` aceita grupo, igual aos
+ * outros endpoints.
+ */
+export async function sendMessageReactionMessage(
+  input: SendMessageReactionInput,
+): Promise<void> {
+  await post("/send-message-reaction", {
+    phone: input.phone,
+    messageId: input.messageId,
+    reaction: input.reaction,
+  });
+}
+
 export interface SendButtonPixInput {
   phone: string;
   pixKey: string;

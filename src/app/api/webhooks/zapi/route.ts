@@ -6,12 +6,17 @@ import { UnauthenticatedError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
 import { handleZapiWebhookUseCase } from "@/features/accounts-payable/application/handle-zapi-webhook.use-case";
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
+import { ZapiWhatsAppMessaging } from "@/features/accounts-payable/infrastructure/zapi-whatsapp-messaging";
 import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
 import { PrismaUserRepository } from "@/features/auth/infrastructure/prisma-user.repository";
+import { PrismaOrganizationSettingsRepository } from "@/features/organization-settings/infrastructure/prisma-organization-settings.repository";
 
 const accountsPayableRepository = new PrismaAccountsPayableRepository();
 const safeRepository = new PrismaSafeRepository();
 const userRepository = new PrismaUserRepository();
+const organizationSettingsRepository =
+  new PrismaOrganizationSettingsRepository();
+const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
 /**
  * Recebe o clique no botão "Pago" enviado pela Z-API — sem sessão,
@@ -77,6 +82,8 @@ export async function POST(request: NextRequest) {
       accountsPayableRepository,
       safeRepository,
       userRepository,
+      organizationSettingsRepository,
+      whatsAppMessaging,
     });
 
     return NextResponse.json({ data: { received: true } });
