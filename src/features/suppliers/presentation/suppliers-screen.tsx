@@ -8,9 +8,11 @@ import { useSetSupplierActive } from "./use-set-supplier-active";
 import { useDeleteSupplier } from "./use-delete-supplier";
 import { SupplierDrawer, type SupplierDrawerMode } from "./supplier-drawer";
 import { SuppliersTable } from "./suppliers-table";
+import { SuppliersCards } from "./suppliers-cards";
 import { ApiError } from "@/shared/lib/api-client";
 import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { EmptyState } from "@/shared/components/empty-state";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Skeleton } from "@/shared/ui/skeleton";
@@ -21,6 +23,7 @@ export function SuppliersScreen({ canCreate }: { canCreate: boolean }) {
   const { data: suppliers, isLoading } = useSuppliers();
   const setSupplierActive = useSetSupplierActive();
   const deleteSupplier = useDeleteSupplier();
+  const isMobile = useMediaQuery("(max-width: 1023px)");
 
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -120,6 +123,12 @@ export function SuppliersScreen({ canCreate }: { canCreate: boolean }) {
         )}
       </div>
 
+      {!isLoading && suppliers && (
+        <p className="text-muted-foreground text-sm">
+          {suppliers.length} cadastrado{suppliers.length === 1 ? "" : "s"}
+        </p>
+      )}
+
       <Card>
         <CardContent>
           {isLoading && (
@@ -145,16 +154,23 @@ export function SuppliersScreen({ canCreate }: { canCreate: boolean }) {
             />
           )}
 
-          {!isLoading && filteredSuppliers.length > 0 && (
-            <SuppliersTable
-              suppliers={filteredSuppliers}
-              canEdit={canCreate}
-              onEdit={openEdit}
-              onDuplicate={openDuplicate}
-              onToggleActive={handleToggleActive}
-              onDeleteRequest={setDeleteTarget}
-            />
-          )}
+          {!isLoading &&
+            filteredSuppliers.length > 0 &&
+            (isMobile ? (
+              <SuppliersCards
+                suppliers={filteredSuppliers}
+                onSelect={canCreate ? openEdit : undefined}
+              />
+            ) : (
+              <SuppliersTable
+                suppliers={filteredSuppliers}
+                canEdit={canCreate}
+                onEdit={openEdit}
+                onDuplicate={openDuplicate}
+                onToggleActive={handleToggleActive}
+                onDeleteRequest={setDeleteTarget}
+              />
+            ))}
         </CardContent>
       </Card>
 
