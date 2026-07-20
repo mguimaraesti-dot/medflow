@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Landmark } from "lucide-react";
 import { useSafeMovements } from "./use-safe-movements";
 import { SafeMovementDetailDrawer } from "./safe-movement-detail-drawer";
@@ -55,6 +55,20 @@ export function SafeMovementsTable({
   const [selected, setSelected] = useState<SafeMovementResponseDTO | null>(
     null,
   );
+
+  // Reset centralizado: qualquer critério de filtragem que mude aqui
+  // volta a lista para a página 1 — único ponto de reset, em vez de
+  // espalhar `setPage(1)` em cada filtro (mesmo bug já corrigido em
+  // Contas a Pagar). Datas usam `.getTime()` e `types` usa `.join(",")`
+  // em vez dos objetos/array em si, porque `filter` é recriado a cada
+  // render do componente pai — a referência muda mesmo quando o valor
+  // não muda, e usá-los direto disparava o reset à toa.
+  const typesKey = filter.types?.join(",");
+  const createdAtFromMs = filter.createdAtFrom?.getTime();
+  const createdAtToMs = filter.createdAtTo?.getTime();
+  useEffect(() => {
+    setPage(1);
+  }, [typesKey, filter.status, filter.search, createdAtFromMs, createdAtToMs]);
 
   const { data, isLoading } = useSafeMovements({
     ...filter,
