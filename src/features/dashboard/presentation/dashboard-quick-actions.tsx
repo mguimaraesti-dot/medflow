@@ -5,6 +5,7 @@ import { Landmark, Receipt, Wallet, FilePlus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { cn } from "@/shared/lib/utils";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 
 type QuickActionTone = "green" | "blue" | "purple" | "red";
 
@@ -42,6 +43,7 @@ export function DashboardQuickActions({
 }: {
   permissions: string[];
 }) {
+  const isMobile = useMediaQuery("(max-width: 1023px)");
   const hasTreasuryAccess = permissions.some((p) => p.startsWith("treasury:"));
 
   const actions: Array<{
@@ -85,7 +87,11 @@ export function DashboardQuickActions({
   if (visibleActions.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div
+      className={cn(
+        isMobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2",
+      )}
+    >
       {visibleActions.map((action) => (
         <QuickActionButton key={action.label} {...action} />
       ))}
