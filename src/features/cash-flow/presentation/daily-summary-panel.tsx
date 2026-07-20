@@ -3,6 +3,7 @@
 import { useCashFlowEntries } from "./use-cash-flow-entries";
 import { formatCurrencyBRL } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import type { CashRegisterDayResponseDTO } from "@/features/cash-register/application/dtos/cash-register-day.response-dto";
 
@@ -10,18 +11,27 @@ function MetricTile({
   label,
   value,
   tone,
+  compact,
 }: {
   label: string;
   value: string;
   tone?: "positive" | "negative" | "primary";
+  /** Mobile: grade 2 colunas em vez de empilhado — tile mais baixo, valor menor (Ajuste layout mobile Caixa Recepção). */
+  compact?: boolean;
 }) {
   return (
-    <div className="bg-muted/30 flex flex-col justify-center rounded-xl border px-4 py-5">
+    <div
+      className={cn(
+        "bg-muted/30 flex flex-col justify-center rounded-xl border",
+        compact ? "px-3 py-3" : "px-4 py-5",
+      )}
+    >
       <p className="text-muted-foreground text-sm">{label}</p>
       <p
         className={cn(
           "font-semibold tabular-nums",
-          tone === "primary" ? "text-primary text-2xl" : "text-xl",
+          compact ? "text-lg" : tone === "primary" ? "text-2xl" : "text-xl",
+          tone === "primary" && "text-primary",
           tone === "positive" && "text-green-600 dark:text-green-500",
           tone === "negative" && "text-destructive",
         )}
@@ -50,6 +60,7 @@ export function DailySummaryPanel({
 }: {
   today: CashRegisterDayResponseDTO | null | undefined;
 }) {
+  const isMobile = useMediaQuery("(max-width: 1023px)");
   const isOpen = today?.status === "OPEN";
   const { data } = useCashFlowEntries(
     { cashRegisterDayId: today?.id, pageSize: 100 },
@@ -69,27 +80,41 @@ export function DailySummaryPanel({
           Resumo do Dia
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col justify-between">
+      <CardContent
+        className={cn(
+          isMobile
+            ? "grid grid-cols-2 gap-2"
+            : "flex flex-1 flex-col justify-between",
+        )}
+      >
         <MetricTile
           label="Saldo Inicial"
           value={formatCurrencyBRL(openingBalance)}
+          compact={isMobile}
         />
         <MetricTile
           label="Saldo Atual"
           value={formatCurrencyBRL(currentBalance)}
           tone="primary"
+          compact={isMobile}
         />
         <MetricTile
           label="Entradas"
           value={formatCurrencyBRL(totalIn)}
           tone="positive"
+          compact={isMobile}
         />
         <MetricTile
           label="Saídas"
           value={`-${formatCurrencyBRL(totalOut)}`}
           tone="negative"
+          compact={isMobile}
         />
-        <MetricTile label="Lançamentos Hoje" value={String(entriesCount)} />
+        <MetricTile
+          label="Lançamentos Hoje"
+          value={String(entriesCount)}
+          compact={isMobile}
+        />
       </CardContent>
     </Card>
   );
