@@ -238,6 +238,82 @@ export async function sendMessageReactionMessage(
   });
 }
 
+export interface DeleteMessageInput {
+  phone: string;
+  /** Id da mensagem a apagar — para a resposta automática do botão, é o `messageId` da RAIZ do payload do webhook (não o `referenceMessageId`, que é a mensagem original). */
+  messageId: string;
+  /** `true` = mensagem que NÓS enviamos; `false` = mensagem recebida (de terceiro). */
+  owner: boolean;
+  /** `true` = apaga só para a nossa instância; omitido/`false` = apaga "para todos" (só funciona em grupo onde a instância é admin, quando `owner: false` — restrição do próprio WhatsApp, não documentada pela Z-API). */
+  deleteForMe?: boolean;
+}
+
+/**
+ * Apaga uma mensagem enviada ou recebida — usado pra remover a resposta
+ * automática ("Pago") que o WhatsApp injeta no chat ao clicar no botão
+ * do lembrete (ver `handle-zapi-webhook.use-case.ts`).
+ *
+ * PATH REAL (2026-07-21): a doc tem slug `message/delete-message`, mas o
+ * endpoint verdadeiro — visto no exemplo de cURL da própria página — é
+ * `DELETE /instances/{instanceId}/token/{token}/messages` com os
+ * identificadores via QUERY STRING (não body) — mesma discrepância
+ * doc-slug-vs-path-real já vista em `/send-reaction`. Por isso usa fetch
+ * direto em vez do helper `post()` (que só cobre POST+JSON body).
+ *
+ * `owner: false` apaga mensagem de TERCEIRO — "para todos" só funciona
+ * de verdade se a instância for ADMIN do grupo (regra do próprio
+ * WhatsApp: participante comum nunca pode apagar mensagem alheia pra
+ * todos, e em conversa individual isso nunca é possível, admin ou não —
+ * ver `handle-zapi-webhook.use-case.ts` pra como isso é tratado).
+ */
+export async function deleteMessage(input: DeleteMessageInput): Promise<void> {
+  const { instanceId, token, clientToken } = loadConfig();
+  const params = new URLSearchParams({
+    messageId: input.messageId,
+    phone: input.phone,
+    owner: String(input.owner),
+  });
+  if (input.deleteForMe !== undefined) {
+    params.set("deleteForMe", String(input.deleteForMe));
+  }
+  // Nunca logar `url` inteira — tem instanceId/token embutidos no path.
+  const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/messages?${params.toString()}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "DELETE",
+      headers: { "Client-Token": clientToken },
+    });
+  } catch (error) {
+    logger.error("Z-API: falha de rede ao chamar endpoint", {
+      path: "/messages",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw toZapiError(error);
+  }
+
+  const responseText = await response.text();
+  const parsedBody = parseJsonSafe(responseText);
+
+  if (!response.ok || bodyIndicatesFailure(parsedBody)) {
+    logger.error("Z-API respondeu com falha", {
+      path: "/messages",
+      status: response.status,
+      body: responseText,
+    });
+    throw new Error(
+      `Z-API respondeu ${response.status} em /messages: ${responseText}`,
+    );
+  }
+
+  logger.info("Z-API: mensagem deletada", {
+    path: "/messages",
+    status: response.status,
+    body: responseText,
+  });
+}
+
 export interface SendButtonPixInput {
   phone: string;
   pixKey: string;
