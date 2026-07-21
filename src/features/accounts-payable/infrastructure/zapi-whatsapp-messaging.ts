@@ -128,10 +128,16 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async reactToPaymentConfirmed(
     input: WhatsAppPaymentConfirmedReactionInput,
   ): Promise<void> {
+    // ✅ (não 👍) DE PROPÓSITO — o gatilho de baixa por reação
+    // (`handleZapiReactionWebhookUseCase`) só dispara em 👍. Usar um
+    // emoji diferente pra confirmação garante que a própria reação do
+    // sistema nunca seja confundida com um novo gatilho, mesmo que o
+    // campo `fromMe` do webhook não distinga de forma confiável reações
+    // enviadas pela própria instância (não testado a fundo ainda).
     await sendMessageReactionMessage({
       phone: input.phone,
       messageId: input.messageId,
-      reaction: "👍",
+      reaction: "✅",
     });
   }
 }
