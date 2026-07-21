@@ -61,18 +61,7 @@ export async function POST(request: NextRequest) {
     const buttonIdMatch = JSON.stringify(body).match(/pago_([\w-]+)/);
     const accountsPayableId = buttonIdMatch ? buttonIdMatch[1] : null;
 
-    const bodyRecord = body as Record<string, unknown> | null;
-    const fromApi = bodyRecord?.fromApi;
-    // `messageId` na RAIZ do payload é o id da mensagem de RESPOSTA que o
-    // clique no botão gera (ex.: o "Pago" injetado no chat) — confirmado
-    // via developer.z-api.io/webhooks/on-message-received-examples
-    // (2026-07-21). Não confundir com `referenceMessageId` (a mensagem
-    // original do cartão-resumo, onde vai o joinha 👍 — ver
-    // `AccountsPayable.lastReminderMessageId`, capturado no ENVIO, não
-    // aqui). Usado só pra apagar essa resposta (best-effort, ver
-    // `handle-zapi-webhook.use-case.ts`).
-    const replyMessageId =
-      typeof bodyRecord?.messageId === "string" ? bodyRecord.messageId : null;
+    const fromApi = (body as Record<string, unknown> | null)?.fromApi;
 
     if (!accountsPayableId || fromApi) {
       // Não é um clique no botão "Pago" (status de entrega, presença,
@@ -89,17 +78,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data: { received: true, ignored: true } });
     }
 
-    await handleZapiWebhookUseCase(
-      { accountsPayableId, replyMessageId },
-      organization.id,
-      {
-        accountsPayableRepository,
-        safeRepository,
-        userRepository,
-        organizationSettingsRepository,
-        whatsAppMessaging,
-      },
-    );
+    await handleZapiWebhookUseCase({ accountsPayableId }, organization.id, {
+      accountsPayableRepository,
+      safeRepository,
+      userRepository,
+      organizationSettingsRepository,
+      whatsAppMessaging,
+    });
 
     return NextResponse.json({ data: { received: true } });
   } catch (error) {

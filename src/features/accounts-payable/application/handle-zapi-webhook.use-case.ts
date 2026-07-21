@@ -19,8 +19,6 @@ interface Deps {
 export interface HandleZapiWebhookInput {
   /** Extraído do id do botão "Pago" clicado (`pago_<id>` — ver `route.ts`). */
   accountsPayableId: string;
-  /** Id da mensagem de RESPOSTA que o clique gerou (campo `messageId` da raiz do payload do webhook) — `null` quando o payload não trouxe (evento antigo/formato inesperado). Usado só para apagar essa resposta (best-effort, ver abaixo) — não confundir com `lastReminderMessageId` (mensagem original, onde vai o joinha). */
-  replyMessageId: string | null;
 }
 
 /**
@@ -31,10 +29,9 @@ export interface HandleZapiWebhookInput {
  *
  * A baixa acontece silenciosamente no sistema — decisão de produto:
  * nenhuma mensagem NOVA de confirmação é enviada de volta ao WhatsApp.
- * O feedback visual é uma reação 👍 na própria mensagem do lembrete, e a
- * resposta automática "Pago" que o próprio clique gera é apagada (ver
- * blocos após `payAccountsPayableUseCase` abaixo) — ambos best-effort,
- * independentes entre si, nenhum derruba a baixa nem o outro.
+ * O único feedback visual é uma reação 👍 na própria mensagem do
+ * lembrete (ver bloco após `payAccountsPayableUseCase` abaixo) — best
+ * -effort, nunca derruba a baixa.
  *
  * Idempotente: se a conta encontrada já não está PENDENTE, não faz
  * nada (2º clique não tem efeito colateral) — e por isso também não
@@ -91,38 +88,26 @@ export async function handleZapiWebhookUseCase(
     organizationId: payable.organizationId,
   });
 
-  // Passos abaixo são BEST-EFFORT e INDEPENDENTES entre si: a baixa
-  // (crítica) já aconteceu; se um deles falhar, o outro ainda é
-  // tentado — nenhum pode derrubar a baixa nem impedir o outro.
-  let destinationPhone: string | null | undefined;
-  try {
-    const settings =
-      await deps.organizationSettingsRepository.findByOrganization(
-        payable.organizationId,
-      );
-    destinationPhone =
-      settings?.accountsPayableReminderWhatsapp || settings?.whatsapp;
-  } catch (error) {
-    logger.warn(
-      "Webhook Z-API: falha ao buscar configurações da organização (reação e delete da resposta pulados — baixa já confirmada)",
-      {
-        accountsPayableId: payable.id,
-        error: error instanceof Error ? error.message : String(error),
-      },
-    );
-  }
-
   // Reação 👍 na mensagem original do lembrete — feedback visual sem
   // gerar mensagem nova no chat. BEST-EFFORT de propósito: a baixa já
   // aconteceu e é o que importa; se a reação falhar (ou não houver
   // `lastReminderMessageId` — ex.: baixa manual sem lembrete enviado),
   // só loga um aviso e segue, nunca propaga erro.
-  if (destinationPhone && payable.lastReminderMessageId) {
+  if (payable.lastReminderMessageId) {
     try {
-      await deps.whatsAppMessaging.reactToPaymentConfirmed({
-        phone: destinationPhone,
-        messageId: payable.lastReminderMessageId,
-      });
+      const settings =
+        await deps.organizationSettingsRepository.findByOrganization(
+          payable.organizationId,
+        );
+      const destinationPhone =
+        settings?.accountsPayableReminderWhatsapp || settings?.whatsapp;
+
+      if (destinationPhone) {
+        await deps.whatsAppMessaging.reactToPaymentConfirmed({
+          phone: destinationPhone,
+          messageId: payable.lastReminderMessageId,
+        });
+      }
     } catch (error) {
       logger.warn(
         "Webhook Z-API: falha ao reagir à mensagem do lembrete (best-effort — baixa já confirmada)",
@@ -130,38 +115,6 @@ export async function handleZapiWebhookUseCase(
           accountsPayableId: payable.id,
           error: error instanceof Error ? error.message : String(error),
         },
-      );
-    }
-  }
-
-  // Apaga a resposta automática ("Pago") que o próprio clique no botão
-  // gera no chat — protocolo do WhatsApp, fora do nosso controle no
-  // envio. Só TENTA em GRUPO (destino termina em "-group"): em conversa
-  // individual não existe permissão pra apagar mensagem de terceiro
-  // "para todos" (regra do WhatsApp, não da Z-API — nem admin resolve
-  // isso fora de grupo), então nem chama a API — evita um log de erro
-  // certo de acontecer. Em grupo, só funciona de verdade se a instância
-  // for ADMIN dele.
-  if (destinationPhone && input.replyMessageId) {
-    if (destinationPhone.endsWith("-group")) {
-      try {
-        await deps.whatsAppMessaging.deleteButtonReply({
-          phone: destinationPhone,
-          messageId: input.replyMessageId,
-        });
-      } catch (error) {
-        logger.warn(
-          "Webhook Z-API: falha ao apagar a resposta automática do botão (best-effort — baixa e reação seguem normais)",
-          {
-            accountsPayableId: payable.id,
-            error: error instanceof Error ? error.message : String(error),
-          },
-        );
-      }
-    } else {
-      logger.info(
-        "Webhook Z-API: delete da resposta pulado — destino não é grupo (apagar mensagem de terceiro só é possível em grupo, com a instância como admin)",
-        { accountsPayableId: payable.id },
       );
     }
   }

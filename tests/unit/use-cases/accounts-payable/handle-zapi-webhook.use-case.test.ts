@@ -6,7 +6,6 @@ import type { SafeRepository } from "@/features/treasury/domain/safe.repository"
 import type { UserRepository } from "@/features/auth/domain/user.repository";
 import type { OrganizationSettingsRepository } from "@/features/organization-settings/domain/organization-settings.repository";
 import type { WhatsAppMessagingPort } from "@/features/accounts-payable/domain/whatsapp-messaging.port";
-import { logger } from "@/core/logger/logger";
 
 vi.mock(
   "@/features/accounts-payable/application/pay-accounts-payable.use-case",
@@ -14,10 +13,6 @@ vi.mock(
     payAccountsPayableUseCase: vi.fn(),
   }),
 );
-
-vi.mock("@/core/logger/logger", () => ({
-  logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() },
-}));
 
 function buildPayable(overrides: Record<string, unknown> = {}) {
   return {
@@ -64,7 +59,6 @@ function buildDeps(overrides: {
   const whatsAppMessaging = {
     sendPaymentReminder: vi.fn(),
     reactToPaymentConfirmed: vi.fn().mockResolvedValue(undefined),
-    deleteButtonReply: vi.fn().mockResolvedValue(undefined),
   } as unknown as WhatsAppMessagingPort;
 
   return {
@@ -79,15 +73,13 @@ function buildDeps(overrides: {
 describe("handleZapiWebhookUseCase", () => {
   afterEach(() => {
     vi.mocked(payAccountsPayableUseCase).mockReset();
-    vi.mocked(logger.info).mockClear();
-    vi.mocked(logger.warn).mockClear();
   });
 
   it("ignora quando a conta do id do botão não existe", async () => {
     const deps = buildDeps({ payable: null });
 
     await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+      { accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -104,7 +96,7 @@ describe("handleZapiWebhookUseCase", () => {
     });
 
     await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+      { accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -119,7 +111,7 @@ describe("handleZapiWebhookUseCase", () => {
     const deps = buildDeps({ payable: buildPayable({ status: "PAID" }) });
 
     await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+      { accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -137,7 +129,7 @@ describe("handleZapiWebhookUseCase", () => {
     const deps = buildDeps({});
 
     await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+      { accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -172,7 +164,7 @@ describe("handleZapiWebhookUseCase", () => {
     });
 
     await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+      { accountsPayableId: "payable-1" },
       "org-1",
       deps,
     );
@@ -195,7 +187,7 @@ describe("handleZapiWebhookUseCase", () => {
 
     await expect(
       handleZapiWebhookUseCase(
-        { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+        { accountsPayableId: "payable-1" },
         "org-1",
         deps,
       ),
@@ -218,7 +210,7 @@ describe("handleZapiWebhookUseCase", () => {
 
     await expect(
       handleZapiWebhookUseCase(
-        { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+        { accountsPayableId: "payable-1" },
         "org-1",
         deps,
       ),
@@ -227,133 +219,13 @@ describe("handleZapiWebhookUseCase", () => {
     expect(payAccountsPayableUseCase).toHaveBeenCalled();
   });
 
-  it("grupo: apaga a resposta automática do botão com o messageId da RESPOSTA (não o do lembrete)", async () => {
-    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
-      buildPayable({ status: "PAID" }) as never,
-    );
-    const deps = buildDeps({
-      settings: {
-        whatsapp: "5511111111111-group",
-        accountsPayableReminderWhatsapp: null,
-      },
-    });
-
-    await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
-      "org-1",
-      deps,
-    );
-
-    expect(deps.whatsAppMessaging.deleteButtonReply).toHaveBeenCalledWith({
-      phone: "5511111111111-group",
-      messageId: "reply-msg-1",
-    });
-  });
-
-  it("individual (sem sufixo -group): NÃO tenta apagar a resposta, e loga como info (não warn/error)", async () => {
-    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
-      buildPayable({ status: "PAID" }) as never,
-    );
-    const deps = buildDeps({});
-
-    await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
-      "org-1",
-      deps,
-    );
-
-    expect(deps.whatsAppMessaging.deleteButtonReply).not.toHaveBeenCalled();
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.stringContaining("delete da resposta pulado"),
-      expect.objectContaining({ accountsPayableId: "payable-1" }),
-    );
-    expect(logger.warn).not.toHaveBeenCalled();
-  });
-
-  it("sem replyMessageId (payload sem o campo): não tenta apagar a resposta", async () => {
-    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
-      buildPayable({ status: "PAID" }) as never,
-    );
-    const deps = buildDeps({
-      settings: {
-        whatsapp: "5511111111111-group",
-        accountsPayableReminderWhatsapp: null,
-      },
-    });
-
-    await handleZapiWebhookUseCase(
-      { accountsPayableId: "payable-1", replyMessageId: null },
-      "org-1",
-      deps,
-    );
-
-    expect(deps.whatsAppMessaging.deleteButtonReply).not.toHaveBeenCalled();
-  });
-
-  it("delete da resposta falha: best-effort, não propaga, e a reação ainda acontece (independência)", async () => {
-    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
-      buildPayable({ status: "PAID" }) as never,
-    );
-    const deps = buildDeps({
-      settings: {
-        whatsapp: "5511111111111-group",
-        accountsPayableReminderWhatsapp: null,
-      },
-    });
-    vi.mocked(deps.whatsAppMessaging.deleteButtonReply).mockRejectedValue(
-      new Error("não é admin do grupo"),
-    );
-
-    await expect(
-      handleZapiWebhookUseCase(
-        { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
-        "org-1",
-        deps,
-      ),
-    ).resolves.toBeUndefined();
-
-    expect(deps.whatsAppMessaging.reactToPaymentConfirmed).toHaveBeenCalled();
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("apagar a resposta automática"),
-      expect.objectContaining({ accountsPayableId: "payable-1" }),
-    );
-  });
-
-  it("reação falha: o delete da resposta ainda é tentado (independência inversa)", async () => {
-    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
-      buildPayable({ status: "PAID" }) as never,
-    );
-    const deps = buildDeps({
-      settings: {
-        whatsapp: "5511111111111-group",
-        accountsPayableReminderWhatsapp: null,
-      },
-    });
-    vi.mocked(deps.whatsAppMessaging.reactToPaymentConfirmed).mockRejectedValue(
-      new Error("Z-API fora do ar"),
-    );
-
-    await expect(
-      handleZapiWebhookUseCase(
-        { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
-        "org-1",
-        deps,
-      ),
-    ).resolves.toBeUndefined();
-
-    expect(deps.whatsAppMessaging.deleteButtonReply).toHaveBeenCalledWith({
-      phone: "5511111111111-group",
-      messageId: "reply-msg-1",
-    });
-  });
-
   it("lança NotFoundError quando o usuário de sistema do WhatsApp não existe", async () => {
     const { NotFoundError } = await import("@/core/errors/domain-error");
     const deps = buildDeps({ systemUser: null });
 
     await expect(
       handleZapiWebhookUseCase(
-        { accountsPayableId: "payable-1", replyMessageId: "reply-msg-1" },
+        { accountsPayableId: "payable-1" },
         "org-1",
         deps,
       ),

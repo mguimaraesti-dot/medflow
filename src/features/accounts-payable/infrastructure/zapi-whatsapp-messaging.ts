@@ -4,13 +4,11 @@ import {
   sendTextMessage,
   sendButtonPixMessage,
   sendMessageReactionMessage,
-  deleteMessage,
 } from "@/core/whatsapp/zapi-client";
 import type {
   WhatsAppMessagingPort,
   WhatsAppPaymentReminderInput,
   WhatsAppPaymentConfirmedReactionInput,
-  WhatsAppDeleteButtonReplyInput,
 } from "../domain/whatsapp-messaging.port";
 
 /**
@@ -134,16 +132,6 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       phone: input.phone,
       messageId: input.messageId,
       reaction: "👍",
-    });
-  }
-
-  async deleteButtonReply(
-    input: WhatsAppDeleteButtonReplyInput,
-  ): Promise<void> {
-    await deleteMessage({
-      phone: input.phone,
-      messageId: input.messageId,
-      owner: false,
     });
   }
 }

@@ -36,13 +36,6 @@ export interface WhatsAppPaymentConfirmedReactionInput {
   messageId: string;
 }
 
-export interface WhatsAppDeleteButtonReplyInput {
-  /** Mesmo destino que recebeu o lembrete — precisa ser um GRUPO (só quem chama decide isso, ver `handle-zapi-webhook.use-case.ts`). */
-  phone: string;
-  /** Id da mensagem de RESPOSTA gerada pelo clique no botão (campo `messageId` da raiz do payload do webhook) — não confundir com o id da mensagem original. */
-  messageId: string;
-}
-
 export interface WhatsAppMessagingPort {
   /**
    * Dispara o lembrete (cartão-resumo com botão "Pago", código de
@@ -65,12 +58,4 @@ export interface WhatsAppMessagingPort {
   reactToPaymentConfirmed(
     input: WhatsAppPaymentConfirmedReactionInput,
   ): Promise<void>;
-
-  /**
-   * Apaga a resposta automática que o próprio WhatsApp injeta no chat ao
-   * clicar no botão (protocolo, fora do nosso controle no envio) — só
-   * funciona "para todos" quando `phone` é um GRUPO onde a instância é
-   * admin (regra do WhatsApp, não da Z-API — ver `zapi-client.ts`).
-   */
-  deleteButtonReply(input: WhatsAppDeleteButtonReplyInput): Promise<void>;
 }
