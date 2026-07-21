@@ -38,7 +38,7 @@ export interface WhatsAppPaymentConfirmedReactionInput {
 
 export interface WhatsAppMessagingPort {
   /**
-   * Dispara o lembrete (cartão-resumo com botão "Pagar", código de
+   * Dispara o lembrete (cartão-resumo com botão "Pago", código de
    * barras e/ou chave Pix com botão de copiar — os 2 últimos só quando
    * o dado correspondente existe). Devolve o id da mensagem do
    * cartão-resumo — só auditoria/depuração, a confirmação em si casa
