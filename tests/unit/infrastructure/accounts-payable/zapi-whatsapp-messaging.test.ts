@@ -49,7 +49,7 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     vi.mocked(sendButtonPixMessage).mockResolvedValue(undefined);
   });
 
-  it("cartão principal é texto simples (sem botão), com instrução de reação, e messageId é logado", async () => {
+  it("cartão principal é texto simples (sem botão), sem instrução de reação, e messageId é logado", async () => {
     const messaging = new ZapiWhatsAppMessaging();
 
     const result = await messaging.sendPaymentReminder(buildInput());
@@ -57,9 +57,12 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     expect(result).toEqual({ messageId: "msg-123" });
     expect(sendTextMessage).toHaveBeenNthCalledWith(1, {
       phone: "11999999999",
-      message: expect.stringContaining(
-        "_Reaja com 👍 nesta mensagem para dar baixa no pagamento._",
-      ),
+      message:
+        "⚠️ *Conta a Pagar*\n\n" +
+        "Fornecedor: *Fornecedor Teste*\n" +
+        "Descrição: *Aluguel*\n" +
+        "Valor: *R$ 150,00*\n" +
+        "Vencimento: *20/07/2026*",
       delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
     });
     expect(logger.info).toHaveBeenCalledWith(
