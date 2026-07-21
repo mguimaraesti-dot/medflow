@@ -11,6 +11,7 @@ import {
 import { formatCurrencyBRL, formatTimeBR } from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
 import type { DashboardTimelineEventResponseDTO } from "../application/dtos/dashboard-overview.response-dto";
 import type { DashboardTimelineTone } from "../domain/dashboard-overview.entity";
 
@@ -29,6 +30,26 @@ export const TONE_VALUE_CLASSES: Record<DashboardTimelineTone, string> = {
   yellow: "text-amber-600 dark:text-amber-500",
   neutral: "text-foreground",
 };
+
+/** Badge PIX/Dinheiro ao lado do título — só recebimentos têm `method` preenchido (ver `get-dashboard-overview.use-case.ts`); os demais eventos da timeline não renderizam nada. Reaproveitado pela Timeline mobile. */
+export function TimelineMethodBadge({
+  method,
+}: {
+  method: DashboardTimelineEventResponseDTO["method"];
+}) {
+  if (!method) return null;
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "border-transparent text-[10px]",
+        method === "PIX" ? TONE_ICON_CLASSES.blue : TONE_ICON_CLASSES.green,
+      )}
+    >
+      {method === "PIX" ? "PIX" : "Dinheiro"}
+    </Badge>
+  );
+}
 
 export function eventIcon(
   event: DashboardTimelineEventResponseDTO,
@@ -91,9 +112,12 @@ export function DashboardTimelineCard({
                 </span>
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3 pt-0.5">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">
-                      {event.title}
-                    </p>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="min-w-0 truncate text-sm font-semibold">
+                        {event.title}
+                      </p>
+                      <TimelineMethodBadge method={event.method} />
+                    </div>
                     {event.subtitle && (
                       <p className="text-muted-foreground truncate text-xs">
                         {event.subtitle}
