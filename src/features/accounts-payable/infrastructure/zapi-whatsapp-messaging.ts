@@ -1,6 +1,5 @@
 import { logger } from "@/core/logger/logger";
 import {
-  sendButtonListMessage,
   sendTextMessage,
   sendButtonPixMessage,
   sendMessageReactionMessage,
@@ -22,22 +21,25 @@ import type {
  */
 const REMINDER_MESSAGE_DELAY_SECONDS = 5;
 
-/** Id do botão "Pago" — carrega o `accountsPayableId`, lido direto pelo webhook (ver `handle-zapi-webhook.use-case.ts`). */
-function payButtonId(accountsPayableId: string): string {
-  return `pago_${accountsPayableId}`;
-}
-
 /**
- * Implementa `WhatsAppMessagingPort` sobre a Z-API. Cartão principal
- * ("Pago") e chave Pix usam botão nativo; código de barras usa texto
- * simples (`/send-text`, ver histórico em `zapi-client.ts`: botão OTP
- * não entrega em grupo/iOS; botão URL-copy copia errado, mesma família
- * OTP; testado em produção — código isolado numa mensagem SEM
- * fornecedor/valor/título é o que funciona: ao segurar pra copiar,
- * "copiar" pega a mensagem inteira, que já é só o código). As
- * mensagens de boleto/Pix só são enviadas quando a conta tem o dado
- * correspondente cadastrado — nem toda conta a pagar tem boleto ou
- * chave Pix.
+ * Implementa `WhatsAppMessagingPort` sobre a Z-API. Cartão principal e
+ * código de barras usam texto simples (`/send-text`); só a chave Pix
+ * ainda usa botão nativo de copiar. As mensagens de boleto/Pix só são
+ * enviadas quando a conta tem o dado correspondente cadastrado — nem
+ * toda conta a pagar tem boleto ou chave Pix.
+ *
+ * DECISÃO (2026-07-21): o cartão principal deixou de usar botão
+ * (`send-button-list`) — a baixa passa a ser SÓ via reação 👍 na
+ * mensagem (ver `handleZapiReactionWebhookUseCase` em
+ * `handle-zapi-webhook.use-case.ts`), nunca mais por clique. Isso
+ * também elimina, de quebra, o reply "Pago"/"Pagar" que o WhatsApp
+ * injetava sozinho ao clicar num botão (protocolo do WhatsApp, nunca
+ * deu pra evitar por API só desligando o botão) — sem botão, não há
+ * reply. O clique em botões de mensagens ANTIGAS (enviadas antes desta
+ * mudança) continua funcionando normalmente: só o ENVIO de botão parou,
+ * o RECEBIMENTO do clique não foi tocado (ver `handleZapiWebhookUseCase`
+ * no mesmo arquivo do use case — os dois gatilhos levam ao mesmo
+ * núcleo de baixa).
  *
  * O tipo de chave Pix (`CPF`/`CNPJ`/`PHONE`/`EMAIL`/`EVP`) não existe
  * hoje no cadastro do MedFlow (`AccountsPayable.pixKey` é só a chave,
@@ -51,22 +53,33 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
   ): Promise<{ messageId: string | null }> {
-    // Cartão com botão "Pago" é a mensagem CRÍTICA: sem ela, nada foi
-    // entregue ao dono da conta — a falha aqui propaga (não é
-    // capturada), pra que o use case chamador não marque a conta como
-    // lembrada e ela seja retentada no próximo ciclo.
-    const { messageId } = await sendButtonListMessage({
+    // Cartão principal é a mensagem CRÍTICA: sem ela, nada foi entregue
+    // ao dono da conta — a falha aqui propaga (não é capturada), pra
+    // que o use case chamador não marque a conta como lembrada e ela
+    // seja retentada no próximo ciclo.
+    //
+    // messageId: `sendTextMessage` usa exatamente a mesma extração de
+    // resposta que `sendButtonListMessage` usava antes (mesmo helper
+    // interno em `zapi-client.ts`, mesmo formato de campo —
+    // `messageId ?? zaapId ?? id`) — capturar `lastReminderMessageId`
+    // continua funcionando sem nenhuma mudança de formato. Logado
+    // explicitamente abaixo pra confirmar isso no primeiro teste real.
+    const { messageId } = await sendTextMessage({
       phone: input.phone,
       message:
         `⚠️ *Conta a Pagar*\n\n` +
         `Fornecedor: *${input.supplierName}*\n` +
         `Descrição: *${input.description}*\n` +
         `Valor: *${input.amount}*\n` +
-        `Vencimento: *${input.dueDate}*`,
-      buttonId: payButtonId(input.accountsPayableId),
-      buttonLabel: "Pago",
+        `Vencimento: *${input.dueDate}*\n\n` +
+        `_Reaja com 👍 nesta mensagem para dar baixa no pagamento._`,
       delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
     });
+
+    logger.info(
+      "Lembrete de WhatsApp: cartão principal enviado como texto (sem botão) — messageId capturado para o gatilho de reação",
+      { accountsPayableId: input.accountsPayableId, messageId },
+    );
 
     // Código de barras e PIX são BEST-EFFORT: o cartão principal já
     // chegou, então uma falha aqui não pode derrubar o lembrete inteiro
@@ -128,16 +141,18 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async reactToPaymentConfirmed(
     input: WhatsAppPaymentConfirmedReactionInput,
   ): Promise<void> {
-    // ✅ (não 👍) DE PROPÓSITO — o gatilho de baixa por reação
-    // (`handleZapiReactionWebhookUseCase`) só dispara em 👍. Usar um
-    // emoji diferente pra confirmação garante que a própria reação do
-    // sistema nunca seja confundida com um novo gatilho, mesmo que o
-    // campo `fromMe` do webhook não distinga de forma confiável reações
-    // enviadas pela própria instância (não testado a fundo ainda).
+    // 🆗 (não 👍, nem ✅) DE PROPÓSITO — o gatilho de baixa por reação
+    // (`handleZapiReactionWebhookUseCase`) dispara em QUALQUER variante
+    // de 👍 (ver `isThumbsUpEmoji` em `route.ts`), então a confirmação
+    // NUNCA pode ser 👍 (ou o próprio sistema dispararia a si mesmo).
+    // 🆗 não é polegar, não tem variação de tom de pele, e é visualmente
+    // claro como "confirmado" — mais seguro que ✅ pra esse propósito
+    // específico (ambos funcionam, mas 🆗 elimina qualquer ambiguidade
+    // com o gatilho por construção, não só por convenção).
     await sendMessageReactionMessage({
       phone: input.phone,
       messageId: input.messageId,
-      reaction: "✅",
+      reaction: "🆗",
     });
   }
 }
