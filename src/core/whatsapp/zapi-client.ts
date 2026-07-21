@@ -217,15 +217,21 @@ export interface SendMessageReactionInput {
 /**
  * Reage com emoji a uma mensagem já enviada — usado pra sinalizar "pago"
  * na própria mensagem do lembrete, sem gerar mensagem nova no chat (ver
- * `handle-zapi-webhook.use-case.ts`). Confirmado via
- * developer.z-api.io/message/send-message-reaction (2026-07-20): corpo
- * `{ phone, messageId, reaction }`; `phone` aceita grupo, igual aos
- * outros endpoints.
+ * `handle-zapi-webhook.use-case.ts`).
+ *
+ * CORREÇÃO (2026-07-21): a página de doc tem o slug
+ * `message/send-message-reaction`, mas o path REAL do endpoint — visto
+ * no exemplo de cURL da própria página — é `/send-reaction` (sem
+ * "message" no meio). Usar `/send-message-reaction` (como antes) faz a
+ * Z-API responder 200 com `{"error":"NOT_FOUND","message":"Unable to
+ * find matching target resource method"}` — confirmado em produção
+ * (log real do webhook). Corpo `{ phone, messageId, reaction }` está
+ * correto e não muda; `phone` aceita grupo, igual aos outros endpoints.
  */
 export async function sendMessageReactionMessage(
   input: SendMessageReactionInput,
 ): Promise<void> {
-  await post("/send-message-reaction", {
+  await post("/send-reaction", {
     phone: input.phone,
     messageId: input.messageId,
     reaction: input.reaction,
