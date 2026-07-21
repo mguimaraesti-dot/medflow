@@ -4,7 +4,10 @@ import { logger } from "@/core/logger/logger";
 import { handleApiError } from "@/core/errors/error-handler";
 import { UnauthenticatedError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
-import { handleZapiWebhookUseCase } from "@/features/accounts-payable/application/handle-zapi-webhook.use-case";
+import {
+  handleZapiWebhookUseCase,
+  handleZapiReactionWebhookUseCase,
+} from "@/features/accounts-payable/application/handle-zapi-webhook.use-case";
 import { PrismaAccountsPayableRepository } from "@/features/accounts-payable/infrastructure/prisma-accounts-payable.repository";
 import { ZapiWhatsAppMessaging } from "@/features/accounts-payable/infrastructure/zapi-whatsapp-messaging";
 import { PrismaSafeRepository } from "@/features/treasury/infrastructure/prisma-safe.repository";
@@ -46,6 +49,28 @@ const whatsAppMessaging = new ZapiWhatsAppMessaging();
  * confirmado nesta mesma integração (ver histórico) como o sinal
  * confiável de "evento originado pelo próprio sistema" — reaproveitado
  * aqui pra ignorar esses ecos e só processar cliques humanos de verdade.
+ *
+ * GATILHO ADICIONAL: reação 👍 na mensagem do lembrete também dá
+ * baixa (além do clique no botão, que continua funcionando em
+ * paralelo). Reações chegam neste MESMO webhook (confirmado na doc da
+ * Z-API, `webhooks/on-message-received-examples`: mesmo `type:
+ * "ReceivedCallback"`, com um campo `reaction` a mais no payload) — não
+ * existe endpoint/URL separado, nem configuração extra conhecida no
+ * painel. Salvaguardas EM CASCATA antes de considerar a reação válida
+ * (todas obrigatórias, na ordem):
+ *   1. `body.reaction` existe (é mesmo um evento de reação);
+ *   2. `fromMe !== true` — ignora reação da PRÓPRIA instância (evita
+ *      confundir com a reação ✅ de confirmação que o sistema manda
+ *      após a baixa — ver `zapi-whatsapp-messaging.ts`). Não
+ *      confirmado a fundo ainda se `fromMe` distingue de forma
+ *      confiável reações enviadas por nós; por isso a confirmação usa
+ *      um emoji DIFERENTE (✅, não 👍) como segunda camada de proteção
+ *      independente deste campo;
+ *   3. `reaction.value === "👍"` — qualquer outro emoji é ignorado;
+ * As 2 últimas (achar a conta pelo `referencedMessage.messageId` e
+ * checar se ainda está PENDENTE) rodam dentro de
+ * `handleZapiReactionWebhookUseCase`, que reaproveita o mesmo núcleo de
+ * baixa do clique no botão.
  */
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId();
@@ -57,11 +82,65 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const bodyRecord = body as Record<string, unknown> | null;
+
+    // Salvaguarda 1 (cascata): é mesmo um evento de reação? Formato
+    // confirmado na doc: `reaction: { value, referencedMessage: { messageId } }`.
+    const reaction = bodyRecord?.reaction as
+      | { value?: unknown; referencedMessage?: { messageId?: unknown } }
+      | undefined;
+
+    if (reaction && typeof reaction === "object") {
+      // Salvaguarda 2: ignora reação da PRÓPRIA instância (evita loop
+      // com a reação ✅ de confirmação — ver doc do arquivo acima).
+      if (bodyRecord?.fromMe === true) {
+        logger.info(
+          "Webhook Z-API (reação): ignorada — fromMe true (reação da própria instância, provavelmente a confirmação ✅)",
+        );
+        return NextResponse.json({ data: { received: true, ignored: true } });
+      }
+
+      // Salvaguarda 3: só 👍 dá baixa.
+      if (reaction.value !== "👍") {
+        logger.info("Webhook Z-API (reação): ignorada — emoji não é 👍", {
+          emoji: reaction.value,
+        });
+        return NextResponse.json({ data: { received: true, ignored: true } });
+      }
+
+      const referencedMessageId = reaction.referencedMessage?.messageId;
+      if (typeof referencedMessageId !== "string" || !referencedMessageId) {
+        logger.warn(
+          "Webhook Z-API (reação 👍): payload sem referencedMessage.messageId — ignorado",
+        );
+        return NextResponse.json({ data: { received: true, ignored: true } });
+      }
+
+      const organization = await prisma.organization.findFirst();
+      if (!organization) {
+        logger.warn("Webhook Z-API ignorado: nenhuma organização cadastrada");
+        return NextResponse.json({ data: { received: true, ignored: true } });
+      }
+
+      await handleZapiReactionWebhookUseCase(
+        { referencedMessageId },
+        organization.id,
+        {
+          accountsPayableRepository,
+          safeRepository,
+          userRepository,
+          organizationSettingsRepository,
+          whatsAppMessaging,
+        },
+      );
+
+      return NextResponse.json({ data: { received: true } });
+    }
 
     const buttonIdMatch = JSON.stringify(body).match(/pago_([\w-]+)/);
     const accountsPayableId = buttonIdMatch ? buttonIdMatch[1] : null;
 
-    const fromApi = (body as Record<string, unknown> | null)?.fromApi;
+    const fromApi = bodyRecord?.fromApi;
 
     if (!accountsPayableId || fromApi) {
       // Não é um clique no botão "Pago" (status de entrega, presença,

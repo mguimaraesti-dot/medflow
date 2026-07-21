@@ -126,6 +126,11 @@ export interface UpdateManyForSeriesInput {
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;
 
+  /** Acha a conta cujo `lastReminderMessageId` bate com o messageId da mensagem original reagida — gatilho de baixa por reação 👍 (ver `handle-zapi-webhook.use-case.ts`). `null` se nenhuma conta tem esse messageId salvo. */
+  findByLastReminderMessageId(
+    messageId: string,
+  ): Promise<AccountsPayable | null>;
+
   list(
     filter: ListAccountsPayableFilter,
     pagination: Pagination,
