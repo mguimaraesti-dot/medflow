@@ -5,15 +5,18 @@
  * provedor de WhatsApp no futuro vira só uma nova implementação desta
  * interface, sem tocar em domain/application.
  *
- * Botões interativos nativos (cartão-resumo com botão "Pago", código
- * de barras/Pix com botão de copiar) — ver histórico em
- * `zapi-client.ts`. A confirmação de pagamento é por clique no botão
- * "Pago", que carrega o id da conta — ver `handle-zapi-webhook.use-case.ts`.
- * A baixa acontece silenciosamente no sistema — decisão de produto:
- * nenhuma mensagem de confirmação é enviada de volta ao WhatsApp.
+ * Cartão principal e código de barras são texto simples; a chave Pix
+ * ainda usa botão nativo de copiar (ver histórico em `zapi-client.ts`).
+ * A confirmação de pagamento é por REAÇÃO 👍 na mensagem do lembrete
+ * (ver `handleZapiReactionWebhookUseCase` em
+ * `handle-zapi-webhook.use-case.ts`) — mensagens antigas com botão
+ * "Pago" ainda dão baixa se clicadas (o handler de clique não foi
+ * removido, só o envio de botão parou). A baixa acontece
+ * silenciosamente no sistema — decisão de produto: nenhuma mensagem de
+ * confirmação é enviada de volta ao WhatsApp.
  */
 export interface WhatsAppPaymentReminderInput {
-  /** Usado como id do botão "Pago" (`pago_<accountsPayableId>`) — o webhook lê esse id direto do payload do clique, sem precisar casar telefone nem mensagem. */
+  /** Usado só nos logs de acompanhamento do envio (sucesso/falha por conta) — não gera mais nenhum botão; a baixa é achada casando `lastReminderMessageId` (capturado da resposta do envio) com a reação recebida. */
   accountsPayableId: string;
   /** Telefone da clínica (`OrganizationSettings.whatsapp`) que recebe o lembrete — dono do caixa, não o fornecedor. */
   phone: string;
@@ -38,11 +41,11 @@ export interface WhatsAppPaymentConfirmedReactionInput {
 
 export interface WhatsAppMessagingPort {
   /**
-   * Dispara o lembrete (cartão-resumo com botão "Pago", código de
+   * Dispara o lembrete (cartão-resumo em texto simples, código de
    * barras e/ou chave Pix com botão de copiar — os 2 últimos só quando
    * o dado correspondente existe). Devolve o id da mensagem do
-   * cartão-resumo — só auditoria/depuração, a confirmação em si casa
-   * pelo id da conta embutido no próprio botão clicado.
+   * cartão-resumo — persistido em `AccountsPayable.lastReminderMessageId`,
+   * é o que casa a reação 👍 recebida com a conta certa.
    */
   sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,

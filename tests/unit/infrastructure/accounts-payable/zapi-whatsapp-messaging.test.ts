@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ZapiWhatsAppMessaging } from "@/features/accounts-payable/infrastructure/zapi-whatsapp-messaging";
 import {
-  sendButtonListMessage,
   sendTextMessage,
   sendButtonPixMessage,
   sendMessageReactionMessage,
@@ -9,7 +8,6 @@ import {
 import { logger } from "@/core/logger/logger";
 
 vi.mock("@/core/whatsapp/zapi-client", () => ({
-  sendButtonListMessage: vi.fn(),
   sendTextMessage: vi.fn(),
   sendButtonPixMessage: vi.fn(),
   sendMessageReactionMessage: vi.fn(),
@@ -38,14 +36,42 @@ function buildInput(overrides: Record<string, unknown> = {}) {
 describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(sendButtonListMessage).mockResolvedValue({
-      messageId: "msg-123",
+    // Diferencia a resposta pelo conteúdo da mensagem — o cartão
+    // principal e o código de barras usam a MESMA função
+    // (sendTextMessage), então precisam de messageIds distintos pra os
+    // testes conseguirem afirmar qual é qual.
+    vi.mocked(sendTextMessage).mockImplementation(async (input) => {
+      if (input.message.startsWith("⚠️ *Conta a Pagar*")) {
+        return { messageId: "msg-123" };
+      }
+      return { messageId: "msg-456" };
     });
-    vi.mocked(sendTextMessage).mockResolvedValue({ messageId: "msg-456" });
     vi.mocked(sendButtonPixMessage).mockResolvedValue(undefined);
   });
 
-  it("código de barras vira 1 chamada de sendTextMessage com SÓ o código puro (sem título/fornecedor/valor)", async () => {
+  it("cartão principal é texto simples (sem botão), com instrução de reação, e messageId é logado", async () => {
+    const messaging = new ZapiWhatsAppMessaging();
+
+    const result = await messaging.sendPaymentReminder(buildInput());
+
+    expect(result).toEqual({ messageId: "msg-123" });
+    expect(sendTextMessage).toHaveBeenNthCalledWith(1, {
+      phone: "11999999999",
+      message: expect.stringContaining(
+        "_Reaja com 👍 nesta mensagem para dar baixa no pagamento._",
+      ),
+      delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
+    });
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining("messageId capturado"),
+      expect.objectContaining({
+        accountsPayableId: "payable-1",
+        messageId: "msg-123",
+      }),
+    );
+  });
+
+  it("código de barras vira uma 2ª chamada de sendTextMessage com SÓ o código puro (sem título/fornecedor/valor)", async () => {
     const messaging = new ZapiWhatsAppMessaging();
 
     const start = Date.now();
@@ -55,11 +81,8 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     // Sem sleep de código: deve resolver quase instantaneamente.
     expect(elapsed).toBeLessThan(500);
 
-    expect(sendButtonListMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ delayMessage: REMINDER_MESSAGE_DELAY_SECONDS }),
-    );
-    expect(sendTextMessage).toHaveBeenCalledTimes(1);
-    expect(sendTextMessage).toHaveBeenCalledWith({
+    expect(sendTextMessage).toHaveBeenCalledTimes(2);
+    expect(sendTextMessage).toHaveBeenNthCalledWith(2, {
       phone: "11999999999",
       message: "12345",
       delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
@@ -71,7 +94,8 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
 
   it("msg 1 (cartão) falha: propaga o erro (lembrete inteiro falha)", async () => {
     const messaging = new ZapiWhatsAppMessaging();
-    vi.mocked(sendButtonListMessage).mockRejectedValue(
+    vi.mocked(sendTextMessage).mockReset();
+    vi.mocked(sendTextMessage).mockRejectedValueOnce(
       new Error("Z-API fora do ar"),
     );
 
@@ -79,16 +103,21 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
       "Z-API fora do ar",
     );
 
-    // Nem boleto nem Pix devem ter sido tentados após a falha crítica.
-    expect(sendTextMessage).not.toHaveBeenCalled();
+    // Só a 1ª chamada (cartão) foi tentada — nem boleto nem Pix depois
+    // da falha crítica.
+    expect(sendTextMessage).toHaveBeenCalledTimes(1);
     expect(sendButtonPixMessage).not.toHaveBeenCalled();
   });
 
   it("msg 2 (código de barras) falha: não propaga, loga aviso, e a msg 3 (Pix) ainda é tentada", async () => {
     const messaging = new ZapiWhatsAppMessaging();
-    vi.mocked(sendTextMessage).mockRejectedValue(
-      new Error("Falha ao enviar boleto"),
-    );
+    vi.mocked(sendTextMessage).mockReset();
+    vi.mocked(sendTextMessage).mockImplementation(async (input) => {
+      if (input.message.startsWith("⚠️ *Conta a Pagar*")) {
+        return { messageId: "msg-123" };
+      }
+      throw new Error("Falha ao enviar boleto");
+    });
 
     const result = await messaging.sendPaymentReminder(buildInput());
 
@@ -121,7 +150,7 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     );
   });
 
-  it("sem boleto nem Pix cadastrados, envia só o cartão e não loga aviso nenhum", async () => {
+  it("sem boleto nem Pix cadastrados, envia só o cartão (1 chamada de sendTextMessage) e não loga aviso nenhum", async () => {
     const messaging = new ZapiWhatsAppMessaging();
 
     const result = await messaging.sendPaymentReminder(
@@ -129,7 +158,7 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     );
 
     expect(result).toEqual({ messageId: "msg-123" });
-    expect(sendTextMessage).not.toHaveBeenCalled();
+    expect(sendTextMessage).toHaveBeenCalledTimes(1);
     expect(sendButtonPixMessage).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
   });
