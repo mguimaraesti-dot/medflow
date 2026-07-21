@@ -21,6 +21,22 @@ const organizationSettingsRepository =
   new PrismaOrganizationSettingsRepository();
 const whatsAppMessaging = new ZapiWhatsAppMessaging();
 
+// 👍 = U+1F44D. Tom de pele (👍🏻👍🏼👍🏽👍🏾👍🏿) é um SEGUNDO codepoint
+// modificador (U+1F3FB-U+1F3FF) grudado depois, não substitui o
+// primeiro — por isso comparar só o primeiro codepoint casa 👍 com
+// qualquer tom (ou nenhum), sem afrouxar pra outros emojis (👎, ❤️,
+// etc. começam com codepoints totalmente diferentes). Confirmado em
+// produção: o iPhone aplica o tom de pele padrão do teclado
+// automaticamente na reação rápida do WhatsApp — testado com
+// `reaction.value === "👍🏻"`, que a comparação exata antiga rejeitava.
+const THUMBS_UP_CODEPOINT = 0x1f44d;
+
+function isThumbsUpEmoji(value: unknown): boolean {
+  return (
+    typeof value === "string" && value.codePointAt(0) === THUMBS_UP_CODEPOINT
+  );
+}
+
 /**
  * Recebe o clique no botão "Pago" enviado pela Z-API — sem sessão,
  * autenticada por um `?secret=` na query string (cadastrado também no
@@ -66,7 +82,10 @@ const whatsAppMessaging = new ZapiWhatsAppMessaging();
  *      confiável reações enviadas por nós; por isso a confirmação usa
  *      um emoji DIFERENTE (✅, não 👍) como segunda camada de proteção
  *      independente deste campo;
- *   3. `reaction.value === "👍"` — qualquer outro emoji é ignorado;
+ *   3. `isThumbsUpEmoji(reaction.value)` — 👍 em qualquer tom de pele
+ *      (ou nenhum) confirma; qualquer outro emoji é ignorado (ver
+ *      comentário da função, definida logo acima, pelo porquê da
+ *      comparação não ser uma igualdade de string simples);
  * As 2 últimas (achar a conta pelo `referencedMessage.messageId` e
  * checar se ainda está PENDENTE) rodam dentro de
  * `handleZapiReactionWebhookUseCase`, que reaproveita o mesmo núcleo de
@@ -100,8 +119,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ data: { received: true, ignored: true } });
       }
 
-      // Salvaguarda 3: só 👍 dá baixa.
-      if (reaction.value !== "👍") {
+      // Salvaguarda 3: só 👍 (qualquer tom de pele) dá baixa.
+      if (!isThumbsUpEmoji(reaction.value)) {
         logger.info("Webhook Z-API (reação): ignorada — emoji não é 👍", {
           emoji: reaction.value,
         });
