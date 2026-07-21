@@ -246,4 +246,71 @@ describe("getDashboardOverviewUseCase", () => {
       true,
     );
   });
+
+  it("timeline: recebimento em Dinheiro/PIX carrega method correto; saída e eventos de caixa vêm com method null", async () => {
+    const todayRegister = {
+      id: "day-1",
+      status: "OPEN",
+      openingBalance: new Prisma.Decimal("0"),
+      openedAt: new Date("2026-07-09T08:00:00.000Z"),
+      openedByUserName: "Maria",
+      reopenedAt: null,
+      reopenedByUserName: null,
+      closedAt: null,
+      closingBalance: null,
+      difference: null,
+    };
+
+    const recentEntries = [
+      {
+        id: "entry-cash",
+        occurredAt: new Date("2026-07-09T10:00:00.000Z"),
+        type: "IN",
+        patientName: "Fulano",
+        withdrawalReason: null,
+        amount: new Prisma.Decimal("50.00"),
+        paymentMethodIsCash: true,
+      },
+      {
+        id: "entry-pix",
+        occurredAt: new Date("2026-07-09T11:00:00.000Z"),
+        type: "IN",
+        patientName: "Ciclana",
+        withdrawalReason: null,
+        amount: new Prisma.Decimal("60.00"),
+        paymentMethodIsCash: false,
+      },
+      {
+        id: "entry-out",
+        occurredAt: new Date("2026-07-09T12:00:00.000Z"),
+        type: "OUT",
+        patientName: null,
+        withdrawalReason: "Troco",
+        amount: new Prisma.Decimal("10.00"),
+        paymentMethodIsCash: true,
+      },
+    ];
+
+    const deps = buildDeps({ todayRegister, recentEntries });
+
+    const result = await getDashboardOverviewUseCase("org-1", deps);
+
+    const cashEvent = result.timeline.find(
+      (e) => e.id === "cash-flow-entry-cash",
+    );
+    const pixEvent = result.timeline.find(
+      (e) => e.id === "cash-flow-entry-pix",
+    );
+    const outEvent = result.timeline.find(
+      (e) => e.id === "cash-flow-entry-out",
+    );
+    const registerOpenEvent = result.timeline.find(
+      (e) => e.id === "register-open-day-1",
+    );
+
+    expect(cashEvent?.method).toBe("CASH");
+    expect(pixEvent?.method).toBe("PIX");
+    expect(outEvent?.method).toBeNull();
+    expect(registerOpenEvent?.method).toBeNull();
+  });
 });

@@ -50,6 +50,9 @@ function safeMovementToTimelineEvent(
   const base = {
     id: `safe-movement-${movement.id}`,
     occurredAt: movement.createdAt,
+    // Movimentações do Cofre nunca são recebimento de caixa — não têm
+    // forma de pagamento (PIX/Dinheiro) associada.
+    method: null,
   };
 
   switch (movement.type) {
@@ -211,6 +214,7 @@ export async function getDashboardOverviewUseCase(
         subtitle: todayRegister.openedByUserName,
         tone: "neutral",
         amount: null,
+        method: null,
       },
       ...(todayRegister.reopenedAt
         ? [
@@ -221,6 +225,7 @@ export async function getDashboardOverviewUseCase(
               subtitle: todayRegister.reopenedByUserName,
               tone: "neutral" as const,
               amount: null,
+              method: null,
             },
           ]
         : []),
@@ -235,6 +240,7 @@ export async function getDashboardOverviewUseCase(
               amount: todayRegister.closingBalance
                 ? new Prisma.Decimal(todayRegister.closingBalance)
                 : null,
+              method: null,
             },
           ]
         : []),
@@ -251,6 +257,7 @@ export async function getDashboardOverviewUseCase(
                 ? ("red" as const)
                 : ("yellow" as const),
               amount: new Prisma.Decimal(todayRegister.difference),
+              method: null,
             },
           ]
         : []),
@@ -261,6 +268,16 @@ export async function getDashboardOverviewUseCase(
         subtitle: entry.patientName ?? entry.withdrawalReason ?? null,
         tone: entry.type === "IN" ? "green" : "red",
         amount: entry.type === "IN" ? entry.amount : entry.amount.negated(),
+        // Só recebimentos têm método (Caixa Recepção só permite
+        // Dinheiro/PIX em Entradas — ver cash-flow-entry-form.tsx,
+        // `allowedNames`). isCash decide CASH; senão é PIX (as únicas
+        // duas opções possíveis aqui).
+        method:
+          entry.type === "IN"
+            ? entry.paymentMethodIsCash
+              ? "CASH"
+              : "PIX"
+            : null,
       })),
     );
   }

@@ -4,6 +4,7 @@ import type {
   DashboardCashRegisterStatus,
   DashboardPendencySeverity,
   DashboardTimelineTone,
+  DashboardTimelineMethod,
 } from "../../domain/dashboard-overview.entity";
 
 export interface DashboardPendencyResponseDTO {
@@ -22,6 +23,8 @@ export interface DashboardTimelineEventResponseDTO {
   subtitle: string | null;
   tone: DashboardTimelineTone;
   amount: string | null;
+  /** Só preenchido em recebimentos ("PIX" | "CASH"); `null` nos demais eventos da timeline. */
+  method: DashboardTimelineMethod;
 }
 
 export interface DashboardOverviewResponseDTO {
@@ -82,6 +85,7 @@ export function toDashboardOverviewResponseDTO(
       subtitle: event.subtitle,
       tone: event.tone,
       amount: toMoneyString(event.amount),
+      method: event.method,
     })),
   };
 }

@@ -20,6 +20,9 @@ export interface DashboardPendency {
 export type DashboardTimelineTone =
   "green" | "red" | "blue" | "yellow" | "neutral";
 
+/** Método de pagamento normalizado pra UI — só preenchido em eventos de recebimento (`null` nos demais: abertura de caixa, sangria etc.). */
+export type DashboardTimelineMethod = "PIX" | "CASH" | null;
+
 export interface DashboardTimelineEvent {
   id: string;
   occurredAt: Date;
@@ -29,6 +32,7 @@ export interface DashboardTimelineEvent {
   tone: DashboardTimelineTone;
   /** Já com o sinal correto (negativo pra saída) — `null` quando o evento não representa um valor (ex: abertura de caixa). Formatação BRL é sempre no frontend. */
   amount: Prisma.Decimal | null;
+  method: DashboardTimelineMethod;
 }
 
 /**
