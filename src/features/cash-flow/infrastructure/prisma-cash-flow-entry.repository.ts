@@ -25,6 +25,28 @@ function toDomainEntry(row: RowWithCreatedBy): CashFlowEntry {
   return { ...entry, createdByUserName: createdBy.name };
 }
 
+/** `list()` também carrega a forma de pagamento (nome/isCash) — hoje só a Timeline do Dashboard usa isso (badge PIX/Dinheiro nos recebimentos), mas o join é barato o bastante (2 consumidores, ambos paginados) pra não justificar um método dedicado. */
+const LIST_INCLUDE = {
+  createdBy: { select: { name: true } },
+  paymentMethod: { select: { name: true, isCash: true } },
+} as const;
+
+type RowWithCreatedByAndPaymentMethod = Prisma.CashFlowEntryGetPayload<{
+  include: typeof LIST_INCLUDE;
+}>;
+
+function toDomainEntryWithPaymentMethod(
+  row: RowWithCreatedByAndPaymentMethod,
+): CashFlowEntry {
+  const { createdBy, paymentMethod, ...entry } = row;
+  return {
+    ...entry,
+    createdByUserName: createdBy.name,
+    paymentMethodName: paymentMethod.name,
+    paymentMethodIsCash: paymentMethod.isCash,
+  };
+}
+
 export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
   async findById(id: string): Promise<CashFlowEntry | null> {
     const row = await prisma.cashFlowEntry.findUnique({
@@ -56,7 +78,7 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
     const [rows, total] = await Promise.all([
       prisma.cashFlowEntry.findMany({
         where,
-        include: CREATED_BY_INCLUDE,
+        include: LIST_INCLUDE,
         orderBy: { occurredAt: "desc" },
         skip: (pagination.page - 1) * pagination.pageSize,
         take: pagination.pageSize,
@@ -64,7 +86,11 @@ export class PrismaCashFlowEntryRepository implements CashFlowEntryRepository {
       prisma.cashFlowEntry.count({ where }),
     ]);
 
-    return buildPaginatedResult(rows.map(toDomainEntry), total, pagination);
+    return buildPaginatedResult(
+      rows.map(toDomainEntryWithPaymentMethod),
+      total,
+      pagination,
+    );
   }
 
   async create(data: CreateCashFlowEntryInput): Promise<CashFlowEntry> {

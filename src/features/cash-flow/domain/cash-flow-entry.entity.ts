@@ -19,6 +19,10 @@ export interface CashFlowEntry {
 
   categoryId: string;
   paymentMethodId: string;
+  /** Denormalizado só pra exibição (Timeline do Dashboard) — via join na infraestrutura. Só populado por `list()`; `undefined` nos demais métodos (não precisam disso hoje). */
+  paymentMethodName?: string;
+  /** Idem — junto com o nome, pra decidir badge Dinheiro/PIX sem outra consulta. */
+  paymentMethodIsCash?: boolean;
   accountsPayableId: string | null;
 
   /** Nome do paciente pagando — obrigatório no formulário quando `type === "IN"`. */

@@ -5,17 +5,19 @@ import {
   TONE_ICON_CLASSES,
   TONE_VALUE_CLASSES,
   eventIcon,
+  TimelineMethodBadge,
 } from "./dashboard-timeline-card";
 import { Card, CardContent } from "@/shared/ui/card";
 import type { DashboardTimelineEventResponseDTO } from "../application/dtos/dashboard-overview.response-dto";
 
 /**
  * "Últimas movimentações" — seção 6 do Dashboard mobile. Mesmos
- * `overview.timeline` e mesmo mapeamento de ícone/tom de
- * `DashboardTimelineCard` (desktop) — só o layout muda: no desktop o
- * nome/descrição usa `truncate` (corta em telas estreitas); aqui o
- * valor e a hora vão pra direita numa coluna própria, deixando a
- * largura toda pro nome (que o usuário usa pra conferir o dia).
+ * `overview.timeline` e mesmo mapeamento de ícone/tom/badge de método
+ * (PIX/Dinheiro) de `DashboardTimelineCard` (desktop) — só o layout
+ * muda: no desktop o nome/descrição usa `truncate` (corta em telas
+ * estreitas); aqui o valor e a hora vão pra direita numa coluna
+ * própria, deixando a largura toda pro nome (que o usuário usa pra
+ * conferir o dia).
  */
 export function DashboardMobileTimeline({
   events,
@@ -52,7 +54,12 @@ export function DashboardMobileTimeline({
                     <Icon className="h-3.5 w-3.5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{event.title}</p>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="min-w-0 truncate text-sm font-semibold">
+                        {event.title}
+                      </p>
+                      <TimelineMethodBadge method={event.method} />
+                    </div>
                     {event.subtitle && (
                       <p className="text-muted-foreground text-xs">
                         {event.subtitle}
