@@ -29,16 +29,19 @@ export interface HandleZapiReactionWebhookInput {
 
 /**
  * Núcleo da confirmação de pagamento via webhook — reaproveitado pelos
- * DOIS gatilhos (clique no botão "Pagar" e reação 👍 no lembrete, ver
- * `handleZapiWebhookUseCase` e `handleZapiReactionWebhookUseCase`
- * abaixo). Quem chama já garantiu `payable.status === "PENDING"`.
+ * DOIS gatilhos que ainda coexistem: clique no botão de mensagens
+ * ANTIGAS (`handleZapiWebhookUseCase` — lembretes novos não enviam mais
+ * botão, ver `zapi-whatsapp-messaging.ts`, mas o RECEBIMENTO do clique
+ * continua ativo pra quem ainda tem uma mensagem antiga no chat) e
+ * reação 👍 (`handleZapiReactionWebhookUseCase`, único gatilho de
+ * lembretes novos). Quem chama já garantiu `payable.status === "PENDING"`.
  *
  * A baixa acontece silenciosamente no sistema — decisão de produto:
  * nenhuma mensagem NOVA de confirmação é enviada de volta ao WhatsApp.
- * O único feedback visual é uma reação ✅ na própria mensagem do
+ * O único feedback visual é uma reação 🆗 na própria mensagem do
  * lembrete (bloco final abaixo) — best-effort, nunca derruba a baixa.
  *
- * IMPORTANTE (anti-loop do gatilho por reação): a confirmação usa ✅
+ * IMPORTANTE (anti-loop do gatilho por reação): a confirmação usa 🆗
  * (não 👍) DE PROPÓSITO — o gatilho novo só dispara em 👍
  * (`handleZapiReactionWebhookUseCase`), então a própria reação do
  * sistema nunca é confundida com um clique/reação de cliente, mesmo se
@@ -77,7 +80,7 @@ async function confirmPayableFromWebhook(
     organizationId: payable.organizationId,
   });
 
-  // Reação ✅ na mensagem original do lembrete — feedback visual sem
+  // Reação 🆗 na mensagem original do lembrete — feedback visual sem
   // gerar mensagem nova no chat. BEST-EFFORT de propósito: a baixa já
   // aconteceu e é o que importa; se a reação falhar (ou não houver
   // `lastReminderMessageId` — ex.: baixa manual sem lembrete enviado),
@@ -110,10 +113,18 @@ async function confirmPayableFromWebhook(
 }
 
 /**
- * Confirma o pagamento a partir do clique no botão "Pagar" enviado
- * junto do lembrete — o id da conta vem embutido no próprio id do
- * botão (`pago_<accountsPayableId>`), então não depende de casar
- * telefone (único por organização) nem mensagem citada.
+ * Confirma o pagamento a partir do clique no botão do lembrete — o id
+ * da conta vem embutido no próprio id do botão (`pago_<accountsPayableId>`),
+ * então não depende de casar telefone (único por organização) nem
+ * mensagem citada.
+ *
+ * DECISÃO (2026-07-21): lembretes NOVOS não enviam mais botão (ver
+ * `zapi-whatsapp-messaging.ts` — a baixa passa a ser só via reação 👍,
+ * `handleZapiReactionWebhookUseCase` abaixo). Este handler continua
+ * ATIVO de propósito: mensagens ANTIGAS, já entregues antes dessa
+ * mudança, ainda têm o botão — clicar nelas precisa continuar dando
+ * baixa normalmente. Só o ENVIO de botão parou, o RECEBIMENTO do
+ * clique não foi tocado.
  *
  * Idempotente: se a conta encontrada já não está PENDENTE, não faz
  * nada (2º clique não tem efeito colateral) — e por isso também não
