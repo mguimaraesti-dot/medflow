@@ -4,6 +4,7 @@ import {
   sendButtonListMessage,
   sendTextMessage,
   sendButtonPixMessage,
+  sendMessageReactionMessage,
 } from "@/core/whatsapp/zapi-client";
 import { logger } from "@/core/logger/logger";
 
@@ -11,6 +12,7 @@ vi.mock("@/core/whatsapp/zapi-client", () => ({
   sendButtonListMessage: vi.fn(),
   sendTextMessage: vi.fn(),
   sendButtonPixMessage: vi.fn(),
+  sendMessageReactionMessage: vi.fn(),
 }));
 
 vi.mock("@/core/logger/logger", () => ({
@@ -130,5 +132,27 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     expect(sendTextMessage).not.toHaveBeenCalled();
     expect(sendButtonPixMessage).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("ZapiWhatsAppMessaging.reactToPaymentConfirmed", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(sendMessageReactionMessage).mockResolvedValue(undefined);
+  });
+
+  it("reage com ✅ (não 👍) — emoji diferente do gatilho de baixa por reação, evita loop", async () => {
+    const messaging = new ZapiWhatsAppMessaging();
+
+    await messaging.reactToPaymentConfirmed({
+      phone: "11999999999",
+      messageId: "msg-original-1",
+    });
+
+    expect(sendMessageReactionMessage).toHaveBeenCalledWith({
+      phone: "11999999999",
+      messageId: "msg-original-1",
+      reaction: "✅",
+    });
   });
 });
