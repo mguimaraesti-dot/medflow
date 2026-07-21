@@ -71,8 +71,7 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
         `Fornecedor: *${input.supplierName}*\n` +
         `Descrição: *${input.description}*\n` +
         `Valor: *${input.amount}*\n` +
-        `Vencimento: *${input.dueDate}*\n\n` +
-        `_Reaja com 👍 nesta mensagem para dar baixa no pagamento._`,
+        `Vencimento: *${input.dueDate}*`,
       delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
     });
 
