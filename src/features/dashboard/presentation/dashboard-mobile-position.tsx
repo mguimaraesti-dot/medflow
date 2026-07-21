@@ -3,7 +3,8 @@ import { formatCurrencyBRL } from "@/shared/lib/format";
 import { Card, CardContent } from "@/shared/ui/card";
 
 /**
- * "Quanto tenho agora" (posição) — seção 3 do Dashboard mobile. Mesmos
+ * "Valores disponíveis em espécie" (posição) — seção 3 do Dashboard
+ * mobile. Mesmos
  * `cashBalance`/`safeBalance`/`availableTotal` do overview, já usados
  * hoje no KPI row e em "Disponibilidade Financeira" — aqui só aparecem
  * UMA vez (Opção A do protótipo de KPI: 2 cards Caixa/Cofre + Total em
@@ -21,7 +22,7 @@ export function DashboardMobilePosition({
   return (
     <div className="space-y-2">
       <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-        Quanto tenho agora
+        Valores disponíveis em espécie
       </p>
       <div className="grid grid-cols-2 gap-2">
         <Card className="py-3">

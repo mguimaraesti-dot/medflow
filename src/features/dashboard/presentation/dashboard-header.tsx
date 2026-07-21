@@ -43,19 +43,24 @@ export function DashboardHeader({
   cashRegisterStatus,
   overdueCount,
   pendingConfirmationCount,
+  hideTitle = false,
 }: {
   cashRegisterStatus: DashboardCashRegisterStatus;
   overdueCount: number;
   pendingConfirmationCount: number;
+  /** Mobile (Dashboard mobile, rótulos/KPIs) já mostra o título "Dashboard" via header de página — evita duplicar aqui, sem afetar o desktop (default false). */
+  hideTitle?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">
-          Centro de Controle Financeiro da Clínica
-        </p>
-      </div>
+      {!hideTitle && (
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">
+            Centro de Controle Financeiro da Clínica
+          </p>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
         <StatusPill
           dot={
