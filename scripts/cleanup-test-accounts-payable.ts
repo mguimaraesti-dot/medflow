@@ -47,10 +47,14 @@ const prisma = new PrismaClient();
 
 // Critério de busca — TODOS os 4 campos combinados (nunca um sozinho),
 // pra nunca pegar por engano algo que não seja lixo de teste.
+// Status aceita PAID ou CANCELLED: uma das 5 contas de teste originais
+// virou CANCELLED (não foi este script — ele nunca tinha rodado antes
+// dessa mudança), mas segue sendo lixo de teste com o mesmo
+// beneficiário/categoria/valor.
 const TARGET_SUPPLIER_NAME = "Teste de Sistema";
 const TARGET_CATEGORY_NAME = "Teste";
 const TARGET_AMOUNT = "1.00";
-const TARGET_STATUS = "PAID" as const;
+const TARGET_STATUSES: Array<"PAID" | "CANCELLED"> = ["PAID", "CANCELLED"];
 
 // Contagem esperada — número diferente disso aborta o script inteiro,
 // nas duas fases (dry-run e confirm).
@@ -97,7 +101,7 @@ async function findCandidates(organizationId: string) {
   const candidates = await prisma.accountsPayable.findMany({
     where: {
       organizationId,
-      status: TARGET_STATUS,
+      status: { in: TARGET_STATUSES },
       amount: new Prisma.Decimal(TARGET_AMOUNT),
       supplier: { name: TARGET_SUPPLIER_NAME },
       category: { name: TARGET_CATEGORY_NAME },
@@ -215,7 +219,7 @@ async function main() {
   console.log("=== Limpeza de Contas de Teste (WhatsApp) ===");
   console.log(`Organização : ${organization.name} (${organization.id})`);
   console.log(
-    `Critério    : beneficiário="${TARGET_SUPPLIER_NAME}" + categoria="${TARGET_CATEGORY_NAME}" + valor=${TARGET_AMOUNT} + status=${TARGET_STATUS}`,
+    `Critério    : beneficiário="${TARGET_SUPPLIER_NAME}" + categoria="${TARGET_CATEGORY_NAME}" + valor=${TARGET_AMOUNT} + status IN (${TARGET_STATUSES.join(", ")})`,
   );
   console.log(`Executado por: ${performingUser.name} (${performingUser.id})`);
   console.log(
@@ -245,7 +249,7 @@ async function main() {
     const freshCandidates = await tx.accountsPayable.findMany({
       where: {
         organizationId: organization.id,
-        status: TARGET_STATUS,
+        status: { in: TARGET_STATUSES },
         amount: new Prisma.Decimal(TARGET_AMOUNT),
         supplier: { name: TARGET_SUPPLIER_NAME },
         category: { name: TARGET_CATEGORY_NAME },
