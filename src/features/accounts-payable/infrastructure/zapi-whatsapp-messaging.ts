@@ -128,16 +128,18 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async reactToPaymentConfirmed(
     input: WhatsAppPaymentConfirmedReactionInput,
   ): Promise<void> {
-    // ✅ (não 👍) DE PROPÓSITO — o gatilho de baixa por reação
-    // (`handleZapiReactionWebhookUseCase`) só dispara em 👍. Usar um
-    // emoji diferente pra confirmação garante que a própria reação do
-    // sistema nunca seja confundida com um novo gatilho, mesmo que o
-    // campo `fromMe` do webhook não distinga de forma confiável reações
-    // enviadas pela própria instância (não testado a fundo ainda).
+    // 🆗 (não 👍, nem ✅) DE PROPÓSITO — o gatilho de baixa por reação
+    // (`handleZapiReactionWebhookUseCase`) dispara em QUALQUER variante
+    // de 👍 (ver `isThumbsUpEmoji` em `route.ts`), então a confirmação
+    // NUNCA pode ser 👍 (ou o próprio sistema dispararia a si mesmo).
+    // 🆗 não é polegar, não tem variação de tom de pele, e é visualmente
+    // claro como "confirmado" — mais seguro que ✅ pra esse propósito
+    // específico (ambos funcionam, mas 🆗 elimina qualquer ambiguidade
+    // com o gatilho por construção, não só por convenção).
     await sendMessageReactionMessage({
       phone: input.phone,
       messageId: input.messageId,
-      reaction: "✅",
+      reaction: "🆗",
     });
   }
 }

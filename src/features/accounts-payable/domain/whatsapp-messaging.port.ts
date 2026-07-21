@@ -49,13 +49,11 @@ export interface WhatsAppMessagingPort {
   ): Promise<{ messageId: string | null }>;
 
   /**
-   * Reage com ✅ na mensagem original do lembrete, para sinalizar "pago"
-   * sem gerar mensagem nova no chat (ver `handle-zapi-webhook.use-case.ts`
-   * — a mensagem de resposta que o próprio clique no botão já gera é do
-   * protocolo do WhatsApp, fora do nosso controle; isso aqui é só o
-   * feedback extra da baixa em si). Emoji ✅ (não 👍) DE PROPÓSITO — o
-   * gatilho de baixa por reação só dispara em 👍, então a confirmação
-   * do sistema nunca é confundida com um novo gatilho (anti-loop).
+   * Reage com 🆗 na mensagem original do lembrete, para sinalizar "pago"
+   * sem gerar mensagem nova no chat. Emoji 🆗 (não 👍) DE PROPÓSITO — o
+   * gatilho de baixa por reação dispara em qualquer variante de 👍 (ver
+   * `isThumbsUpEmoji` em `route.ts`), então a confirmação do sistema
+   * nunca pode ser 👍 sob risco de disparar a si mesma (anti-loop).
    */
   reactToPaymentConfirmed(
     input: WhatsAppPaymentConfirmedReactionInput,

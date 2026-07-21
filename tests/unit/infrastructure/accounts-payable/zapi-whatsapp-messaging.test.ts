@@ -141,7 +141,7 @@ describe("ZapiWhatsAppMessaging.reactToPaymentConfirmed", () => {
     vi.mocked(sendMessageReactionMessage).mockResolvedValue(undefined);
   });
 
-  it("reage com ✅ (não 👍) — emoji diferente do gatilho de baixa por reação, evita loop", async () => {
+  it("reage com 🆗 (não 👍) — emoji diferente do gatilho de baixa por reação, evita loop", async () => {
     const messaging = new ZapiWhatsAppMessaging();
 
     await messaging.reactToPaymentConfirmed({
@@ -152,7 +152,7 @@ describe("ZapiWhatsAppMessaging.reactToPaymentConfirmed", () => {
     expect(sendMessageReactionMessage).toHaveBeenCalledWith({
       phone: "11999999999",
       messageId: "msg-original-1",
-      reaction: "✅",
+      reaction: "🆗",
     });
   });
 });
