@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ZapiWhatsAppMessaging } from "@/features/accounts-payable/infrastructure/zapi-whatsapp-messaging";
 import {
   sendButtonListMessage,
-  sendButtonCodeMessage,
+  sendTextMessage,
   sendButtonPixMessage,
 } from "@/core/whatsapp/zapi-client";
 import { logger } from "@/core/logger/logger";
 
 vi.mock("@/core/whatsapp/zapi-client", () => ({
   sendButtonListMessage: vi.fn(),
-  sendButtonCodeMessage: vi.fn(),
+  sendTextMessage: vi.fn(),
   sendButtonPixMessage: vi.fn(),
 }));
 
@@ -39,27 +39,29 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     vi.mocked(sendButtonListMessage).mockResolvedValue({
       messageId: "msg-123",
     });
-    vi.mocked(sendButtonCodeMessage).mockResolvedValue(undefined);
+    vi.mocked(sendTextMessage).mockResolvedValue({ messageId: "msg-456" });
     vi.mocked(sendButtonPixMessage).mockResolvedValue(undefined);
   });
 
-  it("passa delayMessage (constante) nas 3 chamadas, sem sleep de código", async () => {
+  it("código de barras vira 1 chamada de sendTextMessage com SÓ o código puro (sem título/fornecedor/valor)", async () => {
     const messaging = new ZapiWhatsAppMessaging();
 
     const start = Date.now();
     await messaging.sendPaymentReminder(buildInput());
     const elapsed = Date.now() - start;
 
-    // Sem sleep de código: deve resolver quase instantaneamente (bem
-    // abaixo dos 6000ms que os 2x delay(3000) antigos exigiriam).
+    // Sem sleep de código: deve resolver quase instantaneamente.
     expect(elapsed).toBeLessThan(500);
 
     expect(sendButtonListMessage).toHaveBeenCalledWith(
       expect.objectContaining({ delayMessage: REMINDER_MESSAGE_DELAY_SECONDS }),
     );
-    expect(sendButtonCodeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ delayMessage: REMINDER_MESSAGE_DELAY_SECONDS }),
-    );
+    expect(sendTextMessage).toHaveBeenCalledTimes(1);
+    expect(sendTextMessage).toHaveBeenCalledWith({
+      phone: "11999999999",
+      message: "12345",
+      delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
+    });
     expect(sendButtonPixMessage).toHaveBeenCalledWith(
       expect.objectContaining({ delayMessage: REMINDER_MESSAGE_DELAY_SECONDS }),
     );
@@ -76,13 +78,13 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     );
 
     // Nem boleto nem Pix devem ter sido tentados após a falha crítica.
-    expect(sendButtonCodeMessage).not.toHaveBeenCalled();
+    expect(sendTextMessage).not.toHaveBeenCalled();
     expect(sendButtonPixMessage).not.toHaveBeenCalled();
   });
 
   it("msg 2 (código de barras) falha: não propaga, loga aviso, e a msg 3 (Pix) ainda é tentada", async () => {
     const messaging = new ZapiWhatsAppMessaging();
-    vi.mocked(sendButtonCodeMessage).mockRejectedValue(
+    vi.mocked(sendTextMessage).mockRejectedValue(
       new Error("Falha ao enviar boleto"),
     );
 
@@ -125,7 +127,7 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
     );
 
     expect(result).toEqual({ messageId: "msg-123" });
-    expect(sendButtonCodeMessage).not.toHaveBeenCalled();
+    expect(sendTextMessage).not.toHaveBeenCalled();
     expect(sendButtonPixMessage).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
   });

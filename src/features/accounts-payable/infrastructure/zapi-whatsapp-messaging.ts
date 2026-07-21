@@ -1,7 +1,7 @@
 import { logger } from "@/core/logger/logger";
 import {
   sendButtonListMessage,
-  sendButtonCodeMessage,
+  sendTextMessage,
   sendButtonPixMessage,
 } from "@/core/whatsapp/zapi-client";
 import type {
@@ -26,10 +26,16 @@ function payButtonId(accountsPayableId: string): string {
 }
 
 /**
- * Implementa `WhatsAppMessagingPort` sobre a Z-API usando botões nativos
- * (ver histórico em `zapi-client.ts`). As mensagens de boleto/Pix só são
- * enviadas quando a conta tem o dado correspondente cadastrado — nem
- * toda conta a pagar tem boleto ou chave Pix.
+ * Implementa `WhatsAppMessagingPort` sobre a Z-API. Cartão principal
+ * ("Pago") e chave Pix usam botão nativo; código de barras usa texto
+ * simples (`/send-text`, ver histórico em `zapi-client.ts`: botão OTP
+ * não entrega em grupo/iOS; botão URL-copy copia errado, mesma família
+ * OTP; testado em produção — código isolado numa mensagem SEM
+ * fornecedor/valor/título é o que funciona: ao segurar pra copiar,
+ * "copiar" pega a mensagem inteira, que já é só o código). As
+ * mensagens de boleto/Pix só são enviadas quando a conta tem o dado
+ * correspondente cadastrado — nem toda conta a pagar tem boleto ou
+ * chave Pix.
  *
  * O tipo de chave Pix (`CPF`/`CNPJ`/`PHONE`/`EMAIL`/`EVP`) não existe
  * hoje no cadastro do MedFlow (`AccountsPayable.pixKey` é só a chave,
@@ -67,11 +73,13 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     // que essa conta ficou sem boleto/PIX.
     if (input.barcode) {
       try {
-        await sendButtonCodeMessage({
+        // SÓ o código, puro — sem título, sem fornecedor/valor, sem
+        // formatação (o cartão principal já tem fornecedor e valor,
+        // repetir aqui é redundante). Ao segurar pra copiar, "copiar"
+        // pega a mensagem inteira, que já é só o código.
+        await sendTextMessage({
           phone: input.phone,
-          message: `*${input.supplierName}*\n${input.amount}\nCódigo de barras da fatura:`,
-          code: input.barcode,
-          buttonText: "Copiar código de barras",
+          message: input.barcode,
           delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
         });
       } catch (error) {

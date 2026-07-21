@@ -20,9 +20,10 @@ import { logger } from "@/core/logger/logger";
  * (`pago_<accountsPayableId>`) — a confirmação de pagamento volta a
  * ser por clique, não mais por resposta de texto "PAGO".
  *
- * `/send-text` (`sendTextMessage`) não tem uso atual no projeto — mantida
- * disponível caso surja necessidade de mensagem simples sem interação
- * (ex: agradecimento pós-pagamento).
+ * `/send-text` (`sendTextMessage`) passou a ser usada pro código de
+ * barras do lembrete (teste comparativo de duas versões — ver
+ * `BARCODE_MESSAGE_MODE` em `zapi-whatsapp-messaging.ts`): o botão OTP
+ * (`sendButtonCodeMessage` abaixo) não entrega em grupo/iOS.
  *
  * IMPORTANTE: a Z-API às vezes responde HTTP 200 mesmo quando a
  * mensagem não é entregue de verdade (instância desconectada, número
@@ -134,15 +135,18 @@ interface ZapiSendTextResponse {
 export interface SendTextInput {
   phone: string;
   message: string;
+  /** Ver `SendButtonListInput.delayMessage`. */
+  delayMessage?: number;
 }
 
-/** Mensagem de texto simples, sem interação — usada só pro separador entre contas do mesmo lote e pelo agradecimento pós-pagamento (ver `zapi-whatsapp-messaging.ts`). */
+/** Mensagem de texto simples, sem interação — usada pro código de barras do lembrete (ver `zapi-whatsapp-messaging.ts`). */
 export async function sendTextMessage(
   input: SendTextInput,
 ): Promise<{ messageId: string | null }> {
   const responseBody = (await post("/send-text", {
     phone: input.phone,
     message: input.message,
+    delayMessage: input.delayMessage,
   })) as ZapiSendTextResponse | undefined;
 
   const messageId =
