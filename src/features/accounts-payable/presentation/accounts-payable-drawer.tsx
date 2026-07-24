@@ -620,7 +620,10 @@ export function AccountsPayableDrawer({
           activeSnapPoint={snap}
           setActiveSnapPoint={setSnap}
         >
-          <DrawerContent className="flex max-h-[85vh] flex-col gap-0">
+          {/* max-h um pouco abaixo de 100vh — alto o bastante pra não
+              cortar o snap de 1 (tela cheia), baixo o bastante pra sempre
+              sobrar uma fresta da lista atrás pra tocar-fora fechar. */}
+          <DrawerContent className="flex max-h-[95vh] flex-col gap-0">
             {drawerBody}
           </DrawerContent>
         </Drawer>
