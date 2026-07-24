@@ -122,6 +122,13 @@ export function AccountsPayableScreen({
     "RECURRING" | "NON_RECURRING" | undefined
   >();
   const [pendingReminderOnly, setPendingReminderOnly] = useState(false);
+  // Intervalo de data só da LISTA (nunca dos KPIs) — setado pelo clique em
+  // "Hoje" (a única categoria que restringe data, não só status). Os 5
+  // KPIs continuam usando `range` (derivado só de periodPreset/periodCustom,
+  // nunca alterado por clique de KPI) como referência fixa do período.
+  const [listDueDateOverride, setListDueDateOverride] = useState<
+    { from: Date; to: Date } | undefined
+  >(undefined);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     category: true,
     recurring: true,
@@ -157,6 +164,8 @@ export function AccountsPayableScreen({
   const { data: suppliers } = useSuppliers();
   const range = computePeriodRange(periodPreset, periodCustom);
   const { summary, trend } = useAccountsPayableSummaryTrend(range);
+  // Só a lista usa isto — os KPIs acima usam `range` direto, sempre.
+  const listRange = listDueDateOverride ?? range;
 
   function supplierNameOf(payable: AccountsPayableResponseDTO | null) {
     return payable
@@ -238,9 +247,10 @@ export function AccountsPayableScreen({
     setStatus("ALL");
   }
   function filterByDueToday() {
-    setPeriodPreset("TODAY");
-    setPeriodCustom(undefined);
     setStatus("PENDING");
+    // Timezone-safe (mesmo helper do PeriodSelector) — nunca `new Date()`
+    // cru, que trunca em UTC e erra a virada de dia em Brasília.
+    setListDueDateOverride(computePeriodRange("TODAY", undefined));
   }
   function filterByUpcoming() {
     setStatus("PENDING");
@@ -788,8 +798,8 @@ export function AccountsPayableScreen({
             supplierId={supplierId}
             recurringOnly={recurringOnly}
             search={debouncedSearch.trim() || undefined}
-            dueDateFrom={range.from}
-            dueDateTo={range.to}
+            dueDateFrom={listRange.from}
+            dueDateTo={listRange.to}
             pendingReminderOnly={pendingReminderOnly}
             onView={handleView}
             onEdit={setEditing}
@@ -808,8 +818,8 @@ export function AccountsPayableScreen({
             supplierId={supplierId}
             recurringOnly={recurringOnly}
             search={debouncedSearch.trim() || undefined}
-            dueDateFrom={range.from}
-            dueDateTo={range.to}
+            dueDateFrom={listRange.from}
+            dueDateTo={listRange.to}
             pendingReminderOnly={pendingReminderOnly}
             visibleColumns={visibleColumns}
             onView={handleView}
