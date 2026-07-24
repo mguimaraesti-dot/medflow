@@ -10,6 +10,7 @@ import {
   Pencil,
   Repeat,
   Trash2,
+  X,
   XCircle,
 } from "lucide-react";
 import {
@@ -20,6 +21,7 @@ import {
 } from "@/shared/ui/sheet";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
@@ -220,6 +222,17 @@ export function AccountsPayableDrawer({
   const drawerBody = payable && badge && dueDateDisplay && (
     <>
       <HeaderTag className="space-y-3 pb-2">
+        {/* DrawerContent (vaul) não tem X embutido como o SheetContent
+            (que já mostra um via showCloseButton) — sem isso, mobile
+            ficaria só com arrastar/tocar fora pra fechar. */}
+        {isMobile && (
+          <DrawerClose
+            aria-label="Fechar"
+            className="text-muted-foreground absolute top-4 right-4 z-10 rounded-xs opacity-70 transition-opacity hover:opacity-100"
+          >
+            <X className="h-4 w-4" />
+          </DrawerClose>
+        )}
         <Badge variant="outline" className={cn("w-fit", badge.badgeClassName)}>
           {badge.label}
         </Badge>
