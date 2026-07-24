@@ -44,12 +44,15 @@ export function DashboardHeader({
   overdueCount,
   pendingConfirmationCount,
   hideTitle = false,
+  hideExport = false,
 }: {
   cashRegisterStatus: DashboardCashRegisterStatus;
   overdueCount: number;
   pendingConfirmationCount: number;
   /** Mobile (Dashboard mobile, rótulos/KPIs) já mostra o título "Dashboard" via header de página — evita duplicar aqui, sem afetar o desktop (default false). */
   hideTitle?: boolean;
+  /** Exportar ainda é placeholder (só um toast) — sem espaço sobrando no mobile pra um botão sem função real ainda (default false, desktop inalterado). */
+  hideExport?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -91,17 +94,19 @@ export function DashboardHeader({
           <CalendarDays className="h-3.5 w-3.5" />
           {formatDateOnlyLocalBR(new Date())}
         </span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            toast.info("Exportação ainda não disponível nesta versão.")
-          }
-        >
-          <Download className="h-4 w-4" />
-          Exportar
-        </Button>
+        {!hideExport && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              toast.info("Exportação ainda não disponível nesta versão.")
+            }
+          >
+            <Download className="h-4 w-4" />
+            Exportar
+          </Button>
+        )}
       </div>
     </div>
   );

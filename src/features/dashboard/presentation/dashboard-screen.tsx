@@ -50,6 +50,7 @@ export function DashboardScreen({ permissions }: { permissions: string[] }) {
           overdueCount={overview.overdueCount}
           pendingConfirmationCount={overview.pendingConfirmationCount}
           hideTitle
+          hideExport
         />
         <DashboardMobileAlerts pendencies={overview.pendencies} />
         <DashboardMobilePosition
