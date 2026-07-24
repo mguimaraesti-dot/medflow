@@ -18,6 +18,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/shared/ui/sheet";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/shared/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -46,6 +52,7 @@ import {
   shortMovementNumber,
   toAccountsPayableEvents,
 } from "./accounts-payable-helpers";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { useRecurringBill } from "./use-recurring-bill";
 import { useRecurringBillInsights } from "./use-recurring-bill-insights";
 import { useAccountsPayableAuditLog } from "./use-accounts-payable-audit-log";
@@ -104,6 +111,8 @@ export function AccountsPayableDrawer({
   const [occurrencesDrawerOpen, setOccurrencesDrawerOpen] = useState(false);
   const [endRecurrenceOpen, setEndRecurrenceOpen] = useState(false);
   const cancelAccountsPayable = useCancelAccountsPayable();
+  // Mobile vira bottom-sheet arrastável (vaul); desktop mantém o Sheet lateral de sempre.
+  const isMobile = useMediaQuery("(max-width: 1023px)");
 
   const { data: recurringBill } = useRecurringBill(
     payable?.recurringBillId ?? null,
@@ -205,409 +214,411 @@ export function AccountsPayableDrawer({
     }
   }
 
-  return (
+  const HeaderTag = isMobile ? DrawerHeader : SheetHeader;
+  const TitleTag = isMobile ? DrawerTitle : SheetTitle;
+
+  const drawerBody = payable && badge && dueDateDisplay && (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="flex w-full flex-col gap-0 sm:max-w-lg"
-        >
-          {payable && badge && dueDateDisplay && (
-            <>
-              <SheetHeader className="space-y-3 pb-2">
-                <Badge
-                  variant="outline"
-                  className={cn("w-fit", badge.badgeClassName)}
-                >
-                  {badge.label}
-                </Badge>
-                <div>
-                  <p className="text-muted-foreground text-xs">Conta a Pagar</p>
-                  <SheetTitle className="text-xl">
-                    {supplierName ?? payable.description}
-                  </SheetTitle>
+      <HeaderTag className="space-y-3 pb-2">
+        <Badge variant="outline" className={cn("w-fit", badge.badgeClassName)}>
+          {badge.label}
+        </Badge>
+        <div>
+          <p className="text-muted-foreground text-xs">Conta a Pagar</p>
+          <TitleTag className="text-xl">
+            {supplierName ?? payable.description}
+          </TitleTag>
+        </div>
+        <p className="text-primary text-2xl font-semibold">
+          {formatCurrencyBRL(payable.amount)}
+        </p>
+        <p className="text-muted-foreground text-sm">
+          {payable.status === "PAID" || payable.status === "CANCELLED"
+            ? "Vencimento"
+            : dueDateDisplay.tone === "danger"
+              ? "Venceu"
+              : "Vence"}{" "}
+          {dueDateDisplay.top.toLowerCase()}
+          {dueDateDisplay.bottom && ` · ${dueDateDisplay.bottom}`}
+        </p>
+      </HeaderTag>
+
+      <Tabs
+        key={initialTab}
+        defaultValue={initialTab}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <TabsList variant="line" className="mx-4">
+          <TabsTrigger value="account">Conta</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
+          <TabsTrigger value="attachments">Documentos</TabsTrigger>
+        </TabsList>
+
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <TabsContent value="account" className="mt-4 space-y-4">
+            <p className="text-sm font-medium">Informações principais</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Beneficiário" value={supplierName ?? "—"} />
+              <Field label="Categoria" value={categoryName ?? "—"} />
+              <Field
+                label="Vencimento"
+                value={
+                  <span className="flex items-center gap-1.5">
+                    {dueDateDisplay.bottom || dueDateDisplay.fullDate}
+                    <span className="text-muted-foreground text-xs">
+                      {dueDateDisplay.weekday}
+                    </span>
+                    {(dueDateDisplay.tone === "warning" ||
+                      dueDateDisplay.tone === "danger") && (
+                      <Badge
+                        variant="outline"
+                        className={
+                          dueDateDisplay.tone === "danger"
+                            ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400"
+                            : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                        }
+                      >
+                        {dueDateDisplay.top}
+                      </Badge>
+                    )}
+                  </span>
+                }
+              />
+              <Field
+                label="Confirmado por"
+                value={
+                  paymentConfirmation ? (
+                    <span
+                      className="cursor-help"
+                      title={paymentConfirmation.userName}
+                    >
+                      {getPaymentConfirmationDisplayName(paymentConfirmation)}
+                    </span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+              <Field
+                label="Origem do Pagamento"
+                value={
+                  payable.paymentOrigin === "COFRE" ? "🟢 Cofre" : "🏦 Banco"
+                }
+              />
+              <Field
+                label="Último lembrete de WhatsApp"
+                value={
+                  payable.lastReminderSentAt ? (
+                    <span>
+                      {formatDateTimeBR(payable.lastReminderSentAt)}
+                      <span className="text-muted-foreground block text-xs font-normal">
+                        {lastReminderSentEvent?.userId === null
+                          ? "Automático"
+                          : lastReminderSentEvent?.userName
+                            ? `Manual, por ${lastReminderSentEvent.userName}`
+                            : "Manual"}
+                      </span>
+                    </span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+            </div>
+
+            {paymentConfirmation && (
+              <div className="space-y-2 rounded-lg border p-3">
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                  Confirmado por{" "}
+                  <span
+                    className="cursor-help"
+                    title={paymentConfirmation.userName}
+                  >
+                    {getPaymentConfirmationDisplayName(paymentConfirmation)}
+                  </span>
+                </p>
+                <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
+                  <span>Origem: {paymentConfirmation.source}</span>
+                  <span>
+                    Em: {formatDateTimeBR(paymentConfirmation.confirmedAt)}
+                  </span>
+                  {payable.paidSafeMovementId && (
+                    <span>
+                      Nº movimentação:{" "}
+                      {shortMovementNumber(payable.paidSafeMovementId)}
+                    </span>
+                  )}
                 </div>
-                <p className="text-primary text-2xl font-semibold">
-                  {formatCurrencyBRL(payable.amount)}
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  {payable.status === "PAID" || payable.status === "CANCELLED"
-                    ? "Vencimento"
-                    : dueDateDisplay.tone === "danger"
-                      ? "Venceu"
-                      : "Vence"}{" "}
-                  {dueDateDisplay.top.toLowerCase()}
-                  {dueDateDisplay.bottom && ` · ${dueDateDisplay.bottom}`}
-                </p>
-              </SheetHeader>
+              </div>
+            )}
 
-              <Tabs
-                key={initialTab}
-                defaultValue={initialTab}
-                className="flex min-h-0 flex-1 flex-col"
-              >
-                <TabsList variant="line" className="mx-4">
-                  <TabsTrigger value="account">Conta</TabsTrigger>
-                  <TabsTrigger value="history">Histórico</TabsTrigger>
-                  <TabsTrigger value="attachments">Documentos</TabsTrigger>
-                </TabsList>
-
-                <div className="flex-1 overflow-y-auto px-4 pb-4">
-                  <TabsContent value="account" className="mt-4 space-y-4">
-                    <p className="text-sm font-medium">
-                      Informações principais
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Field label="Beneficiário" value={supplierName ?? "—"} />
-                      <Field label="Categoria" value={categoryName ?? "—"} />
+            {(payable.barcode || payable.pixKey) && (
+              <div className="space-y-3 rounded-lg border p-3">
+                <p className="text-sm font-medium">Pagamento</p>
+                {payable.barcode && (
+                  <div className="flex items-end gap-2">
+                    <div className="min-w-0 flex-1">
                       <Field
-                        label="Vencimento"
+                        label="Código de barras"
                         value={
-                          <span className="flex items-center gap-1.5">
-                            {dueDateDisplay.bottom || dueDateDisplay.fullDate}
-                            <span className="text-muted-foreground text-xs">
-                              {dueDateDisplay.weekday}
-                            </span>
-                            {(dueDateDisplay.tone === "warning" ||
-                              dueDateDisplay.tone === "danger") && (
-                              <Badge
-                                variant="outline"
-                                className={
-                                  dueDateDisplay.tone === "danger"
-                                    ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400"
-                                    : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                }
-                              >
-                                {dueDateDisplay.top}
-                              </Badge>
-                            )}
+                          <span className="block truncate">
+                            {payable.barcode}
                           </span>
-                        }
-                      />
-                      <Field
-                        label="Confirmado por"
-                        value={
-                          paymentConfirmation ? (
-                            <span
-                              className="cursor-help"
-                              title={paymentConfirmation.userName}
-                            >
-                              {getPaymentConfirmationDisplayName(
-                                paymentConfirmation,
-                              )}
-                            </span>
-                          ) : (
-                            "—"
-                          )
-                        }
-                      />
-                      <Field
-                        label="Origem do Pagamento"
-                        value={
-                          payable.paymentOrigin === "COFRE"
-                            ? "🟢 Cofre"
-                            : "🏦 Banco"
-                        }
-                      />
-                      <Field
-                        label="Último lembrete de WhatsApp"
-                        value={
-                          payable.lastReminderSentAt ? (
-                            <span>
-                              {formatDateTimeBR(payable.lastReminderSentAt)}
-                              <span className="text-muted-foreground block text-xs font-normal">
-                                {lastReminderSentEvent?.userId === null
-                                  ? "Automático"
-                                  : lastReminderSentEvent?.userName
-                                    ? `Manual, por ${lastReminderSentEvent.userName}`
-                                    : "Manual"}
-                              </span>
-                            </span>
-                          ) : (
-                            "—"
-                          )
                         }
                       />
                     </div>
-
-                    {paymentConfirmation && (
-                      <div className="space-y-2 rounded-lg border p-3">
-                        <p className="flex items-center gap-1.5 text-sm font-medium">
-                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
-                          Confirmado por{" "}
-                          <span
-                            className="cursor-help"
-                            title={paymentConfirmation.userName}
-                          >
-                            {getPaymentConfirmationDisplayName(
-                              paymentConfirmation,
-                            )}
-                          </span>
-                        </p>
-                        <div className="text-muted-foreground grid grid-cols-2 gap-2 text-xs">
-                          <span>Origem: {paymentConfirmation.source}</span>
-                          <span>
-                            Em:{" "}
-                            {formatDateTimeBR(paymentConfirmation.confirmedAt)}
-                          </span>
-                          {payable.paidSafeMovementId && (
-                            <span>
-                              Nº movimentação:{" "}
-                              {shortMovementNumber(payable.paidSafeMovementId)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {(payable.barcode || payable.pixKey) && (
-                      <div className="space-y-3 rounded-lg border p-3">
-                        <p className="text-sm font-medium">Pagamento</p>
-                        {payable.barcode && (
-                          <div className="flex items-end gap-2">
-                            <div className="min-w-0 flex-1">
-                              <Field
-                                label="Código de barras"
-                                value={
-                                  <span className="block truncate">
-                                    {payable.barcode}
-                                  </span>
-                                }
-                              />
-                            </div>
-                            <CopyButton
-                              value={payable.barcode}
-                              label="Copiar código de barras"
-                              successMessage="Código copiado"
-                            />
-                          </div>
-                        )}
-                        {payable.pixKey && (
-                          <div className="flex items-end gap-2">
-                            <div className="min-w-0 flex-1">
-                              <Field
-                                label="Chave PIX"
-                                value={
-                                  <span className="block truncate">
-                                    {payable.pixKey}
-                                  </span>
-                                }
-                              />
-                            </div>
-                            <CopyButton
-                              value={payable.pixKey}
-                              label="Copiar PIX"
-                              successMessage="PIX copiado"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {recurrenceDisplay && recurringBill && (
-                      <div className="space-y-3 rounded-lg border p-3">
-                        <div className="flex items-center justify-between">
-                          <p className="flex items-center gap-1.5 text-sm font-medium">
-                            <Repeat className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                            Recorrência
-                          </p>
-                          <Badge
-                            variant="outline"
-                            className={
-                              recurringBill.active
-                                ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-500"
-                                : "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400"
-                            }
-                          >
-                            {recurringBill.active ? "Ativa" : "Encerrada"}
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <Field
-                            label="Periodicidade"
-                            value={recurrenceDisplay.periodicityLabel}
-                          />
-                          <Field
-                            label="Próxima geração"
-                            value={
-                              insights?.nextGenerationDate
-                                ? formatDateOnlyBR(insights.nextGenerationDate)
-                                : "—"
-                            }
-                          />
-                          <Field
-                            label="Início"
-                            value={recurrenceDisplay.startLabel}
-                          />
-                          <Field
-                            label="Fim"
-                            value={recurrenceDisplay.endLabel}
-                          />
-                          <Field
-                            label="Ocorrências geradas"
-                            value={insights?.occurrencesGenerated ?? "—"}
-                          />
-                        </div>
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setOccurrencesDrawerOpen(true)}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            Ver Ocorrências
-                          </Button>
-                          {recurringBill.active && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setEndRecurrenceOpen(true)}
-                            >
-                              <Ban className="h-3.5 w-3.5" />
-                              Encerrar Recorrência
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <Field
-                      label="Observação"
-                      value={payable.description || "—"}
+                    <CopyButton
+                      value={payable.barcode}
+                      label="Copiar código de barras"
+                      successMessage="Código copiado"
                     />
-                  </TabsContent>
-
-                  <TabsContent value="history" className="mt-4">
-                    <ol className="space-y-4">
-                      {events.map((event, index) => (
-                        <li key={event.id} className="flex gap-3">
-                          <div className="flex flex-col items-center">
-                            <span className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                              <event.icon className="h-3.5 w-3.5" />
-                            </span>
-                            {index < events.length - 1 && (
-                              <span className="bg-border mt-1 w-px flex-1" />
-                            )}
-                          </div>
-                          <div className="-mt-0.5 pb-3">
-                            <p className="text-sm font-medium">{event.label}</p>
-                            <p className="text-muted-foreground text-xs">
-                              Por {event.actor} · {formatDateTimeBR(event.date)}
-                            </p>
-                            {event.detail && (
-                              <p className="text-muted-foreground text-xs">
-                                {event.detail}
-                              </p>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  </TabsContent>
-
-                  <TabsContent value="attachments" className="mt-4">
-                    <AccountsPayableAttachmentsPanel
-                      payable={payable}
-                      canManage={canEditThis}
+                  </div>
+                )}
+                {payable.pixKey && (
+                  <div className="flex items-end gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Field
+                        label="Chave PIX"
+                        value={
+                          <span className="block truncate">
+                            {payable.pixKey}
+                          </span>
+                        }
+                      />
+                    </div>
+                    <CopyButton
+                      value={payable.pixKey}
+                      label="Copiar PIX"
+                      successMessage="PIX copiado"
                     />
-                  </TabsContent>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {recurrenceDisplay && recurringBill && (
+              <div className="space-y-3 rounded-lg border p-3">
+                <div className="flex items-center justify-between">
+                  <p className="flex items-center gap-1.5 text-sm font-medium">
+                    <Repeat className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                    Recorrência
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={
+                      recurringBill.active
+                        ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-500"
+                        : "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:text-slate-400"
+                    }
+                  >
+                    {recurringBill.active ? "Ativa" : "Encerrada"}
+                  </Badge>
                 </div>
-              </Tabs>
-
-              <div className="flex items-center gap-2 border-t p-4">
-                {canPayThis && (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <Field
+                    label="Periodicidade"
+                    value={recurrenceDisplay.periodicityLabel}
+                  />
+                  <Field
+                    label="Próxima geração"
+                    value={
+                      insights?.nextGenerationDate
+                        ? formatDateOnlyBR(insights.nextGenerationDate)
+                        : "—"
+                    }
+                  />
+                  <Field label="Início" value={recurrenceDisplay.startLabel} />
+                  <Field label="Fim" value={recurrenceDisplay.endLabel} />
+                  <Field
+                    label="Ocorrências geradas"
+                    value={insights?.occurrencesGenerated ?? "—"}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
                   <Button
                     type="button"
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={() => setPaying(true)}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOccurrencesDrawerOpen(true)}
                   >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Confirmar pagamento
+                    <Eye className="h-3.5 w-3.5" />
+                    Ver Ocorrências
                   </Button>
-                )}
-                {/* Secundárias no "⋯" — 1 linha fixa em vez de até 6
+                  {recurringBill.active && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setEndRecurrenceOpen(true)}
+                    >
+                      <Ban className="h-3.5 w-3.5" />
+                      Encerrar Recorrência
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Field label="Observação" value={payable.description || "—"} />
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-4">
+            <ol className="space-y-4">
+              {events.map((event, index) => (
+                <li key={event.id} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <span className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                      <event.icon className="h-3.5 w-3.5" />
+                    </span>
+                    {index < events.length - 1 && (
+                      <span className="bg-border mt-1 w-px flex-1" />
+                    )}
+                  </div>
+                  <div className="-mt-0.5 pb-3">
+                    <p className="text-sm font-medium">{event.label}</p>
+                    <p className="text-muted-foreground text-xs">
+                      Por {event.actor} · {formatDateTimeBR(event.date)}
+                    </p>
+                    {event.detail && (
+                      <p className="text-muted-foreground text-xs">
+                        {event.detail}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </TabsContent>
+
+          <TabsContent value="attachments" className="mt-4">
+            <AccountsPayableAttachmentsPanel
+              payable={payable}
+              canManage={canEditThis}
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
+
+      <div className="flex items-center gap-2 border-t p-4">
+        {canPayThis && (
+          <Button
+            type="button"
+            className="flex-1 bg-green-600 hover:bg-green-700"
+            onClick={() => setPaying(true)}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {isMobile ? "Confirmar" : "Confirmar pagamento"}
+          </Button>
+        )}
+        {/* Mobile promove "Lembrar" (SendWhatsAppReminderButton) pra
+                    superfície — protótipo de UX validou como a ação mais
+                    usada depois de Confirmar. "Copiar para WhatsApp" e as
+                    demais ações continuam só no "⋯", igual desktop. */}
+        {isMobile && canPayThis && (
+          <SendWhatsAppReminderButton
+            payable={payable}
+            label="Lembrar"
+            className="shrink-0 border-green-600/30 bg-green-600/10 text-green-700 hover:bg-green-600/15 dark:text-green-500"
+          />
+        )}
+        {/* Secundárias no "⋯" — 1 linha fixa em vez de até 6
                     botões empilhando (Editar/Cancelar/Excluir/2x WhatsApp).
                     "Fechar" foi removido de propósito: já existe o ✕ no
                     canto do Sheet, e arrastar pra baixo/tocar fora também
                     fecha — era um botão de largura total fazendo o que
                     três gestos já fazem. */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={canPayThis ? "shrink-0" : "flex-1"}
-                      size={canPayThis ? "icon" : "default"}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                      {canPayThis ? (
-                        <span className="sr-only">Mais ações</span>
-                      ) : (
-                        "Mais ações"
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    {canEditThis && (
-                      <DropdownMenuItem onClick={() => onEdit?.(payable)}>
-                        <Pencil className="h-4 w-4" />
-                        Editar conta
-                      </DropdownMenuItem>
-                    )}
-                    {/* `onSelect` com preventDefault mantém o menu aberto
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className={canPayThis ? "shrink-0" : "flex-1"}
+              size={canPayThis ? "icon" : "default"}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+              {canPayThis ? (
+                <span className="sr-only">Mais ações</span>
+              ) : (
+                "Mais ações"
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {canEditThis && (
+              <DropdownMenuItem onClick={() => onEdit?.(payable)}>
+                <Pencil className="h-4 w-4" />
+                Editar conta
+              </DropdownMenuItem>
+            )}
+            {/* `onSelect` com preventDefault mantém o menu aberto
                         — sem isso, o feedback visual desses dois botões
                         (ícone "Copiado!"/spinner de envio) some junto com
                         o menu antes do usuário conseguir ver. */}
-                    <DropdownMenuItem
-                      asChild
-                      onSelect={(event) => event.preventDefault()}
-                    >
-                      <CopyToWhatsAppButton
-                        payable={payable}
-                        supplierName={supplierName ?? payable.description}
-                        variant="full"
-                        className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
-                      />
-                    </DropdownMenuItem>
-                    {canPayThis && (
-                      <DropdownMenuItem
-                        asChild
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        <SendWhatsAppReminderButton
-                          payable={payable}
-                          className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
-                        />
-                      </DropdownMenuItem>
-                    )}
-                    {canCancelThis && (
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={onCancelClick}
-                      >
-                        <XCircle className="h-4 w-4" />
-                        Cancelar
-                      </DropdownMenuItem>
-                    )}
-                    {canDeleteThis && (
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => setDeleting(true)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+            <DropdownMenuItem
+              asChild
+              onSelect={(event) => event.preventDefault()}
+            >
+              <CopyToWhatsAppButton
+                payable={payable}
+                supplierName={supplierName ?? payable.description}
+                variant="full"
+                className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
+              />
+            </DropdownMenuItem>
+            {/* No mobile o "Lembrar" já está na barra de ação —
+                        evita duplicar o mesmo disparo no menu. */}
+            {!isMobile && canPayThis && (
+              <DropdownMenuItem
+                asChild
+                onSelect={(event) => event.preventDefault()}
+              >
+                <SendWhatsAppReminderButton
+                  payable={payable}
+                  className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
+                />
+              </DropdownMenuItem>
+            )}
+            {canCancelThis && (
+              <DropdownMenuItem variant="destructive" onClick={onCancelClick}>
+                <XCircle className="h-4 w-4" />
+                Cancelar
+              </DropdownMenuItem>
+            )}
+            {canDeleteThis && (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDeleting(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="flex max-h-[85vh] flex-col gap-0">
+            {drawerBody}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+          <SheetContent
+            side="right"
+            className="flex w-full flex-col gap-0 sm:max-w-lg"
+          >
+            {drawerBody}
+          </SheetContent>
+        </Sheet>
+      )}
 
       <PayAccountsPayableDialog
         payable={payable}
