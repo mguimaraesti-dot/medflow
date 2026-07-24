@@ -2,7 +2,11 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyBR,
+  todayDateOnlyBR,
+} from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
 import {
@@ -15,6 +19,28 @@ import { Skeleton } from "@/shared/ui/skeleton";
 
 /** Total de linhas exibidas somando os dois grupos — mesmo teto de uma consulta (`AGENDA_PAGE_SIZE`). Vencida é mais urgente, então ela nunca é cortada; "vencem hoje" cede espaço primeiro. */
 const MAX_LIST_ROWS = 8;
+
+/** Timezone-safe (mesmo padrão de `formatSmartDueDate`) — nunca `new Date()` cru comparado em UTC. */
+function daysOverdue(dueDate: string): number {
+  const due = new Date(dueDate);
+  const dueUTC = Date.UTC(
+    due.getUTCFullYear(),
+    due.getUTCMonth(),
+    due.getUTCDate(),
+  );
+  const todayUTC = todayDateOnlyBR().getTime();
+  return Math.round((todayUTC - dueUTC) / 86_400_000);
+}
+
+function OverdueBadge({ dueDate }: { dueDate: string }) {
+  const days = daysOverdue(dueDate);
+  if (days <= 0) return null;
+  return (
+    <span className="bg-destructive/10 text-destructive rounded px-1.5 py-0.5 text-[10px] font-semibold">
+      {days} {days === 1 ? "dia" : "dias"}
+    </span>
+  );
+}
 
 function PayableRow({
   item,
@@ -29,9 +55,10 @@ function PayableRow({
     <div className="flex items-center justify-between gap-2 py-2 text-sm">
       <div className="min-w-0">
         <p className="truncate font-medium">{supplierName}</p>
-        <p className="text-muted-foreground text-xs">
+        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
           {formatDateOnlyBR(item.dueDate)}
-        </p>
+          {tone === "destructive" && <OverdueBadge dueDate={item.dueDate} />}
+        </div>
       </div>
       <span
         className={cn(
