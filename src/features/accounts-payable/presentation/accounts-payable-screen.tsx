@@ -122,6 +122,13 @@ export function AccountsPayableScreen({
     "RECURRING" | "NON_RECURRING" | undefined
   >();
   const [pendingReminderOnly, setPendingReminderOnly] = useState(false);
+  // Intervalo de data só da LISTA (nunca dos KPIs) — setado pelo clique em
+  // "Hoje" (a única categoria que restringe data, não só status). Os 5
+  // KPIs continuam usando `range` (derivado só de periodPreset/periodCustom,
+  // nunca alterado por clique de KPI) como referência fixa do período.
+  const [listDueDateOverride, setListDueDateOverride] = useState<
+    { from: Date; to: Date } | undefined
+  >(undefined);
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     category: true,
     recurring: true,
@@ -157,6 +164,8 @@ export function AccountsPayableScreen({
   const { data: suppliers } = useSuppliers();
   const range = computePeriodRange(periodPreset, periodCustom);
   const { summary, trend } = useAccountsPayableSummaryTrend(range);
+  // Só a lista usa isto — os KPIs acima usam `range` direto, sempre.
+  const listRange = listDueDateOverride ?? range;
 
   function supplierNameOf(payable: AccountsPayableResponseDTO | null) {
     return payable
@@ -191,10 +200,21 @@ export function AccountsPayableScreen({
     setPeriodCustom(undefined);
     setSearch("");
     setStatus("ALL");
+    setListDueDateOverride(undefined);
     setCategoryId(undefined);
     setSupplierId(undefined);
     setRecurringOnly(undefined);
     setPendingReminderOnly(false);
+  }
+
+  // Reaproveitado por qualquer mudança MANUAL de status (Select desktop,
+  // chips mobile, "x" do chip de filtro aplicado) — nunca deixa o
+  // override de "hoje" sobreviver a uma troca de status que não veio do
+  // clique no KPI "Hoje" em si (senão a lista ficaria presa em hoje
+  // mesmo depois do usuário escolher outro status manualmente).
+  function handleStatusChange(newStatus: StatusFilter) {
+    setStatus(newStatus);
+    setListDueDateOverride(undefined);
   }
 
   const supplierName = suppliers?.find((s) => s.id === supplierId)?.name;
@@ -218,6 +238,7 @@ export function AccountsPayableScreen({
   const supplierSummary = supplierId ? (supplierName ?? "—") : "Todos";
   const activeFilterCount = [
     status !== "ALL",
+    Boolean(listDueDateOverride),
     Boolean(categoryId),
     Boolean(supplierId),
     Boolean(recurringOnly),
@@ -226,6 +247,7 @@ export function AccountsPayableScreen({
   ].filter(Boolean).length;
   const hasNonDefaultFilters =
     status !== "ALL" ||
+    Boolean(listDueDateOverride) ||
     Boolean(categoryId) ||
     Boolean(supplierId) ||
     Boolean(recurringOnly) ||
@@ -236,25 +258,32 @@ export function AccountsPayableScreen({
   // derivado de {status, periodPreset}, nunca um estado novo duplicado.
   function filterByTotal() {
     setStatus("ALL");
+    setListDueDateOverride(undefined);
   }
   function filterByDueToday() {
-    setPeriodPreset("TODAY");
-    setPeriodCustom(undefined);
     setStatus("PENDING");
+    // Timezone-safe (mesmo helper do PeriodSelector) — nunca `new Date()`
+    // cru, que trunca em UTC e erra a virada de dia em Brasília.
+    setListDueDateOverride(computePeriodRange("TODAY", undefined));
   }
   function filterByUpcoming() {
     setStatus("PENDING");
+    setListDueDateOverride(undefined);
   }
   function filterByOverdue() {
     setStatus("OVERDUE");
+    setListDueDateOverride(undefined);
   }
   function filterByPaid() {
     setStatus("PAID");
+    setListDueDateOverride(undefined);
   }
 
   const isTotalActive = status === "ALL";
-  const isDueTodayActive = status === "PENDING" && periodPreset === "TODAY";
-  const isUpcomingActive = status === "PENDING" && periodPreset !== "TODAY";
+  const isDueTodayActive =
+    status === "PENDING" && listDueDateOverride !== undefined;
+  const isUpcomingActive =
+    status === "PENDING" && listDueDateOverride === undefined;
   const isOverdueActive = status === "OVERDUE";
   const isPaidActive = status === "PAID";
 
@@ -400,7 +429,7 @@ export function AccountsPayableScreen({
             >
               <FilterChipGroup
                 value={status === "ALL" ? undefined : status}
-                onChange={(value) => setStatus(value ?? "ALL")}
+                onChange={(value) => handleStatusChange(value ?? "ALL")}
                 allLabel="Todos"
                 options={[
                   { value: "PENDING", label: "Pendentes" },
@@ -510,7 +539,7 @@ export function AccountsPayableScreen({
 
           <Select
             value={status}
-            onValueChange={(value) => setStatus(value as StatusFilter)}
+            onValueChange={(value) => handleStatusChange(value as StatusFilter)}
           >
             <SelectTrigger size="sm" className="w-full lg:w-[130px]">
               <SelectValue>
@@ -693,7 +722,19 @@ export function AccountsPayableScreen({
               <button
                 type="button"
                 aria-label="Remover filtro de status"
-                onClick={() => setStatus("ALL")}
+                onClick={() => handleStatusChange("ALL")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {listDueDateOverride && (
+            <Badge variant="secondary" className="gap-1">
+              Vencem hoje
+              <button
+                type="button"
+                aria-label="Remover filtro de vencimento hoje"
+                onClick={() => setListDueDateOverride(undefined)}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -788,8 +829,8 @@ export function AccountsPayableScreen({
             supplierId={supplierId}
             recurringOnly={recurringOnly}
             search={debouncedSearch.trim() || undefined}
-            dueDateFrom={range.from}
-            dueDateTo={range.to}
+            dueDateFrom={listRange.from}
+            dueDateTo={listRange.to}
             pendingReminderOnly={pendingReminderOnly}
             onView={handleView}
             onEdit={setEditing}
@@ -808,8 +849,8 @@ export function AccountsPayableScreen({
             supplierId={supplierId}
             recurringOnly={recurringOnly}
             search={debouncedSearch.trim() || undefined}
-            dueDateFrom={range.from}
-            dueDateTo={range.to}
+            dueDateFrom={listRange.from}
+            dueDateTo={listRange.to}
             pendingReminderOnly={pendingReminderOnly}
             visibleColumns={visibleColumns}
             onView={handleView}
