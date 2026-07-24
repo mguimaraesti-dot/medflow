@@ -523,7 +523,13 @@ export function AccountsPayableDrawer({
         </div>
       </Tabs>
 
-      <div className="flex items-center gap-2 border-t p-4">
+      {/* pb extra respeita a safe-area do aparelho (notch/faixa de gestos)
+          — sem isso, arrastar a folha até quase o topo aproxima a barra
+          da faixa de gestos do Android. Só nesta barra: o resto do app
+          ainda não trata safe-area em nenhum lugar (dívida geral, fora
+          de escopo aqui). No desktop `env(safe-area-inset-bottom)` é 0,
+          então o resultado é idêntico ao `p-4` de antes. */}
+      <div className="flex items-center gap-2 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {canPayThis && (
           <Button
             type="button"
