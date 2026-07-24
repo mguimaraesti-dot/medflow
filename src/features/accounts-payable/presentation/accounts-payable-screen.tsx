@@ -306,7 +306,7 @@ export function AccountsPayableScreen({
               />
             }
             icon={Wallet}
-            iconTone="blue"
+            iconTone="slate"
             compact
             onClick={filterByTotal}
             active={isTotalActive}
@@ -329,7 +329,7 @@ export function AccountsPayableScreen({
               />
             }
             icon={CalendarClock}
-            iconTone="blue"
+            iconTone="amber"
             compact
             onClick={filterByDueToday}
             active={isDueTodayActive}
@@ -345,10 +345,11 @@ export function AccountsPayableScreen({
               />
             }
             icon={Clock}
-            iconTone="green"
+            iconTone="blue"
             compact
             onClick={filterByUpcoming}
             active={isUpcomingActive}
+            emphasized={summary.upcoming.count > 0}
           />
           <KpiCard
             label="Vencidas"
@@ -382,10 +383,12 @@ export function AccountsPayableScreen({
               </div>
             }
             icon={CheckCircle2}
-            iconTone="violet"
+            iconTone="green"
             compact
             onClick={filterByPaid}
             active={isPaidActive}
+            emphasized={summary.paid.count > 0}
+            emphasizeIconOnly
           />
         </div>
       )}
