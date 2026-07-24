@@ -2,21 +2,85 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { formatCurrencyBRL, formatDateOnlyBR } from "@/shared/lib/format";
+import {
+  formatCurrencyBRL,
+  formatDateOnlyBR,
+  todayDateOnlyBR,
+} from "@/shared/lib/format";
 import { cn } from "@/shared/lib/utils";
 import { useSuppliers } from "@/features/suppliers/presentation/use-suppliers";
-import { useDashboardAgendaDueToday } from "./use-dashboard-agenda";
+import {
+  useDashboardAgendaDueToday,
+  useDashboardAgendaOverdue,
+  type DashboardAgendaItemDTO,
+} from "./use-dashboard-agenda";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Skeleton } from "@/shared/ui/skeleton";
+
+/** Total de linhas exibidas somando os dois grupos — mesmo teto de uma consulta (`AGENDA_PAGE_SIZE`). Vencida é mais urgente, então ela nunca é cortada; "vencem hoje" cede espaço primeiro. */
+const MAX_LIST_ROWS = 8;
+
+/** Timezone-safe (mesmo padrão de `formatSmartDueDate`) — nunca `new Date()` cru comparado em UTC. */
+function daysOverdue(dueDate: string): number {
+  const due = new Date(dueDate);
+  const dueUTC = Date.UTC(
+    due.getUTCFullYear(),
+    due.getUTCMonth(),
+    due.getUTCDate(),
+  );
+  const todayUTC = todayDateOnlyBR().getTime();
+  return Math.round((todayUTC - dueUTC) / 86_400_000);
+}
+
+function OverdueBadge({ dueDate }: { dueDate: string }) {
+  const days = daysOverdue(dueDate);
+  if (days <= 0) return null;
+  return (
+    <span className="bg-destructive/10 text-destructive rounded px-1.5 py-0.5 text-[10px] font-semibold">
+      {days} {days === 1 ? "dia" : "dias"}
+    </span>
+  );
+}
+
+function PayableRow({
+  item,
+  supplierName,
+  tone,
+}: {
+  item: DashboardAgendaItemDTO;
+  supplierName: string;
+  tone: "destructive" | "warning";
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-2 text-sm">
+      <div className="min-w-0">
+        <p className="truncate font-medium">{supplierName}</p>
+        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          {formatDateOnlyBR(item.dueDate)}
+          {tone === "destructive" && <OverdueBadge dueDate={item.dueDate} />}
+        </div>
+      </div>
+      <span
+        className={cn(
+          "shrink-0 font-semibold tabular-nums",
+          tone === "destructive"
+            ? "text-destructive"
+            : "text-amber-600 dark:text-amber-500",
+        )}
+      >
+        {formatCurrencyBRL(item.amount)}
+      </span>
+    </div>
+  );
+}
 
 /**
  * "Contas a pagar" — seção 5 do Dashboard mobile. Vencidas + Vencem
  * Hoje lado a lado (mesmos `overdueAmount/Count`/`dueTodayAmount/Count`
- * do overview, já usados no KPI row) + a lista de quem vence hoje
- * (mesmo `useDashboardAgendaDueToday` já usado na aba "Vencem Hoje" da
- * Agenda Financeira desktop). "Amanhã" fica de fora de propósito
- * (decisão do usuário — cálculo novo, PR próprio). A lista de
- * VENCIDAS não é repetida aqui — "Ver todas" leva à tela completa.
+ * do overview, já usados no KPI row) + a lista, agora agrupada em
+ * "Vencidas" e "Vencem hoje" (mesmos hooks já usados pelo desktop em
+ * `dashboard-agenda-card.tsx`). "Amanhã" fica de fora de propósito
+ * (decisão do usuário — cálculo novo, PR próprio).
  */
 export function DashboardMobilePayables({
   dueTodayAmount,
@@ -29,7 +93,10 @@ export function DashboardMobilePayables({
   overdueAmount: string;
   overdueCount: number;
 }) {
-  const { data: dueToday, isLoading } = useDashboardAgendaDueToday();
+  const { data: dueToday, isLoading: isLoadingDueToday } =
+    useDashboardAgendaDueToday();
+  const { data: overdue, isLoading: isLoadingOverdue } =
+    useDashboardAgendaOverdue();
   const { data: suppliers } = useSuppliers();
 
   const supplierNameById = useMemo(() => {
@@ -38,7 +105,13 @@ export function DashboardMobilePayables({
     return map;
   }, [suppliers]);
 
-  const items = dueToday?.items ?? [];
+  const isLoading = isLoadingDueToday || isLoadingOverdue;
+  const overdueItems = overdue?.items ?? [];
+  // Vencida nunca é cortada — "vencem hoje" cede espaço se a soma passar do teto.
+  const dueTodayItems = (dueToday?.items ?? []).slice(
+    0,
+    Math.max(0, MAX_LIST_ROWS - overdueItems.length),
+  );
 
   return (
     <div className="space-y-2">
@@ -91,32 +164,43 @@ export function DashboardMobilePayables({
             </div>
           )}
 
-          {!isLoading && items.length > 0 && (
-            <div className="divide-y">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-2 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {supplierNameById.get(item.supplierId) ??
-                        item.description}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {formatDateOnlyBR(item.dueDate)}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "shrink-0 font-semibold tabular-nums",
-                      "text-amber-600 dark:text-amber-500",
-                    )}
-                  >
-                    {formatCurrencyBRL(item.amount)}
-                  </span>
-                </div>
-              ))}
+          {!isLoading && overdueItems.length > 0 && (
+            <div>
+              <p className="text-destructive mb-1 text-[11px] font-semibold tracking-wide uppercase">
+                Vencidas · {overdueItems.length}
+              </p>
+              <div className="divide-y">
+                {overdueItems.map((item) => (
+                  <PayableRow
+                    key={item.id}
+                    item={item}
+                    supplierName={
+                      supplierNameById.get(item.supplierId) ?? item.description
+                    }
+                    tone="destructive"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isLoading && dueTodayItems.length > 0 && (
+            <div>
+              <p className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase">
+                Vencem hoje · {dueTodayItems.length}
+              </p>
+              <div className="divide-y">
+                {dueTodayItems.map((item) => (
+                  <PayableRow
+                    key={item.id}
+                    item={item}
+                    supplierName={
+                      supplierNameById.get(item.supplierId) ?? item.description
+                    }
+                    tone="warning"
+                  />
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
