@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Ban,
@@ -115,15 +115,6 @@ export function AccountsPayableDrawer({
   const cancelAccountsPayable = useCancelAccountsPayable();
   // Mobile vira bottom-sheet arrastável (vaul); desktop mantém o Sheet lateral de sempre.
   const isMobile = useMediaQuery("(max-width: 1023px)");
-  // Snap points (vaul): sem isso a folha só cresce até caber o conteúdo
-  // (h-auto) — contas curtas (ex. Darf) paravam em ~70vh, deixando a
-  // lista de fundo visível acima ("espaço morto"). Abre sempre no ponto
-  // alto (0.9) e permite arrastar até 1 ou soltar pra fechar; reabrir
-  // nunca deve manter o snap onde o usuário deixou da vez anterior.
-  const [snap, setSnap] = useState<number | string | null>(0.9);
-  useEffect(() => {
-    if (open) setSnap(0.9);
-  }, [open]);
 
   const { data: recurringBill } = useRecurringBill(
     payable?.recurringBillId ?? null,
@@ -523,13 +514,7 @@ export function AccountsPayableDrawer({
         </div>
       </Tabs>
 
-      {/* pb extra respeita a safe-area do aparelho (notch/faixa de gestos)
-          — sem isso, arrastar a folha até quase o topo aproxima a barra
-          da faixa de gestos do Android. Só nesta barra: o resto do app
-          ainda não trata safe-area em nenhum lugar (dívida geral, fora
-          de escopo aqui). No desktop `env(safe-area-inset-bottom)` é 0,
-          então o resultado é idêntico ao `p-4` de antes. */}
-      <div className="flex items-center gap-2 border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="flex items-center gap-2 border-t p-4">
         {canPayThis && (
           <Button
             type="button"
@@ -619,17 +604,8 @@ export function AccountsPayableDrawer({
   return (
     <>
       {isMobile ? (
-        <Drawer
-          open={open}
-          onOpenChange={onOpenChange}
-          snapPoints={[0.9, 1]}
-          activeSnapPoint={snap}
-          setActiveSnapPoint={setSnap}
-        >
-          {/* max-h um pouco abaixo de 100vh — alto o bastante pra não
-              cortar o snap de 1 (tela cheia), baixo o bastante pra sempre
-              sobrar uma fresta da lista atrás pra tocar-fora fechar. */}
-          <DrawerContent className="flex max-h-[95vh] flex-col gap-0">
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="flex max-h-[85vh] flex-col gap-0">
             {drawerBody}
           </DrawerContent>
         </Drawer>
