@@ -349,6 +349,7 @@ export function AccountsPayableScreen({
             compact
             onClick={filterByUpcoming}
             active={isUpcomingActive}
+            emphasized={summary.upcoming.count > 0}
           />
           <KpiCard
             label="Vencidas"
@@ -386,6 +387,8 @@ export function AccountsPayableScreen({
             compact
             onClick={filterByPaid}
             active={isPaidActive}
+            emphasized={summary.paid.count > 0}
+            emphasizeIconOnly
           />
         </div>
       )}
