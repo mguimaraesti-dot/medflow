@@ -12,9 +12,12 @@ import type { AccountsPayableResponseDTO } from "../application/dtos/accounts-pa
 /** Some da tela quando a conta já não está PENDENTE — paga/cancelada não recebe mais lembrete. */
 export function SendWhatsAppReminderButton({
   payable,
+  label = "Enviar WhatsApp agora",
   className,
 }: {
   payable: AccountsPayableResponseDTO;
+  /** Rótulo visível — texto completo no menu "Mais ações", versão curta ("Lembrar") na barra de ação mobile. */
+  label?: string;
   /** Sobrepõe o estilo padrão — usado pelo Drawer mobile pra parecer um item de menu em vez de um botão com borda. */
   className?: string;
 }) {
@@ -48,7 +51,7 @@ export function SendWhatsAppReminderButton({
       ) : (
         <WhatsAppIcon className="h-4 w-4" />
       )}
-      Enviar WhatsApp agora
+      {label}
     </Button>
   );
 }
