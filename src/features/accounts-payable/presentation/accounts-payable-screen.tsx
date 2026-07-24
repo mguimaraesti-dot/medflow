@@ -238,6 +238,7 @@ export function AccountsPayableScreen({
   const supplierSummary = supplierId ? (supplierName ?? "—") : "Todos";
   const activeFilterCount = [
     status !== "ALL",
+    Boolean(listDueDateOverride),
     Boolean(categoryId),
     Boolean(supplierId),
     Boolean(recurringOnly),
@@ -246,6 +247,7 @@ export function AccountsPayableScreen({
   ].filter(Boolean).length;
   const hasNonDefaultFilters =
     status !== "ALL" ||
+    Boolean(listDueDateOverride) ||
     Boolean(categoryId) ||
     Boolean(supplierId) ||
     Boolean(recurringOnly) ||
@@ -278,8 +280,10 @@ export function AccountsPayableScreen({
   }
 
   const isTotalActive = status === "ALL";
-  const isDueTodayActive = status === "PENDING" && periodPreset === "TODAY";
-  const isUpcomingActive = status === "PENDING" && periodPreset !== "TODAY";
+  const isDueTodayActive =
+    status === "PENDING" && listDueDateOverride !== undefined;
+  const isUpcomingActive =
+    status === "PENDING" && listDueDateOverride === undefined;
   const isOverdueActive = status === "OVERDUE";
   const isPaidActive = status === "PAID";
 
@@ -719,6 +723,18 @@ export function AccountsPayableScreen({
                 type="button"
                 aria-label="Remover filtro de status"
                 onClick={() => handleStatusChange("ALL")}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {listDueDateOverride && (
+            <Badge variant="secondary" className="gap-1">
+              Vencem hoje
+              <button
+                type="button"
+                aria-label="Remover filtro de vencimento hoje"
+                onClick={() => setListDueDateOverride(undefined)}
               >
                 <X className="h-3 w-3" />
               </button>
