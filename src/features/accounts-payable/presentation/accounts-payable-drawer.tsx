@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Ban,
@@ -115,6 +115,15 @@ export function AccountsPayableDrawer({
   const cancelAccountsPayable = useCancelAccountsPayable();
   // Mobile vira bottom-sheet arrastável (vaul); desktop mantém o Sheet lateral de sempre.
   const isMobile = useMediaQuery("(max-width: 1023px)");
+  // Snap points (vaul): sem isso a folha só cresce até caber o conteúdo
+  // (h-auto) — contas curtas (ex. Darf) paravam em ~70vh, deixando a
+  // lista de fundo visível acima ("espaço morto"). Abre sempre no ponto
+  // alto (0.9) e permite arrastar até 1 ou soltar pra fechar; reabrir
+  // nunca deve manter o snap onde o usuário deixou da vez anterior.
+  const [snap, setSnap] = useState<number | string | null>(0.9);
+  useEffect(() => {
+    if (open) setSnap(0.9);
+  }, [open]);
 
   const { data: recurringBill } = useRecurringBill(
     payable?.recurringBillId ?? null,
@@ -604,7 +613,13 @@ export function AccountsPayableDrawer({
   return (
     <>
       {isMobile ? (
-        <Drawer open={open} onOpenChange={onOpenChange}>
+        <Drawer
+          open={open}
+          onOpenChange={onOpenChange}
+          snapPoints={[0.9, 1]}
+          activeSnapPoint={snap}
+          setActiveSnapPoint={setSnap}
+        >
           <DrawerContent className="flex max-h-[85vh] flex-col gap-0">
             {drawerBody}
           </DrawerContent>
