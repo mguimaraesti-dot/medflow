@@ -525,11 +525,11 @@ export function AccountsPayableDrawer({
             {isMobile ? "Confirmar" : "Confirmar pagamento"}
           </Button>
         )}
-        {/* Mobile promove "Lembrar" (SendWhatsAppReminderButton) pra
-                    superfície — protótipo de UX validou como a ação mais
-                    usada depois de Confirmar. "Copiar para WhatsApp" e as
-                    demais ações continuam só no "⋯", igual desktop. */}
-        {isMobile && canPayThis && (
+        {/* "Lembrar" (SendWhatsAppReminderButton) promovido pra superfície
+            em mobile e desktop — validado no protótipo de UX como a ação
+            mais usada depois de Confirmar. "Copiar para WhatsApp" e as
+            demais ações continuam só no "⋯". */}
+        {canPayThis && (
           <SendWhatsAppReminderButton
             payable={payable}
             label="Lembrar"
@@ -580,19 +580,6 @@ export function AccountsPayableDrawer({
                 className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
               />
             </DropdownMenuItem>
-            {/* No mobile o "Lembrar" já está na barra de ação —
-                        evita duplicar o mesmo disparo no menu. */}
-            {!isMobile && canPayThis && (
-              <DropdownMenuItem
-                asChild
-                onSelect={(event) => event.preventDefault()}
-              >
-                <SendWhatsAppReminderButton
-                  payable={payable}
-                  className="hover:bg-accent h-auto w-full justify-start border-0 bg-transparent px-2 py-1.5 font-normal shadow-none"
-                />
-              </DropdownMenuItem>
-            )}
             {canCancelThis && (
               <DropdownMenuItem variant="destructive" onClick={onCancelClick}>
                 <XCircle className="h-4 w-4" />
