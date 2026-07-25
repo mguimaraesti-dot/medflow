@@ -258,10 +258,11 @@ export interface AccountsPayableRepository {
    */
   listPendingForReminders(organizationId: string): Promise<AccountsPayable[]>;
 
-  /** Marca que o lembrete foi enviado agora (evita reenviar mais de uma vez no mesmo dia) e guarda o id da mensagem do cartão-resumo (`messageId` pode ser `null` se a Z-API não devolveu um). */
+  /** Marca que o lembrete foi enviado agora (evita reenviar mais de uma vez no mesmo dia) e guarda o id da mensagem do cartão-resumo (`messageId` pode ser `null` se a Z-API não devolveu um) e os ids das mensagens extras de boleto/PIX REALMENTE enviadas (0-2 itens). */
   touchReminderSent(
     id: string,
     sentAt: Date,
     messageId: string | null,
+    extraMessageIds: string[],
   ): Promise<void>;
 }

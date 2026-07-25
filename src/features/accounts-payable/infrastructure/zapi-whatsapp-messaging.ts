@@ -52,7 +52,7 @@ const REMINDER_MESSAGE_DELAY_SECONDS = 5;
 export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
   async sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
-  ): Promise<{ messageId: string | null }> {
+  ): Promise<{ messageId: string | null; extraMessageIds: string[] }> {
     // Cartão principal é a mensagem CRÍTICA: sem ela, nada foi entregue
     // ao dono da conta — a falha aqui propaga (não é capturada), pra
     // que o use case chamador não marque a conta como lembrada e ela
@@ -85,17 +85,29 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
     // — isso faria o cartão (já entregue) ser reenviado duplicado no
     // próximo ciclo. Só loga um aviso claro o bastante pra alguém notar
     // que essa conta ficou sem boleto/PIX.
+    //
+    // Ids extras: só entra o id de uma mensagem que REALMENTE foi
+    // enviada (nunca `null`/falha) — a lista pode ter 0, 1 ou 2 itens,
+    // conforme a conta tenha boleto e/ou PIX cadastrados. Guardados só
+    // pra casar a reação 👍 quando ela vem numa dessas mensagens em vez
+    // da principal (ver `reminderExtraMessageIds` no schema); o 🆗
+    // continua indo sempre no `messageId` principal, nunca num destes.
+    const extraMessageIds: string[] = [];
+
     if (input.barcode) {
       try {
         // SÓ o código, puro — sem título, sem fornecedor/valor, sem
         // formatação (o cartão principal já tem fornecedor e valor,
         // repetir aqui é redundante). Ao segurar pra copiar, "copiar"
         // pega a mensagem inteira, que já é só o código.
-        await sendTextMessage({
+        const barcodeResult = await sendTextMessage({
           phone: input.phone,
           message: input.barcode,
           delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
         });
+        if (barcodeResult.messageId) {
+          extraMessageIds.push(barcodeResult.messageId);
+        }
       } catch (error) {
         logger.warn(
           "Lembrete de WhatsApp: falha ao enviar código de barras (best-effort — conta segue marcada como lembrada)",
@@ -109,7 +121,7 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
 
     if (input.pixKey) {
       try {
-        await sendButtonPixMessage({
+        const pixResult = await sendButtonPixMessage({
           phone: input.phone,
           pixKey: input.pixKey,
           pixKeyType: "EVP",
@@ -123,6 +135,9 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
           merchantName: `${input.amount} - ${input.supplierName}`,
           delayMessage: REMINDER_MESSAGE_DELAY_SECONDS,
         });
+        if (pixResult.messageId) {
+          extraMessageIds.push(pixResult.messageId);
+        }
       } catch (error) {
         logger.warn(
           "Lembrete de WhatsApp: falha ao enviar chave Pix (best-effort — conta segue marcada como lembrada)",
@@ -134,7 +149,7 @@ export class ZapiWhatsAppMessaging implements WhatsAppMessagingPort {
       }
     }
 
-    return { messageId };
+    return { messageId, extraMessageIds };
   }
 
   async reactToPaymentConfirmed(

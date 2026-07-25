@@ -681,10 +681,15 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     id: string,
     sentAt: Date,
     messageId: string | null,
+    extraMessageIds: string[],
   ): Promise<void> {
     await prisma.accountsPayable.update({
       where: { id },
-      data: { lastReminderSentAt: sentAt, lastReminderMessageId: messageId },
+      data: {
+        lastReminderSentAt: sentAt,
+        lastReminderMessageId: messageId,
+        reminderExtraMessageIds: extraMessageIds,
+      },
     });
   }
 }

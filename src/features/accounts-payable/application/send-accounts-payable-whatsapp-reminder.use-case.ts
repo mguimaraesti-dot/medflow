@@ -57,6 +57,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
   }
 
   let messageId: string | null;
+  let extraMessageIds: string[];
   try {
     const result = await deps.whatsAppMessaging.sendPaymentReminder({
       accountsPayableId: payable.id,
@@ -69,6 +70,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
       pixKey: payable.pixKey,
     });
     messageId = result.messageId;
+    extraMessageIds = result.extraMessageIds;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     logger.error("Falha ao enviar lembrete de WhatsApp", {
@@ -106,6 +108,7 @@ export async function sendAccountsPayableWhatsAppReminderUseCase(
     payable.id,
     sentAt,
     messageId,
+    extraMessageIds,
   );
 
   await prisma.auditLog.create({

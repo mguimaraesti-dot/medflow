@@ -261,14 +261,19 @@ export interface SendButtonPixInput {
  */
 export async function sendButtonPixMessage(
   input: SendButtonPixInput,
-): Promise<void> {
-  await post("/send-button-pix", {
+): Promise<{ messageId: string | null }> {
+  const responseBody = (await post("/send-button-pix", {
     phone: input.phone,
     pixKey: input.pixKey,
     type: input.pixKeyType,
     merchantName: input.merchantName,
     delayMessage: input.delayMessage,
-  });
+  })) as ZapiSendTextResponse | undefined;
+
+  const messageId =
+    responseBody?.messageId ?? responseBody?.zaapId ?? responseBody?.id;
+
+  return { messageId: messageId ?? null };
 }
 
 export interface SendImageInput {
