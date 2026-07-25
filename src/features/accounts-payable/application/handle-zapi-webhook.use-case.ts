@@ -1,5 +1,8 @@
 import { logger } from "@/core/logger/logger";
-import { NotFoundError } from "@/core/errors/domain-error";
+import {
+  NotFoundError,
+  PayableAlreadyProcessedError,
+} from "@/core/errors/domain-error";
 import type { AccountsPayableRepository } from "../domain/accounts-payable.repository";
 import type { AccountsPayable } from "../domain/accounts-payable.entity";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
@@ -64,16 +67,35 @@ async function confirmPayableFromWebhook(
     );
   }
 
-  await payAccountsPayableUseCase(
-    payable.id,
-    systemUser.id,
-    payable.organizationId,
-    {
-      accountsPayableRepository: deps.accountsPayableRepository,
-      safeRepository: deps.safeRepository,
-    },
-    "WHATSAPP",
-  );
+  try {
+    await payAccountsPayableUseCase(
+      payable.id,
+      systemUser.id,
+      payable.organizationId,
+      {
+        accountsPayableRepository: deps.accountsPayableRepository,
+        safeRepository: deps.safeRepository,
+      },
+      "WHATSAPP",
+    );
+  } catch (error) {
+    // A checagem de status PENDING feita ANTES de chamar esta função
+    // (nos dois handlers abaixo) é só um atalho — não é mais a proteção
+    // real contra corrida. `markAsPaid` usa um `updateMany` atômico
+    // (WHERE status = 'PENDING') e lança `PayableAlreadyProcessedError`
+    // quando outra reação/webhook já deu baixa nesse meio-tempo (ex.: 👍
+    // em 2-3 mensagens do mesmo lembrete quase simultâneas). Idempotente
+    // de propósito: ignora sem propagar erro, sem reagir 🆗 de novo
+    // (quem ganhou a corrida já reagiu) e sem duplicar AuditLog/SafeMovement.
+    if (error instanceof PayableAlreadyProcessedError) {
+      logger.info(
+        `Webhook Z-API (${triggerLabel}): baixa ignorada — outra reação/webhook já confirmou o pagamento nesse meio-tempo (idempotência atômica)`,
+        { accountsPayableId: payable.id },
+      );
+      return;
+    }
+    throw error;
+  }
 
   logger.info(`Pagamento confirmado via webhook Z-API (${triggerLabel})`, {
     accountsPayableId: payable.id,

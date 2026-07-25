@@ -4,6 +4,7 @@ import {
   handleZapiReactionWebhookUseCase,
 } from "@/features/accounts-payable/application/handle-zapi-webhook.use-case";
 import { payAccountsPayableUseCase } from "@/features/accounts-payable/application/pay-accounts-payable.use-case";
+import { PayableAlreadyProcessedError } from "@/core/errors/domain-error";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
 import type { UserRepository } from "@/features/auth/domain/user.repository";
@@ -355,5 +356,41 @@ describe("handleZapiReactionWebhookUseCase (gatilho de baixa por reação 👍)"
     );
 
     expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
+  });
+
+  it("idempotência atômica: 2 reações quase simultâneas (ex.: 👍 no boleto E no Pix) — a que perde a corrida (markAsPaid lança PayableAlreadyProcessedError) é ignorada silenciosamente, sem propagar erro e sem reagir 🆗 de novo", async () => {
+    vi.mocked(payAccountsPayableUseCase).mockRejectedValue(
+      new PayableAlreadyProcessedError("payable-1"),
+    );
+    const deps = buildDeps({});
+
+    await expect(
+      handleZapiReactionWebhookUseCase(
+        { referencedMessageId: "msg-999" },
+        "org-1",
+        deps,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(
+      deps.whatsAppMessaging.reactToPaymentConfirmed,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("erros que não são PayableAlreadyProcessedError continuam propagando normalmente (não viram idempotência silenciosa)", async () => {
+    const { InsufficientSafeBalanceError } =
+      await import("@/core/errors/domain-error");
+    vi.mocked(payAccountsPayableUseCase).mockRejectedValue(
+      new InsufficientSafeBalanceError("org-1", "150.00", "10.00"),
+    );
+    const deps = buildDeps({});
+
+    await expect(
+      handleZapiReactionWebhookUseCase(
+        { referencedMessageId: "msg-999" },
+        "org-1",
+        deps,
+      ),
+    ).rejects.toThrow(InsufficientSafeBalanceError);
   });
 });

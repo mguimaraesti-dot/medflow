@@ -1,5 +1,6 @@
 import { prisma } from "@/core/database/prisma.client";
 import { Prisma } from "@prisma/client";
+import { PayableAlreadyProcessedError } from "@/core/errors/domain-error";
 import { buildPaginatedResult } from "@/shared/lib/pagination";
 import type { Pagination, PaginatedResult } from "@/shared/lib/pagination";
 import { todayDateOnlyBR } from "@/shared/lib/format";
@@ -348,26 +349,65 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
    * use case) e usa um `SELECT ... FOR UPDATE` na linha do Cofre só pra
    * serializar pagamentos concorrentes — a checagem de saldo continua
    * acontecendo, só não recomputa o valor do zero uma 2ª vez.
+   *
+   * IDEMPOTÊNCIA ATÔMICA (corrige bug pré-existente, não introduzido por
+   * nenhuma feature nova): a transição PENDING -> PAID usa `updateMany`
+   * com `WHERE id = ... AND status = 'PENDING'` em vez de `update` (que
+   * escreve incondicionalmente). Se `count !== 1`, outra chamada já
+   * ganhou a corrida (ex.: 👍 em 2-3 mensagens do mesmo lembrete quase
+   * simultâneas, ou duplo clique) — lança `PayableAlreadyProcessedError`
+   * e NENHUM efeito colateral roda (sem `SafeMovement`, sem `AuditLog`).
+   * As checagens `payable.status !== "PENDING"` feitas ANTES de chegar
+   * aqui (nos use cases/webhook) continuam existindo só como atalho
+   * (evitam trabalho no caso comum) — não são mais a proteção real
+   * contra corrida, que é 100% este `updateMany`. No caminho COFRE, o
+   * `updateMany` roda ANTES do lock do Cofre e da criação do
+   * `SafeMovement`, dentro da MESMA transação: se a conta já não está
+   * PENDING, a transação aborta ali mesmo e o Cofre nunca é debitado —
+   * por isso é impossível duas reações quase simultâneas debitarem o
+   * Cofre duas vezes pela mesma conta.
    */
   async markAsPaid(
     id: string,
     data: MarkAsPaidInput,
   ): Promise<AccountsPayable> {
     if (data.paymentOrigin !== "COFRE") {
-      const row = await prisma.accountsPayable.update({
-        where: { id },
+      const result = await prisma.accountsPayable.updateMany({
+        where: { id, status: "PENDING" },
         data: {
           status: "PAID",
           paidByUserId: data.paidByUserId,
           paidAt: new Date(),
           paidVia: data.paidVia,
         },
+      });
+      if (result.count !== 1) {
+        throw new PayableAlreadyProcessedError(id);
+      }
+
+      const row = await prisma.accountsPayable.findUniqueOrThrow({
+        where: { id },
         include: USER_NAMES_INCLUDE,
       });
       return toDomain(row);
     }
 
     return prisma.$transaction(async (tx) => {
+      // Gate atômico PRIMEIRO: se outra chamada já deu baixa nesse meio-
+      // tempo, aborta aqui — o Cofre nem chega a ser travado/lido.
+      const result = await tx.accountsPayable.updateMany({
+        where: { id, status: "PENDING" },
+        data: {
+          status: "PAID",
+          paidByUserId: data.paidByUserId,
+          paidAt: new Date(),
+          paidVia: data.paidVia,
+        },
+      });
+      if (result.count !== 1) {
+        throw new PayableAlreadyProcessedError(id);
+      }
+
       const payable = await tx.accountsPayable.findUniqueOrThrow({
         where: { id },
       });
@@ -384,11 +424,11 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
       const safeBalance = new Prisma.Decimal(data.safeBalance ?? 0);
 
       // Rede de segurança contra corrida entre dois pagamentos via Cofre
-      // quase simultâneos — a checagem "de verdade" (com
-      // InsufficientSafeBalanceError) já rodou no use case antes de
-      // chamar este método; o lock acima garante que nenhum outro
-      // pagamento via Cofre da mesma organização commitou entre a leitura
-      // do saldo (no use case) e aqui.
+      // quase simultâneos (de contas DIFERENTES) — a checagem "de
+      // verdade" (com InsufficientSafeBalanceError) já rodou no use case
+      // antes de chamar este método; o lock acima garante que nenhum
+      // outro pagamento via Cofre da mesma organização commitou entre a
+      // leitura do saldo (no use case) e aqui.
       if (safeBalance.lessThan(data.amount)) {
         throw new Error(
           `Saldo do Cofre insuficiente para pagar a conta (organização ${data.organizationId}).`,
@@ -407,14 +447,8 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
         },
       });
 
-      const row = await tx.accountsPayable.update({
+      const row = await tx.accountsPayable.findUniqueOrThrow({
         where: { id },
-        data: {
-          status: "PAID",
-          paidByUserId: data.paidByUserId,
-          paidAt: new Date(),
-          paidVia: data.paidVia,
-        },
         include: USER_NAMES_INCLUDE,
       });
 
