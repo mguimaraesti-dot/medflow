@@ -69,7 +69,10 @@ function buildDeps(overrides: {
   const whatsAppMessaging = {
     sendPaymentReminder:
       overrides.sendPaymentReminder ??
-      vi.fn().mockResolvedValue({ messageId: "msg-123" }),
+      vi.fn().mockResolvedValue({
+        messageId: "msg-123",
+        extraMessageIds: ["msg-456", "msg-789"],
+      }),
   } as unknown as WhatsAppMessagingPort;
 
   return {
@@ -226,7 +229,10 @@ describe("sendAccountsPayableWhatsAppReminderUseCase", () => {
     );
     expect(
       deps.accountsPayableRepository.touchReminderSent,
-    ).toHaveBeenCalledWith("payable-1", expect.any(Date), "msg-123");
+    ).toHaveBeenCalledWith("payable-1", expect.any(Date), "msg-123", [
+      "msg-456",
+      "msg-789",
+    ]);
   });
 
   it("com accountsPayableReminderWhatsapp preenchido (id de grupo), envia para o grupo em vez do whatsapp padrão", async () => {

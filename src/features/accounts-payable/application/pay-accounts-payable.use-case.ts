@@ -44,6 +44,12 @@ export async function payAccountsPayableUseCase(
     throw new NotFoundError("Conta a pagar", accountsPayableId);
   }
 
+  // Atalho (economiza trabalho no caso comum) — NÃO é mais a proteção
+  // real contra corrida: entre esta leitura e o `markAsPaid` abaixo,
+  // outra chamada concorrente pode ganhar a corrida. A proteção de
+  // verdade é o `updateMany` atômico (WHERE status = 'PENDING') dentro
+  // de `markAsPaid` (ver prisma-accounts-payable.repository.ts), que
+  // lança este mesmo erro se `count !== 1`.
   if (payable.status !== "PENDING") {
     throw new PayableAlreadyProcessedError(accountsPayableId);
   }

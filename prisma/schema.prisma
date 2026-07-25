@@ -472,6 +472,14 @@ model AccountsPayable {
   reminderDaysBefore    Int       @default(5)
   lastReminderSentAt    DateTime?
   lastReminderMessageId String?
+  // Ids (Z-API) das mensagens EXTRAS do lembrete (boleto/PIX, 0-2 itens
+  // conforme a conta tenha esses dados) — a principal continua só em
+  // lastReminderMessageId, nunca duplicada aqui. Usado só para casar a
+  // reação 👍 quando ela vem numa dessas mensagens em vez da principal;
+  // o 🆗 de confirmação sempre mira lastReminderMessageId, nunca um id
+  // daqui (ver handle-zapi-webhook.use-case.ts). Sem índice de propósito
+  // (volume baixo, MVP mono-clínica) — decisão registrada no PR.
+  reminderExtraMessageIds String[] @default([])
 
   // Soft delete (Sprint 05) — nunca DELETE físico; conta some da listagem
   // padrão mas continua no banco pra auditoria e restauração. Só permitido

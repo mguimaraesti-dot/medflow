@@ -44,12 +44,15 @@ export interface WhatsAppMessagingPort {
    * Dispara o lembrete (cartão-resumo em texto simples, código de
    * barras e/ou chave Pix com botão de copiar — os 2 últimos só quando
    * o dado correspondente existe). Devolve o id da mensagem do
-   * cartão-resumo — persistido em `AccountsPayable.lastReminderMessageId`,
-   * é o que casa a reação 👍 recebida com a conta certa.
+   * cartão-resumo (persistido em `AccountsPayable.lastReminderMessageId`,
+   * a "principal") e os ids das mensagens extras REALMENTE enviadas
+   * (0-2, persistidos em `reminderExtraMessageIds`) — qualquer um dos
+   * ids casa a reação 👍 recebida com a conta certa, mas o 🆗 de
+   * confirmação sempre mira a principal, nunca uma extra.
    */
   sendPaymentReminder(
     input: WhatsAppPaymentReminderInput,
-  ): Promise<{ messageId: string | null }>;
+  ): Promise<{ messageId: string | null; extraMessageIds: string[] }>;
 
   /**
    * Reage com 🆗 na mensagem original do lembrete, para sinalizar "pago"

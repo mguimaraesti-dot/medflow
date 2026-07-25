@@ -126,10 +126,8 @@ export interface UpdateManyForSeriesInput {
 export interface AccountsPayableRepository {
   findById(id: string): Promise<AccountsPayable | null>;
 
-  /** Acha a conta cujo `lastReminderMessageId` bate com o messageId da mensagem original reagida — gatilho de baixa por reação 👍 (ver `handle-zapi-webhook.use-case.ts`). `null` se nenhuma conta tem esse messageId salvo. */
-  findByLastReminderMessageId(
-    messageId: string,
-  ): Promise<AccountsPayable | null>;
+  /** Acha a conta cujo `lastReminderMessageId` (principal) OU `reminderExtraMessageIds` (boleto/PIX) bate com o messageId da mensagem original reagida — gatilho de baixa por reação 👍 em qualquer uma das 3 mensagens do lembrete (ver `handle-zapi-webhook.use-case.ts`). `null` se nenhuma conta tem esse messageId salvo. */
+  findByReminderMessageId(messageId: string): Promise<AccountsPayable | null>;
 
   list(
     filter: ListAccountsPayableFilter,
@@ -258,10 +256,11 @@ export interface AccountsPayableRepository {
    */
   listPendingForReminders(organizationId: string): Promise<AccountsPayable[]>;
 
-  /** Marca que o lembrete foi enviado agora (evita reenviar mais de uma vez no mesmo dia) e guarda o id da mensagem do cartão-resumo (`messageId` pode ser `null` se a Z-API não devolveu um). */
+  /** Marca que o lembrete foi enviado agora (evita reenviar mais de uma vez no mesmo dia) e guarda o id da mensagem do cartão-resumo (`messageId` pode ser `null` se a Z-API não devolveu um) e os ids das mensagens extras de boleto/PIX REALMENTE enviadas (0-2 itens). */
   touchReminderSent(
     id: string,
     sentAt: Date,
     messageId: string | null,
+    extraMessageIds: string[],
   ): Promise<void>;
 }

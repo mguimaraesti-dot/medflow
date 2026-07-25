@@ -4,6 +4,7 @@ import {
   handleZapiReactionWebhookUseCase,
 } from "@/features/accounts-payable/application/handle-zapi-webhook.use-case";
 import { payAccountsPayableUseCase } from "@/features/accounts-payable/application/pay-accounts-payable.use-case";
+import { PayableAlreadyProcessedError } from "@/core/errors/domain-error";
 import type { AccountsPayableRepository } from "@/features/accounts-payable/domain/accounts-payable.repository";
 import type { SafeRepository } from "@/features/treasury/domain/safe.repository";
 import type { UserRepository } from "@/features/auth/domain/user.repository";
@@ -44,7 +45,7 @@ function buildDeps(overrides: {
       : overrides.reactionPayable;
   const accountsPayableRepository = {
     findById: vi.fn().mockResolvedValue(payable),
-    findByLastReminderMessageId: vi.fn().mockResolvedValue(reactionPayable),
+    findByReminderMessageId: vi.fn().mockResolvedValue(reactionPayable),
   } as unknown as AccountsPayableRepository;
 
   const systemUser =
@@ -273,6 +274,44 @@ describe("handleZapiReactionWebhookUseCase (gatilho de baixa por reação 👍)"
     expect(deps.whatsAppMessaging.reactToPaymentConfirmed).toHaveBeenCalled();
   });
 
+  it("cenário 2: reação bate com um id EXTRA (boleto ou Pix) de conta PENDENTE → dá baixa, e a confirmação 🆗 mira a PRINCIPAL, não o id extra", async () => {
+    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
+      buildPayable({ status: "PAID" }) as never,
+    );
+    const deps = buildDeps({
+      reactionPayable: buildPayable({
+        lastReminderMessageId: "msg-999",
+        reminderExtraMessageIds: ["msg-boleto-1", "msg-pix-1"],
+      }),
+    });
+
+    await handleZapiReactionWebhookUseCase(
+      { referencedMessageId: "msg-boleto-1" },
+      "org-1",
+      deps,
+    );
+
+    expect(
+      deps.accountsPayableRepository.findByReminderMessageId,
+    ).toHaveBeenCalledWith("msg-boleto-1");
+    expect(payAccountsPayableUseCase).toHaveBeenCalledWith(
+      "payable-1",
+      "system-user-1",
+      "org-1",
+      {
+        accountsPayableRepository: deps.accountsPayableRepository,
+        safeRepository: deps.safeRepository,
+      },
+      "WHATSAPP",
+    );
+    expect(deps.whatsAppMessaging.reactToPaymentConfirmed).toHaveBeenCalledWith(
+      {
+        phone: "5511999999999",
+        messageId: "msg-999",
+      },
+    );
+  });
+
   it("cenário 3: reação numa mensagem que não é lembrete (nenhuma conta com esse lastReminderMessageId) → nada acontece", async () => {
     const deps = buildDeps({ reactionPayable: null });
 
@@ -317,5 +356,41 @@ describe("handleZapiReactionWebhookUseCase (gatilho de baixa por reação 👍)"
     );
 
     expect(payAccountsPayableUseCase).not.toHaveBeenCalled();
+  });
+
+  it("idempotência atômica: 2 reações quase simultâneas (ex.: 👍 no boleto E no Pix) — a que perde a corrida (markAsPaid lança PayableAlreadyProcessedError) é ignorada silenciosamente, sem propagar erro e sem reagir 🆗 de novo", async () => {
+    vi.mocked(payAccountsPayableUseCase).mockRejectedValue(
+      new PayableAlreadyProcessedError("payable-1"),
+    );
+    const deps = buildDeps({});
+
+    await expect(
+      handleZapiReactionWebhookUseCase(
+        { referencedMessageId: "msg-999" },
+        "org-1",
+        deps,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(
+      deps.whatsAppMessaging.reactToPaymentConfirmed,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("erros que não são PayableAlreadyProcessedError continuam propagando normalmente (não viram idempotência silenciosa)", async () => {
+    const { InsufficientSafeBalanceError } =
+      await import("@/core/errors/domain-error");
+    vi.mocked(payAccountsPayableUseCase).mockRejectedValue(
+      new InsufficientSafeBalanceError("org-1", "150.00", "10.00"),
+    );
+    const deps = buildDeps({});
+
+    await expect(
+      handleZapiReactionWebhookUseCase(
+        { referencedMessageId: "msg-999" },
+        "org-1",
+        deps,
+      ),
+    ).rejects.toThrow(InsufficientSafeBalanceError);
   });
 });

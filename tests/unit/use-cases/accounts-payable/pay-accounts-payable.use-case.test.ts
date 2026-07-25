@@ -143,4 +143,25 @@ describe("payAccountsPayableUseCase", () => {
     ).rejects.toThrow(InsufficientSafeBalanceError);
     expect(markAsPaid).not.toHaveBeenCalled();
   });
+
+  it("idempotência atômica: quando markAsPaid perde a corrida (updateMany não achou PENDING) e lança PayableAlreadyProcessedError, propaga o erro e NÃO grava AuditLog (evita PAYMENT_CONFIRMED duplicado)", async () => {
+    const { prisma } = await import("@/core/database/prisma.client");
+    vi.mocked(prisma.auditLog.create).mockClear();
+    const payable = buildPayable();
+    const accountsPayableRepository = {
+      findById: vi.fn().mockResolvedValue(payable),
+      markAsPaid: vi
+        .fn()
+        .mockRejectedValue(new PayableAlreadyProcessedError("payable-1")),
+    } as unknown as AccountsPayableRepository;
+
+    await expect(
+      payAccountsPayableUseCase("payable-1", "user-1", "org-1", {
+        accountsPayableRepository,
+        safeRepository: buildSafeRepository(),
+      }),
+    ).rejects.toThrow(PayableAlreadyProcessedError);
+
+    expect(prisma.auditLog.create).not.toHaveBeenCalled();
+  });
 });

@@ -46,7 +46,9 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
       }
       return { messageId: "msg-456" };
     });
-    vi.mocked(sendButtonPixMessage).mockResolvedValue(undefined);
+    vi.mocked(sendButtonPixMessage).mockResolvedValue({
+      messageId: "msg-789",
+    });
   });
 
   it("cartão principal é texto simples (sem botão), sem instrução de reação, e messageId é logado", async () => {
@@ -54,7 +56,10 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
 
     const result = await messaging.sendPaymentReminder(buildInput());
 
-    expect(result).toEqual({ messageId: "msg-123" });
+    expect(result).toEqual({
+      messageId: "msg-123",
+      extraMessageIds: ["msg-456", "msg-789"],
+    });
     expect(sendTextMessage).toHaveBeenNthCalledWith(1, {
       phone: "11999999999",
       message:
@@ -124,7 +129,10 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
 
     const result = await messaging.sendPaymentReminder(buildInput());
 
-    expect(result).toEqual({ messageId: "msg-123" });
+    expect(result).toEqual({
+      messageId: "msg-123",
+      extraMessageIds: ["msg-789"],
+    });
     expect(sendButtonPixMessage).toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining("código de barras"),
@@ -143,7 +151,10 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
 
     const result = await messaging.sendPaymentReminder(buildInput());
 
-    expect(result).toEqual({ messageId: "msg-123" });
+    expect(result).toEqual({
+      messageId: "msg-123",
+      extraMessageIds: ["msg-456"],
+    });
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining("Pix"),
       expect.objectContaining({
@@ -160,10 +171,24 @@ describe("ZapiWhatsAppMessaging.sendPaymentReminder", () => {
       buildInput({ barcode: null, pixKey: null }),
     );
 
-    expect(result).toEqual({ messageId: "msg-123" });
+    expect(result).toEqual({ messageId: "msg-123", extraMessageIds: [] });
     expect(sendTextMessage).toHaveBeenCalledTimes(1);
     expect(sendButtonPixMessage).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("só boleto cadastrado (sem Pix): extraMessageIds tem só o id do boleto", async () => {
+    const messaging = new ZapiWhatsAppMessaging();
+
+    const result = await messaging.sendPaymentReminder(
+      buildInput({ pixKey: null }),
+    );
+
+    expect(result).toEqual({
+      messageId: "msg-123",
+      extraMessageIds: ["msg-456"],
+    });
+    expect(sendButtonPixMessage).not.toHaveBeenCalled();
   });
 });
 
