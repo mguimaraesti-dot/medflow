@@ -23,7 +23,7 @@ export interface HandleZapiWebhookInput {
 }
 
 export interface HandleZapiReactionWebhookInput {
-  /** Id da mensagem ORIGINAL reagida (`reaction.referencedMessage.messageId` do payload do webhook) — casado contra `AccountsPayable.lastReminderMessageId` pra achar a conta. Não confundir com o id da PRÓPRIA reação. */
+  /** Id da mensagem ORIGINAL reagida (`reaction.referencedMessage.messageId` do payload do webhook) — casado contra `AccountsPayable.lastReminderMessageId` (principal) OU `reminderExtraMessageIds` (boleto/PIX) pra achar a conta. Não confundir com o id da PRÓPRIA reação. */
   referencedMessageId: string;
 }
 
@@ -159,10 +159,17 @@ export async function handleZapiWebhookUseCase(
 }
 
 /**
- * Confirma o pagamento a partir de uma reação 👍 na mensagem do
- * lembrete — gatilho ADICIONAL ao clique no botão (`handleZapiWebhookUseCase`
- * acima), os dois coexistem. A conta é achada casando o `referencedMessageId`
- * (mensagem original reagida) contra `AccountsPayable.lastReminderMessageId`.
+ * Confirma o pagamento a partir de uma reação 👍 em QUALQUER UMA das 3
+ * mensagens do lembrete (cartão principal, código de barras ou Pix) —
+ * gatilho ADICIONAL ao clique no botão (`handleZapiWebhookUseCase`
+ * acima), os dois coexistem. A conta é achada casando o
+ * `referencedMessageId` (mensagem original reagida) contra
+ * `AccountsPayable.lastReminderMessageId` (principal) OU
+ * `reminderExtraMessageIds` (boleto/PIX) — ver `findByReminderMessageId`.
+ *
+ * IMPORTANTE: independente de qual das 3 mensagens recebeu a reação, a
+ * confirmação 🆗 de volta sempre mira `payable.lastReminderMessageId`
+ * (a principal) — ver `confirmPayableFromWebhook` acima. Não muda.
  *
  * As salvaguardas de "é reação de verdade / emoji é 👍 / não é a reação
  * do próprio sistema" já rodaram em `route.ts` antes de chegar aqui —
@@ -175,10 +182,9 @@ export async function handleZapiReactionWebhookUseCase(
   organizationId: string,
   deps: Deps,
 ): Promise<void> {
-  const payable =
-    await deps.accountsPayableRepository.findByLastReminderMessageId(
-      input.referencedMessageId,
-    );
+  const payable = await deps.accountsPayableRepository.findByReminderMessageId(
+    input.referencedMessageId,
+  );
 
   if (!payable || payable.organizationId !== organizationId) {
     logger.info(

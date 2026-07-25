@@ -64,11 +64,16 @@ export class PrismaAccountsPayableRepository implements AccountsPayableRepositor
     return row ? toDomain(row) : null;
   }
 
-  async findByLastReminderMessageId(
+  async findByReminderMessageId(
     messageId: string,
   ): Promise<AccountsPayable | null> {
     const row = await prisma.accountsPayable.findFirst({
-      where: { lastReminderMessageId: messageId },
+      where: {
+        OR: [
+          { lastReminderMessageId: messageId },
+          { reminderExtraMessageIds: { has: messageId } },
+        ],
+      },
       include: USER_NAMES_INCLUDE,
     });
     return row ? toDomain(row) : null;

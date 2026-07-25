@@ -44,7 +44,7 @@ function buildDeps(overrides: {
       : overrides.reactionPayable;
   const accountsPayableRepository = {
     findById: vi.fn().mockResolvedValue(payable),
-    findByLastReminderMessageId: vi.fn().mockResolvedValue(reactionPayable),
+    findByReminderMessageId: vi.fn().mockResolvedValue(reactionPayable),
   } as unknown as AccountsPayableRepository;
 
   const systemUser =
@@ -271,6 +271,44 @@ describe("handleZapiReactionWebhookUseCase (gatilho de baixa por reação 👍)"
       "WHATSAPP",
     );
     expect(deps.whatsAppMessaging.reactToPaymentConfirmed).toHaveBeenCalled();
+  });
+
+  it("cenário 2: reação bate com um id EXTRA (boleto ou Pix) de conta PENDENTE → dá baixa, e a confirmação 🆗 mira a PRINCIPAL, não o id extra", async () => {
+    vi.mocked(payAccountsPayableUseCase).mockResolvedValue(
+      buildPayable({ status: "PAID" }) as never,
+    );
+    const deps = buildDeps({
+      reactionPayable: buildPayable({
+        lastReminderMessageId: "msg-999",
+        reminderExtraMessageIds: ["msg-boleto-1", "msg-pix-1"],
+      }),
+    });
+
+    await handleZapiReactionWebhookUseCase(
+      { referencedMessageId: "msg-boleto-1" },
+      "org-1",
+      deps,
+    );
+
+    expect(
+      deps.accountsPayableRepository.findByReminderMessageId,
+    ).toHaveBeenCalledWith("msg-boleto-1");
+    expect(payAccountsPayableUseCase).toHaveBeenCalledWith(
+      "payable-1",
+      "system-user-1",
+      "org-1",
+      {
+        accountsPayableRepository: deps.accountsPayableRepository,
+        safeRepository: deps.safeRepository,
+      },
+      "WHATSAPP",
+    );
+    expect(deps.whatsAppMessaging.reactToPaymentConfirmed).toHaveBeenCalledWith(
+      {
+        phone: "5511999999999",
+        messageId: "msg-999",
+      },
+    );
   });
 
   it("cenário 3: reação numa mensagem que não é lembrete (nenhuma conta com esse lastReminderMessageId) → nada acontece", async () => {
