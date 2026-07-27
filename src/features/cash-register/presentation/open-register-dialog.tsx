@@ -29,7 +29,7 @@ import {
  * auditoria, só o valor inicial em dinheiro (Refinamento UX — os dois
  * fluxos não devem ser confundidos/reaproveitados um pelo outro).
  */
-export function OpenRegisterDialog({ disabled }: { disabled?: boolean }) {
+export function OpenRegisterDialog() {
   const [open, setOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const openCashRegister = useOpenCashRegister();
@@ -68,7 +68,7 @@ export function OpenRegisterDialog({ disabled }: { disabled?: boolean }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" disabled={disabled}>
+        <Button type="button">
           <Unlock className="h-4 w-4" />
           Abrir Caixa
         </Button>

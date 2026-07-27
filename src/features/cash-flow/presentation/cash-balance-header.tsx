@@ -132,18 +132,16 @@ export function CashBalanceHeader({
   // Abrir/Fechar/Reabrir Caixa — presentes nos dois layouts. Registrar
   // Entrada/Saída NÃO entra aqui no mobile: vira a barra de ação fixa
   // (ver cash-flow-screen.tsx), então só aparece no bloco desktop abaixo.
+  // Cada botão só RENDERIZA se a permissão existe — nunca aparece
+  // desabilitado (perfil Diretor: botão cinza convidaria o toque
+  // acidental, e confirmação não ajuda quem toca sem querer).
   const registerActionButtons = (
     <>
-      {isOpen && <CloseRegisterDialog disabled={!canClose} />}
-      {hasPreviousDayOpen && !isOpen && (
-        <CloseRegisterDialog
-          disabled={!canClose}
-          previousDayOpenRegister={previousDayOpen}
-        />
+      {isOpen && canClose && <CloseRegisterDialog />}
+      {hasPreviousDayOpen && !isOpen && canClose && (
+        <CloseRegisterDialog previousDayOpenRegister={previousDayOpen} />
       )}
-      {!today && !hasPreviousDayOpen && (
-        <OpenRegisterDialog disabled={!canOpen} />
-      )}
+      {!today && !hasPreviousDayOpen && canOpen && <OpenRegisterDialog />}
       {closedToday && canReopen && !hasPreviousDayOpen && (
         <ReopenRegisterDialog cashRegisterDayId={today.id} />
       )}
@@ -186,11 +184,10 @@ export function CashBalanceHeader({
             {statusMessages}
           </div>
 
-          {isOpen && (
+          {isOpen && canCreateEntry && (
             <>
               <Button
                 type="button"
-                disabled={!canCreateEntry}
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => onSelectType("IN")}
               >
@@ -200,7 +197,6 @@ export function CashBalanceHeader({
               <Button
                 type="button"
                 variant="outline"
-                disabled={!canCreateEntry}
                 className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => onSelectType("OUT")}
               >

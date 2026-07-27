@@ -38,8 +38,16 @@ interface NavItem {
   isVisible: (permissions: string[]) => boolean;
 }
 
+// Alguém com permissão de escrita em Tesouraria (treasury:*) vê o
+// módulo, mas alguém que só tem leitura ampla (Diretor: DASHBOARD_READ
+// + PAYABLE_READ) também precisa ver — as rotas GET de Tesouraria
+// (dashboard-summary/movements/safe) já são liberadas por
+// CASH_REGISTER_READ combinado com leitura ampla, nunca por
+// treasury:* sozinho. Sem o segundo termo, Diretor teria a API
+// liberada mas o link escondido da sidebar.
 const hasTreasuryAccess = (permissions: string[]) =>
-  permissions.some((permission) => permission.startsWith("treasury:"));
+  permissions.some((permission) => permission.startsWith("treasury:")) ||
+  hasBroaderThanCashRegisterAccess(permissions);
 
 const FINANCEIRO: NavItem[] = [
   {
@@ -96,7 +104,13 @@ const SOLTOS: NavItem[] = [
     href: "/settings",
     label: "Configurações",
     icon: Settings,
-    isVisible: hasBroaderThanCashRegisterAccess,
+    // Não usa hasBroaderThanCashRegisterAccess: essa permissão é
+    // exclusiva de quem gerencia a organização (Admin/Gerente) — um
+    // perfil só-leitura com acesso amplo aos módulos financeiros
+    // (Diretor) não deve ver nem o link, já que a API
+    // (`/api/organization-settings`) exige ORGANIZATION_SETTINGS_MANAGE
+    // mesmo pro GET.
+    isVisible: (p) => p.includes(PERMISSIONS.ORGANIZATION_SETTINGS_MANAGE),
   },
 ];
 
