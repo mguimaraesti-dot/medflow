@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "relatorio-exames-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../relatorio-exames", "run", "dev"],
+      "port": 3010
     }
   ]
 }

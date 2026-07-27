@@ -17,6 +17,12 @@ export async function createSupabaseServerClient() {
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      // Escopa o cookie de sessão no domínio pai (".medflow.com.br", por
+      // exemplo) — sem isso, o login feito aqui não é visto pelo sistema
+      // de Relatório de Exames no subdomínio irmão (mesmo projeto
+      // Supabase, mesmo auth.users, cookie host-only por padrão). Vazio
+      // em desenvolvimento local: navegador rejeita Domain= em localhost.
+      cookieOptions: { domain: env.NEXT_PUBLIC_COOKIE_DOMAIN },
       cookies: {
         getAll() {
           return cookieStore.getAll();

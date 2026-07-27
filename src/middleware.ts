@@ -12,6 +12,10 @@ export async function middleware(request: NextRequest) {
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      // Mesmo domínio de cookie do supabase-server.client.ts — o
+      // middleware é quem de fato renova o token a cada request, então
+      // precisa escrever no mesmo escopo de domínio.
+      cookieOptions: { domain: env.NEXT_PUBLIC_COOKIE_DOMAIN },
       cookies: {
         getAll() {
           return request.cookies.getAll();

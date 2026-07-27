@@ -14,6 +14,12 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
+  // Domínio pai comum ao MedFlow e ao sistema de Relatório de Exames
+  // (ex: ".medflow.com.br"), pro cookie de sessão do Supabase atravessar
+  // os dois subdomínios sem repetir login. Opcional e vazio em
+  // desenvolvimento local — ver core/auth/supabase-server.client.ts.
+  NEXT_PUBLIC_COOKIE_DOMAIN: z.string().min(1).optional(),
+
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

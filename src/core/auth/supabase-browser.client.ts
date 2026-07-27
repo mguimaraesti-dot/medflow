@@ -16,5 +16,11 @@ export function createSupabaseBrowserClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      // Mesmo domínio de cookie do supabase-server.client.ts — ver o
+      // comentário lá. Precisa ser repetido aqui (não dá pra importar
+      // `core/utils/env.ts` num bundle de client, ver comentário acima).
+      cookieOptions: { domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN },
+    },
   );
 }
