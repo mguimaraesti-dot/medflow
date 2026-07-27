@@ -18,6 +18,33 @@ código ANTIGO ainda em produção quebra. Ordem correta, sem exceção:
 inspecionar a URL); 3) só então rodar a migration contra o banco de
 produção.
 
+**Regra específica para migration destrutiva** (`DROP TABLE`/`DROP
+COLUMN`/rename de tabela ou coluna/qualquer coisa que o código antigo
+ainda consulta): nunca aplicar antes de o código correspondente estar
+em produção. Diferença proposital em relação a uma migration aditiva
+(nova tabela/coluna nullable) — essa pode ir antes sem risco, porque o
+código antigo simplesmente ignora o que não conhece. Uma migration
+destrutiva não tem essa margem: o código antigo quebra na hora.
+
+**Checklist obrigatório antes de qualquer `prisma migrate deploy`
+contra o banco de produção** (destrutiva ou não):
+1. `git status` limpo — nada modificado/untracked que devesse fazer
+   parte do que já está no ar.
+2. O commit com a mudança correspondente já está no `main` remoto
+   (`git log origin/main -1`), não só commitado localmente nem só
+   pushado numa branch de feature.
+3. O deploy gerado a partir desse commit já está confirmado no ar
+   (`vercel ls`/inspecionar a URL) — só então rodar a migration.
+
+**O que os dois incidentes têm em comum, e por que nenhuma suíte de
+teste pega isso**: nos dois casos `tsc`, `lint`, os testes e o build
+passaram — o código em si estava correto. O que quebrou foi a
+diferença entre o código local (testado, correto) e o código
+efetivamente publicado no Vercel (antigo, desatualizado). Teste
+automatizado roda contra o working tree local; não existe suíte que
+verifique se aquele working tree é o mesmo que está no ar. Essa
+verificação é o checklist acima, não mais testes.
+
 ---
 
 ## O que é o MedFlow
