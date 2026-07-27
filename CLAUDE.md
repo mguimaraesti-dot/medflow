@@ -6,6 +6,26 @@
 
 ---
 
+## Commit + push são parte da correção, não um passo separado
+
+Regra geral (a de migration abaixo é um caso específico dela). Vale
+para os dois projetos (aqui e relatorio-exames) — incidente aconteceu
+lá: um bug de UI foi corrigido, verificado localmente (testes
+automatizados + navegador local) e relatado como resolvido, sem commit
+nem push. Produção continuou com o código antigo, continuou com o bug,
+e só foi corrigida quando o usuário apontou que "funciona local" não é
+a mesma coisa que "está corrigido".
+
+"Verificado localmente" e "corrigido" não são sinônimos — o usuário só
+vê o que está em produção. Uma correção só está de fato entregue
+quando: 1) commit criado; 2) push feito pro `main` remoto; 3) o deploy
+gerado a partir desse commit confirmado no ar (`vercel ls`/inspecionar
+a URL, ver comando abaixo). Reportar uma correção como concluída antes
+disso é a mesma classe de erro que migrar o banco antes do deploy — só
+que sem a migration, o sintoma é mais silencioso (nada quebra
+imediatamente, o bug antigo simplesmente continua lá) e por isso mais
+fácil de deixar passar batido.
+
 ## Ordem de deploy — código no ar ANTES de migrar o banco, sempre
 
 Já causou 2 incidentes de produção na mesma sessão (aqui e no
