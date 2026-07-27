@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { prisma } from "@/core/database/prisma.client";
 import { logger } from "@/core/logger/logger";
+import { syncRelatorioAccessForUser } from "@/core/integrations/relatorio-exames-sync";
 import {
   NotFoundError,
   UserEmailAlreadyExistsError,
@@ -82,6 +83,10 @@ export async function createUserUseCase(
     organizationId,
     userId: user.id,
     roleName: role.name,
+  });
+
+  await syncRelatorioAccessForUser(user.id, {
+    supabaseAdmin: deps.supabaseAdmin,
   });
 
   return user;

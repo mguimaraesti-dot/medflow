@@ -6,6 +6,20 @@
 
 ---
 
+## Ordem de deploy — código no ar ANTES de migrar o banco, sempre
+
+Já causou 2 incidentes de produção na mesma sessão (aqui e no
+relatorio-exames): rodar `prisma migrate deploy`/qualquer alteração
+direta no banco ANTES de o código correspondente estar efetivamente
+publicado (`git push` + deploy confirmado no ar, não só commitado
+localmente). O banco fica num estado que só o código novo entende; o
+código ANTIGO ainda em produção quebra. Ordem correta, sem exceção:
+1) commit + push; 2) confirmar o deploy novo no ar (`vercel ls`/
+inspecionar a URL); 3) só então rodar a migration contra o banco de
+produção.
+
+---
+
 ## O que é o MedFlow
 
 Sistema financeiro para clínicas médicas (Clínica MAE, primeiro cliente). Resolve quatro problemas: Fluxo de Caixa, Contas a Pagar, Dashboard Financeiro, Fechamento Diário + Relatórios. Preparado para virar SaaS multiempresa no futuro, mas o MVP opera com uma única clínica.
@@ -60,6 +74,53 @@ Perfis: Administrador, Proprietário, Secretária, Financeiro, Contador.
 - Financeiro/Proprietário: lançam, estornam, fecham caixa, confirmam pagamento.
 - Admin: reabre caixa, gerencia usuários.
 - Autorização é sempre decidida no backend; frontend só reflete visualmente.
+
+## Acesso ao relatorio-exames — derivado daqui, sem cadastro paralelo
+
+O relatorio-exames (app irmão, mesmo projeto Supabase Auth — login
+único) não tem `User`/`Role`/`Permission` próprios. O MedFlow grava
+`app_metadata.relatorioPerfil` (`"leitor"` | `"gestor"` | `null`) via
+Admin API sempre que um usuário é criado, tem o papel alterado, ou
+muda de status (`src/core/integrations/relatorio-exames-sync.ts`,
+chamado pelos 3 use-cases de Gestão de Acessos). Mapeamento
+(`src/core/permissions/relatorio-perfil.ts`): sem `DASHBOARD_READ` →
+`null` (nunca "leitor" por padrão — a Secretária não recebe metadata
+nenhum); com `DASHBOARD_READ` e sem `USERS_MANAGE` → `"leitor"`; com
+os dois → `"gestor"`. O perfil `"admin"` do relatório nunca é
+atribuído automaticamente daqui.
+
+**Não abrir grant nenhum entre os schemas `public` (aqui) e
+`relatorio`** para resolver isso de outra forma — foi decisão
+deliberada de isolamento (um vazamento da credencial do relatório,
+mais exposta, não deve enxergar dados de usuário do MedFlow). O
+`relatorio-exames` já existiu com uma tabela própria de autorização
+(`usuarios_autorizados`, cadastro manual) — foi removida porque
+permitia uma revogação daqui não revogar de verdade lá (a linha manual
+sobrevivia independente do papel mudar aqui). Não recriar esse tipo de
+mecanismo — ver CLAUDE.md do relatorio-exames, seção "Acesso ao
+relatorio-exames", para o raciocínio completo.
+
+Carga inicial e reconciliação (scripts em `scripts/`, mesmo padrão de
+`create-test-user.ts`): `sincronizar-acesso-relatorio.ts` roda a
+sincronização em todo usuário já existente (uso único, ao adotar este
+mecanismo, ou para corrigir divergência); `verificar-acesso-relatorio.ts`
+só confere (cruza quem deveria ter acesso com o que está gravado de
+verdade), sem corrigir nada — rodar se alguém relatar tela em branco no
+relatório antes de investigar mais fundo.
+
+**Consequência maior do que parece**: desativar um usuário aqui (ou
+trocar o papel dele pra um sem `DASHBOARD_READ`, ex.: Secretária) já
+revoga o acesso aos DOIS sistemas de uma vez — não existe mais um
+segundo cadastro pra lembrar de mexer num desligamento. Propagação
+CONFIRMADA na prática (não só documentada): `getUser()` do lado do
+relatório revalida contra o servidor do Supabase Auth a cada chamada,
+então a revogação vale já no próximo carregamento, sem precisar de
+logout nem esperar o JWT expirar — verificado por
+`scripts/testar-propagacao-revogacao.ts` no repo do relatorio-exames
+(cria sessão real, revoga, confere a MESMA sessão sem novo login). Não
+existe `admin.signOut(usuarioId)` em lugar nenhum deste fluxo — esse
+método do Supabase pede o JWT de uma sessão específica, não um id de
+usuário, então não dá pra usar aqui; a propagação não depende disso.
 
 ## Padrões de Código (resumo — detalhe completo em `MedFlow-Coding-Standards.md`)
 
