@@ -1,5 +1,7 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { prisma } from "@/core/database/prisma.client";
 import { logger } from "@/core/logger/logger";
+import { syncRelatorioAccessForUser } from "@/core/integrations/relatorio-exames-sync";
 import {
   NotFoundError,
   CannotModifyOwnRoleError,
@@ -11,6 +13,7 @@ import type { SetUserStatusInput } from "./dtos/set-user-status.dto";
 
 interface Deps {
   userManagementRepository: UserManagementRepository;
+  supabaseAdmin: SupabaseClient;
 }
 
 export async function setUserStatusUseCase(
@@ -63,6 +66,10 @@ export async function setUserStatusUseCase(
     organizationId,
     userId: user.id,
     status: user.status,
+  });
+
+  await syncRelatorioAccessForUser(user.id, {
+    supabaseAdmin: deps.supabaseAdmin,
   });
 
   return user;

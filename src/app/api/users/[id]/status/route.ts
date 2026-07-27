@@ -4,6 +4,7 @@ import { PERMISSIONS } from "@/core/permissions/roles-permissions";
 import { handleApiError } from "@/core/errors/error-handler";
 import { ForbiddenError } from "@/core/errors/domain-error";
 import { generateRequestId } from "@/core/utils/request-id";
+import { createSupabaseAdminClient } from "@/core/auth/supabase-admin.client";
 import { setUserStatusSchema } from "@/features/users/application/dtos/set-user-status.dto";
 import { toUserResponseDTO } from "@/features/users/application/dtos/user.response-dto";
 import { setUserStatusUseCase } from "@/features/users/application/set-user-status.use-case";
@@ -35,7 +36,7 @@ export async function PATCH(
       input,
       user.id,
       user.organizationId,
-      { userManagementRepository },
+      { userManagementRepository, supabaseAdmin: createSupabaseAdminClient() },
     );
 
     return NextResponse.json({ data: toUserResponseDTO(result) });

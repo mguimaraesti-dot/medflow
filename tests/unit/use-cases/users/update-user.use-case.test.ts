@@ -8,12 +8,24 @@ import {
 import type { UserManagementRepository } from "@/features/users/domain/user-management.repository";
 
 const auditLogCreate = vi.fn();
+const findUniqueUser = vi.fn();
 
 vi.mock("@/core/database/prisma.client", () => ({
   prisma: {
     auditLog: { create: (...args: unknown[]) => auditLogCreate(...args) },
+    user: { findUnique: (...args: unknown[]) => findUniqueUser(...args) },
   },
 }));
+
+// `syncRelatorioAccessForUser` nunca lança (ver comentário no próprio
+// módulo) — sem usuário encontrado, ela só faz nada. Não é o foco
+// destes testes (que cobrem as regras de `updateUserUseCase`), então o
+// mock devolve `null` por padrão em toda parte.
+findUniqueUser.mockResolvedValue(null);
+
+function buildSupabaseAdmin() {
+  return { auth: { admin: {} } };
+}
 
 function buildUser(overrides: Record<string, unknown> = {}) {
   return {
@@ -39,6 +51,8 @@ describe("updateUserUseCase", () => {
     await expect(
       updateUserUseCase("user-1", { name: "Nova" }, "admin-1", "org-1", {
         userManagementRepository,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supabaseAdmin: buildSupabaseAdmin() as any,
       }),
     ).rejects.toThrow(NotFoundError);
   });
@@ -55,7 +69,11 @@ describe("updateUserUseCase", () => {
         { roleId: "role-owner" },
         "admin-1",
         "org-1",
-        { userManagementRepository },
+        {
+          userManagementRepository,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          supabaseAdmin: buildSupabaseAdmin() as any,
+        },
       ),
     ).rejects.toThrow(CannotModifyOwnRoleError);
   });
@@ -73,7 +91,11 @@ describe("updateUserUseCase", () => {
       { name: "Novo Nome" },
       "admin-1",
       "org-1",
-      { userManagementRepository },
+      {
+        userManagementRepository,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supabaseAdmin: buildSupabaseAdmin() as any,
+      },
     );
 
     expect(update).toHaveBeenCalledWith("admin-1", { name: "Novo Nome" });
@@ -93,7 +115,11 @@ describe("updateUserUseCase", () => {
         { roleId: "role-owner" },
         "actor-1",
         "org-1",
-        { userManagementRepository },
+        {
+          userManagementRepository,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          supabaseAdmin: buildSupabaseAdmin() as any,
+        },
       ),
     ).rejects.toThrow(LastActiveAdminError);
   });
@@ -116,7 +142,11 @@ describe("updateUserUseCase", () => {
       { roleId: "role-owner" },
       "actor-1",
       "org-1",
-      { userManagementRepository },
+      {
+        userManagementRepository,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supabaseAdmin: buildSupabaseAdmin() as any,
+      },
     );
 
     expect(result.roleName).toBe("OWNER");
@@ -144,7 +174,11 @@ describe("updateUserUseCase", () => {
       { name: "Ana", roleId: "role-secretary" },
       "actor-1",
       "org-1",
-      { userManagementRepository },
+      {
+        userManagementRepository,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supabaseAdmin: buildSupabaseAdmin() as any,
+      },
     );
 
     expect(update).toHaveBeenCalledWith("user-1", {
@@ -168,7 +202,11 @@ describe("updateUserUseCase", () => {
       { name: "Novo Nome" },
       "actor-1",
       "org-1",
-      { userManagementRepository },
+      {
+        userManagementRepository,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supabaseAdmin: buildSupabaseAdmin() as any,
+      },
     );
 
     expect(update).toHaveBeenCalledWith("user-1", { name: "Novo Nome" });
@@ -193,7 +231,11 @@ describe("updateUserUseCase", () => {
       { roleId: "role-owner" },
       "actor-1",
       "org-1",
-      { userManagementRepository },
+      {
+        userManagementRepository,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        supabaseAdmin: buildSupabaseAdmin() as any,
+      },
     );
 
     expect(countActiveAdmins).not.toHaveBeenCalled();

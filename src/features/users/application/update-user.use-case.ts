@@ -1,5 +1,7 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { prisma } from "@/core/database/prisma.client";
 import { logger } from "@/core/logger/logger";
+import { syncRelatorioAccessForUser } from "@/core/integrations/relatorio-exames-sync";
 import {
   NotFoundError,
   CannotModifyOwnRoleError,
@@ -11,6 +13,7 @@ import type { UpdateUserInput } from "./dtos/update-user.dto";
 
 interface Deps {
   userManagementRepository: UserManagementRepository;
+  supabaseAdmin: SupabaseClient;
 }
 
 export async function updateUserUseCase(
@@ -75,6 +78,15 @@ export async function updateUserUseCase(
   });
 
   logger.info("Usuário atualizado", { organizationId, userId: user.id });
+
+  // Só quando o papel muda: permissões não mudaram, o perfil do
+  // relatório também não — evita uma chamada à Admin API a cada
+  // edição de nome/e-mail.
+  if (isRoleChange) {
+    await syncRelatorioAccessForUser(user.id, {
+      supabaseAdmin: deps.supabaseAdmin,
+    });
+  }
 
   return user;
 }
