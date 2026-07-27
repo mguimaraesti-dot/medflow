@@ -25,7 +25,8 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
   const [entrySheetType, setEntrySheetType] = useState<"IN" | "OUT">("IN");
 
   const can = (permission: string) => permissions.includes(permission);
-  const canCreateEntry = isRegisterOpen && can(PERMISSIONS.CASH_FLOW_CREATE);
+  const hasCreateEntryPermission = can(PERMISSIONS.CASH_FLOW_CREATE);
+  const canCreateEntry = isRegisterOpen && hasCreateEntryPermission;
 
   function openEntrySheet(type: "IN" | "OUT") {
     setEntrySheetType(type);
@@ -44,9 +45,9 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
 
       <div className="space-y-4">
         <div className="flex flex-col items-stretch gap-4 lg:flex-row">
-          {!isMobile && (
+          {!isMobile && hasCreateEntryPermission && (
             <div className="min-w-0 lg:flex-[5]">
-              <CashFlowEntryForm ref={formRef} disabled={!canCreateEntry} />
+              <CashFlowEntryForm ref={formRef} disabled={!isRegisterOpen} />
             </div>
           )}
           <div className="min-w-0 lg:flex-[1]">
@@ -60,11 +61,10 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
         />
       </div>
 
-      {isMobile && isRegisterOpen && (
+      {isMobile && isRegisterOpen && hasCreateEntryPermission && (
         <div className="bg-background fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t p-3">
           <Button
             type="button"
-            disabled={!canCreateEntry}
             className="flex-1 bg-green-600 hover:bg-green-700"
             onClick={() => openEntrySheet("IN")}
           >
@@ -74,7 +74,6 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
           <Button
             type="button"
             variant="outline"
-            disabled={!canCreateEntry}
             className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive flex-1"
             onClick={() => openEntrySheet("OUT")}
           >
@@ -88,7 +87,7 @@ export function CashFlowScreen({ permissions }: { permissions: string[] }) {
         open={entrySheetOpen}
         onOpenChange={setEntrySheetOpen}
         initialType={entrySheetType}
-        disabled={!canCreateEntry}
+        disabled={!isRegisterOpen}
       />
     </div>
   );

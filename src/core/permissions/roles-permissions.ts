@@ -62,9 +62,20 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
  *   TREASURY_MANUAL_ADJUSTMENT (Retirada do Cofre e Ajuste Manual na
  *   Tesouraria) — decisão explícita: só Admin tinha essa permissão
  *   antes, deixando Gerente sem ver esses dois botões por engano.
+ * - Diretor: só leitura em todos os módulos (Caixa Recepção, Contas a
+ *   Pagar, Tesouraria, Dashboard) + geração/exportação de relatórios
+ *   — pedido explícito: "Nenhuma outra escrita — não pode criar,
+ *   editar, excluir, dar baixa em conta, marcar pagamento, nada".
+ *   Por isso NENHUMA permissão de escrita (CREATE/REVERSE/PAY/DELETE/
+ *   OPEN/CLOSE/REOPEN/TREASURY_*) entra aqui, e também não
+ *   USERS_MANAGE nem ORGANIZATION_SETTINGS_MANAGE — pedido explícito:
+ *   "Sem acesso a Configurações e Usuários". A geração de relatório em
+ *   si não grava nenhum registro de auditoria/histórico hoje (rotas em
+ *   `/api/reports/status-report-*` só leem do banco), então não existe
+ *   nenhuma escrita "consequência de consultar" pra liberar à parte.
  */
 export const ROLE_PERMISSIONS: Record<
-  "ADMIN" | "OWNER" | "SECRETARY" | "FINANCE" | "ACCOUNTANT",
+  "ADMIN" | "OWNER" | "SECRETARY" | "FINANCE" | "ACCOUNTANT" | "DIRECTOR",
   PermissionKey[]
 > = {
   ADMIN: [
@@ -132,6 +143,13 @@ export const ROLE_PERMISSIONS: Record<
     PERMISSIONS.PAYABLE_READ,
     PERMISSIONS.DASHBOARD_READ,
   ],
+  /** Só leitura + relatórios — ver comentário acima do tipo. Lista curta de propósito. */
+  DIRECTOR: [
+    PERMISSIONS.CASH_FLOW_READ,
+    PERMISSIONS.CASH_REGISTER_READ,
+    PERMISSIONS.PAYABLE_READ,
+    PERMISSIONS.DASHBOARD_READ,
+  ],
 };
 
 /**
@@ -146,6 +164,7 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Administrador",
   OWNER: "Gerente",
   SECRETARY: "Recepcionista",
+  DIRECTOR: "Diretor",
 };
 
 export function getRoleLabel(roleName: string): string {
@@ -153,7 +172,12 @@ export function getRoleLabel(roleName: string): string {
 }
 
 /** Únicos perfis oferecidos no seletor de "Novo Usuário"/"Editar Usuário" — Financeiro e Contador continuam existindo (usuários antigos mantêm o perfil), só saem da lista de escolha. */
-export const VISIBLE_ROLE_NAMES = ["ADMIN", "OWNER", "SECRETARY"] as const;
+export const VISIBLE_ROLE_NAMES = [
+  "ADMIN",
+  "OWNER",
+  "SECRETARY",
+  "DIRECTOR",
+] as const;
 
 /**
  * A sidebar usa isto pra decidir se mostra os módulos "administrativos"

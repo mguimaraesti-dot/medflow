@@ -52,10 +52,8 @@ const SMALL_DIFFERENCE_THRESHOLD = 5;
  * às cegas.
  */
 export function CloseRegisterDialog({
-  disabled,
   previousDayOpenRegister,
 }: {
-  disabled?: boolean;
   previousDayOpenRegister?: CashRegisterDayResponseDTO | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -123,7 +121,6 @@ export function CloseRegisterDialog({
           type="button"
           variant="outline"
           className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive h-11 rounded-xl transition-colors duration-200"
-          disabled={disabled}
         >
           <Lock className="h-4 w-4" />
           Fechar Caixa

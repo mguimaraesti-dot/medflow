@@ -91,6 +91,7 @@ enum RoleName {
   SECRETARY
   FINANCE
   ACCOUNTANT
+  DIRECTOR
 }
 
 model Role {
