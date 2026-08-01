@@ -37,10 +37,22 @@ function sumDecimals(values: Prisma.Decimal[]): Prisma.Decimal {
  * (contaria 1 kit, não 2).
  */
 const KIT_NAME_PATTERN = /^kit\s*(\d+)/i;
+const FRASCO_AVULSO_LABEL = "Frasco (avulso)";
 
 function extractKitSize(categoryName: string): number | null {
   const match = categoryName.match(KIT_NAME_PATTERN);
   return match ? Number(match[1]) : null;
+}
+
+/**
+ * Igualdade exata (após trim/lower), nunca `includes` — "Kit 2 - ..." não
+ * começa com "kit" seguido só de espaço/fim de string, então já não
+ * colide com `KIT_NAME_PATTERN`, mas a igualdade exata aqui garante que
+ * só a categoria "Frasco" em si (nunca uma variação futura tipo "Frasco
+ * de vidro") entra nessa conta.
+ */
+function isFrascoAvulso(categoryName: string): boolean {
+  return categoryName.trim().toLowerCase() === "frasco";
 }
 
 /** Linhas de frascos só para categorias de kit COM movimentação no período — sem pré-semear o catálogo inteiro (diferente do agrupamento do Relatório do Caixa Recepção). */
@@ -73,8 +85,51 @@ function buildKitRows(
       kitSize: data.kitSize,
       count: data.count,
       frascos: data.count * data.kitSize,
+      isAvulso: false,
     }))
     .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+}
+
+/**
+ * Lançamentos de categoria exatamente "Frasco" (não kit) — cada um conta
+ * 1 frasco, independente de valor/forma de pagamento (não existe campo
+ * de quantidade no lançamento; mesma disciplina de "1 lançamento = 1
+ * unidade" já usada para kits). `categoryId` é preservado (é uma
+ * categoria real, ao contrário do `categoryId: null` sintético usado
+ * pro placeholder "Sem movimentação" no Relatório do Caixa Recepção).
+ * `null` quando não há nenhum lançamento "Frasco" no período — mesma
+ * regra de "sem pré-semear" do `buildKitRows`.
+ */
+function buildFrascoAvulsoRow(
+  rows: CashFlowEntryReceiptRow[],
+  categoryLabelById: Map<string, string>,
+): StatusReportRecebimentosKitRow | null {
+  let categoryId: string | null = null;
+  let count = 0;
+
+  for (const row of rows) {
+    const label = categoryLabelById.get(row.categoryId) ?? "Sem categoria";
+    if (!isFrascoAvulso(label)) continue;
+    categoryId = row.categoryId;
+    count += 1;
+  }
+
+  if (count === 0) return null;
+
+  return {
+    categoryId: categoryId!,
+    label: FRASCO_AVULSO_LABEL,
+    kitSize: 1,
+    count,
+    frascos: count,
+    isAvulso: true,
+  };
+}
+
+/** Frascos por lançamento individual (coluna "FRASCOS" da tabela de detalhe): kit usa o multiplicador do nome, "Frasco" avulso sempre conta 1, o resto fica "—" (`null`). */
+function resolveEntryFrascos(categoryLabel: string): number | null {
+  if (isFrascoAvulso(categoryLabel)) return 1;
+  return extractKitSize(categoryLabel);
 }
 
 /**
@@ -123,7 +178,7 @@ export async function getStatusReportRecebimentosUseCase(
       occurredAt: row.occurredAt,
       categoryLabel,
       patientName: row.patientName ?? "—",
-      frascos: extractKitSize(categoryLabel),
+      frascos: resolveEntryFrascos(categoryLabel),
       paymentMethodLabel: row.paymentMethodName,
       paymentMethodIsCash: row.paymentMethodIsCash,
       amount: row.amount.toFixed(2),
@@ -136,8 +191,22 @@ export async function getStatusReportRecebimentosUseCase(
   const pixTotal = sumDecimals(pixRows.map((row) => row.amount));
   const totalAmount = cashTotal.plus(pixTotal);
 
+  // Frascos de kit e "Frasco" avulso são mutuamente exclusivos por nome
+  // (regex de kit exige começar com "kit"; avulso exige igualdade exata
+  // com "frasco") — somados aqui sem risco de dupla contagem.
   const kitRows = buildKitRows(rows, categoryLabelById);
-  const totalFrascos = kitRows.reduce((sum, row) => sum + row.frascos, 0);
+  const totalKits = kitRows.reduce((sum, row) => sum + row.count, 0);
+  const frascosDeKits = kitRows.reduce((sum, row) => sum + row.frascos, 0);
+
+  const frascoAvulsoRow = buildFrascoAvulsoRow(rows, categoryLabelById);
+  const frascosAvulsos = frascoAvulsoRow?.count ?? 0;
+  const totalFrascos = frascosDeKits + frascosAvulsos;
+
+  // Linha avulsa sempre por último, depois dos kits (já ordenados por
+  // nome) — não entra no `.sort()` de cima porque "Frasco (avulso)"
+  // ordenaria antes de qualquer "Kit N" alfabeticamente, o que não é a
+  // posição desejada.
+  const allKitRows = frascoAvulsoRow ? [...kitRows, frascoAvulsoRow] : kitRows;
 
   return {
     organizationName: organization?.name ?? "MedFlow",
@@ -151,7 +220,9 @@ export async function getStatusReportRecebimentosUseCase(
     pixTotal: pixTotal.toFixed(2),
     pixCount: pixRows.length,
     totalFrascos,
+    totalKits,
+    frascosAvulsos,
     entries,
-    kitRows,
+    kitRows: allKitRows,
   };
 }
