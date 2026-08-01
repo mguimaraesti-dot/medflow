@@ -33,6 +33,7 @@ const CATEGORIES = [
   { id: "cat-kit3-rp", name: "Kit 3 - Rio Preto" },
   { id: "cat-kit2-ol", name: "Kit 2 - Olimpia" },
   { id: "cat-exames", name: "Exames" },
+  { id: "cat-frasco", name: "Frasco" },
 ];
 
 function buildDeps(rows: ReturnType<typeof row>[]) {
@@ -110,6 +111,7 @@ describe("getStatusReportRecebimentosUseCase", () => {
       kitSize: 2,
       count: 4,
       frascos: 8,
+      isAvulso: false,
     });
     expect(kit3).toEqual({
       categoryId: "cat-kit3-rp",
@@ -117,8 +119,103 @@ describe("getStatusReportRecebimentosUseCase", () => {
       kitSize: 3,
       count: 1,
       frascos: 3,
+      isAvulso: false,
     });
     expect(result.totalFrascos).toBe(11);
+    expect(result.totalKits).toBe(5);
+    expect(result.frascosAvulsos).toBe(0);
+  });
+
+  it("conta lançamentos avulsos de categoria 'Frasco' (1 cada, PIX e dinheiro), somados aos frascos de kit sem dupla contagem", async () => {
+    const rows = [
+      // kits: 4×2 = 8 frascos, 5 kits vendidos
+      row({
+        id: "e1",
+        categoryId: "cat-kit2-rp",
+        amount: new Prisma.Decimal("60.00"),
+      }),
+      row({
+        id: "e2",
+        categoryId: "cat-kit2-rp",
+        amount: new Prisma.Decimal("60.00"),
+      }),
+      // avulsos: 3 lançamentos "Frasco", valores e formas de pagamento variados
+      row({
+        id: "e3",
+        categoryId: "cat-frasco",
+        amount: new Prisma.Decimal("10.00"),
+        paymentMethodIsCash: false, // PIX
+      }),
+      row({
+        id: "e4",
+        categoryId: "cat-frasco",
+        amount: new Prisma.Decimal("30.00"),
+        paymentMethodIsCash: true, // dinheiro
+      }),
+      row({
+        id: "e5",
+        categoryId: "cat-frasco",
+        amount: new Prisma.Decimal("500.00"), // valor não importa — conta 1 igual
+        paymentMethodIsCash: false,
+      }),
+    ];
+    const deps = buildDeps(rows);
+
+    const result = await getStatusReportRecebimentosUseCase(
+      "org-1",
+      DATE_FROM,
+      DATE_TO,
+      deps,
+    );
+
+    // frascos de kit (4) + avulsos (3) = 7 — nenhum lançamento contado duas vezes
+    expect(result.totalKits).toBe(2);
+    expect(result.frascosAvulsos).toBe(3);
+    expect(result.totalFrascos).toBe(7);
+
+    const avulsoRow = result.kitRows.find((r) => r.isAvulso);
+    expect(avulsoRow).toEqual({
+      categoryId: "cat-frasco",
+      label: "Frasco (avulso)",
+      kitSize: 1,
+      count: 3,
+      frascos: 3,
+      isAvulso: true,
+    });
+    // linha avulsa vem por último, depois das linhas de kit
+    expect(result.kitRows[result.kitRows.length - 1]).toBe(avulsoRow);
+
+    // coluna "Frascos" por lançamento: 1 pra cada "Frasco" avulso, independente de PIX/dinheiro/valor
+    const avulsoEntries = result.entries.filter(
+      (e) => e.categoryLabel === "Frasco",
+    );
+    expect(avulsoEntries).toHaveLength(3);
+    expect(avulsoEntries.every((e) => e.frascos === 1)).toBe(true);
+  });
+
+  it("não confunde 'Frasco' avulso com variações de nome que não são igualdade exata (ex.: categoria fictícia 'Frascos' no plural)", async () => {
+    const deps = buildDeps([
+      row({
+        id: "e1",
+        categoryId: "cat-plural",
+        amount: new Prisma.Decimal("10.00"),
+      }),
+    ]);
+    vi.mocked(deps.categoryRepository.listActive).mockResolvedValue([
+      { id: "cat-plural", name: "Frascos" } as never,
+    ]);
+
+    const result = await getStatusReportRecebimentosUseCase(
+      "org-1",
+      DATE_FROM,
+      DATE_TO,
+      deps,
+    );
+
+    expect(result.frascosAvulsos).toBe(0);
+    expect(result.totalFrascos).toBe(0);
+    expect(result.kitRows).toHaveLength(0);
+    expect(result.entries[0].frascos).toBeNull();
   });
 
   it("categoria que não é kit não gera linha de frascos nem frascos na entry (frascos: null)", async () => {
@@ -191,6 +288,7 @@ describe("getStatusReportRecebimentosUseCase", () => {
       kitSize: 4,
       count: 1,
       frascos: 4,
+      isAvulso: false,
     });
   });
 

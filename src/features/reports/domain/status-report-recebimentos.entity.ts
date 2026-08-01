@@ -14,13 +14,21 @@ export interface StatusReportRecebimentosEntry {
   amount: string;
 }
 
-/** Uma linha do bloco "Frascos vendidos no período" — só categorias de kit COM movimentação. */
+/**
+ * Uma linha do bloco "Frascos vendidos no período" — categorias de kit
+ * COM movimentação, mais (no máximo) uma linha sintética "Frasco
+ * (avulso)" agregando lançamentos de categoria exatamente "Frasco".
+ * `isAvulso` distingue as duas — necessário porque `kitSize: 1` sozinho
+ * seria ambíguo (uma hipotética categoria "Kit 1" também teria
+ * `kitSize: 1`).
+ */
 export interface StatusReportRecebimentosKitRow {
   categoryId: string;
   label: string;
   kitSize: number;
   count: number;
   frascos: number;
+  isAvulso: boolean;
 }
 
 /**
@@ -44,7 +52,12 @@ export interface StatusReportRecebimentosSummary {
   pixTotal: string;
   pixCount: number;
 
+  /** Frascos de kits + lançamentos avulsos de categoria "Frasco" (1 cada). */
   totalFrascos: number;
+  /** Só kits — usado no subtítulo "X de kits", nunca inclui a linha avulsa de `kitRows`. */
+  totalKits: number;
+  /** Nº de lançamentos de categoria exatamente "Frasco" (0 quando nenhum no período). */
+  frascosAvulsos: number;
 
   /** Sem teto — o PDF pagina automaticamente via `jspdf-autotable`, ao contrário da imagem única dos outros dois relatórios. */
   entries: StatusReportRecebimentosEntry[];
