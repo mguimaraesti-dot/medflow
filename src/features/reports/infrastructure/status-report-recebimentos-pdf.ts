@@ -244,6 +244,13 @@ export function renderStatusReportRecebimentosPdf(
   // (`isAvulso: true`), que NÃO é um kit e inflaria essa soma se
   // recalculada aqui (ver `get-status-report-recebimentos.use-case.ts`).
   const totalKits = input.totalKits;
+  // Sem avulsos, mantém o texto antigo ("N kits vendidos") — só fica
+  // transparente ("N frascos · X de kits + Y avulsos") quando há avulso
+  // de verdade no período, pra não poluir o caso comum.
+  const frascosNote =
+    input.frascosAvulsos > 0
+      ? `${input.totalFrascos} frasco${input.totalFrascos === 1 ? "" : "s"} · ${totalKits} de kit${totalKits === 1 ? "" : "s"} + ${input.frascosAvulsos} avulso${input.frascosAvulsos === 1 ? "" : "s"}`
+      : `${totalKits} kit${totalKits === 1 ? "" : "s"} vendido${totalKits === 1 ? "" : "s"}`;
   const kpis: {
     label: string;
     value: string;
@@ -277,7 +284,7 @@ export function renderStatusReportRecebimentosPdf(
     {
       label: "FRASCOS",
       value: String(input.totalFrascos),
-      note: `${totalKits} kit${totalKits === 1 ? "" : "s"} vendido${totalKits === 1 ? "" : "s"}`,
+      note: frascosNote,
       color: AMBER,
       bg: AMBER_LIGHT,
       icon: "kit",
