@@ -239,7 +239,11 @@ export function renderStatusReportRecebimentosPdf(
 
   y += 28;
 
-  const totalKits = input.kitRows.reduce((sum, row) => sum + row.count, 0);
+  // Vem pronto do use-case, não re-derivado de `input.kitRows.length` —
+  // esse array agora pode incluir a linha sintética "Frasco (avulso)"
+  // (`isAvulso: true`), que NÃO é um kit e inflaria essa soma se
+  // recalculada aqui (ver `get-status-report-recebimentos.use-case.ts`).
+  const totalKits = input.totalKits;
   const kpis: {
     label: string;
     value: string;
@@ -363,7 +367,9 @@ export function renderStatusReportRecebimentosPdf(
       head: [["Categoria", "Cálculo", "Frascos"]],
       body: input.kitRows.map((row) => [
         row.label,
-        `${row.count} kit${row.count === 1 ? "" : "s"} × ${row.kitSize}`,
+        row.isAvulso
+          ? `${row.count} lançamento${row.count === 1 ? "" : "s"} × 1`
+          : `${row.count} kit${row.count === 1 ? "" : "s"} × ${row.kitSize}`,
         String(row.frascos),
       ]),
       foot: [["TOTAL DE FRASCOS", "", String(input.totalFrascos)]],
