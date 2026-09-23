@@ -328,9 +328,17 @@ export function TreasuryScreen({ permissions }: { permissions: string[] }) {
               />
             )}
             {isMobile ? (
-              <SafeMovementCards filter={filter} canConfirm={canConfirm} />
+              <SafeMovementCards
+                filter={filter}
+                canConfirm={canConfirm}
+                canCancelConfirmed={canManualAdjustment}
+              />
             ) : (
-              <SafeMovementsTable filter={filter} canConfirm={canConfirm} />
+              <SafeMovementsTable
+                filter={filter}
+                canConfirm={canConfirm}
+                canCancelConfirmed={canManualAdjustment}
+              />
             )}
           </CardContent>
         </Card>

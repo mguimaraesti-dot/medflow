@@ -47,9 +47,11 @@ function firstName(fullName: string): string {
 export function SafeMovementsTable({
   filter,
   canConfirm,
+  canCancelConfirmed,
 }: {
   filter: Omit<SafeMovementsFilter, "page" | "pageSize">;
   canConfirm: boolean;
+  canCancelConfirmed: boolean;
 }) {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<SafeMovementResponseDTO | null>(
@@ -256,6 +258,7 @@ export function SafeMovementsTable({
       <SafeMovementDetailDrawer
         movement={selected}
         canConfirm={canConfirm}
+        canCancelConfirmed={canCancelConfirmed}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
       />
