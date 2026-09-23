@@ -78,6 +78,40 @@ describe("closeCashRegisterUseCase", () => {
     expect(result.status).toBe("CLOSED");
   });
 
+  it("soma sangrias do dia só CONFIRMED — uma sangria cancelada não pode continuar descontando o Dinheiro Esperado", async () => {
+    const openRegister = { id: "day-1", openingBalance: "100.00" };
+    const cashRegisterDayRepository = {
+      findOpenByOrganization: vi.fn().mockResolvedValue(openRegister),
+      close: vi.fn().mockImplementation((id, data) => ({ id, ...data })),
+    } as unknown as CashRegisterDayRepository;
+
+    const cashFlowEntryRepository = {
+      sumCashOnlyByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
+      sumByCashRegisterDay: vi
+        .fn()
+        .mockResolvedValue({ totalIn: "0.00", totalOut: "0.00" }),
+    } as unknown as CashFlowEntryRepository;
+
+    const sumByCashRegisterDayAndType = vi.fn().mockResolvedValue("0.00");
+    const safeMovementRepository = {
+      sumByCashRegisterDayAndType,
+    } as unknown as SafeMovementRepository;
+
+    await closeCashRegisterUseCase({ countedAmount: 100 }, "user-1", "org-1", {
+      cashRegisterDayRepository,
+      cashFlowEntryRepository,
+      safeMovementRepository,
+    });
+
+    expect(sumByCashRegisterDayAndType).toHaveBeenCalledWith(
+      "day-1",
+      "SANGRIA",
+      "CONFIRMED",
+    );
+  });
+
   it("calcula expectedCashAmount = abertura + entradas em dinheiro - saídas em dinheiro - sangrias", async () => {
     const openRegister = { id: "day-1", openingBalance: "100.00" };
     const close = vi.fn().mockImplementation((id, data) => ({ id, ...data }));

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, RotateCcw, XCircle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -17,9 +17,21 @@ import {
 } from "@/shared/lib/format";
 import { Field } from "@/shared/components/detail-field";
 import type { SafeMovementResponseDTO } from "../application/dtos/safe-movement.response-dto";
+import type { SafeMovementType } from "../domain/safe-movement.entity";
 import { describeMovement, isMovementIn } from "./safe-movement-display";
 import { ConfirmSafeMovementDialog } from "./confirm-safe-movement-dialog";
 import { CancelSafeMovementDialog } from "./cancel-safe-movement-dialog";
+import { CancelConfirmedSafeMovementDialog } from "./cancel-confirmed-safe-movement-dialog";
+
+/**
+ * Tipos elegíveis pro cancelamento de uma movimentação CONFIRMED — ver
+ * `cancel-confirmed-safe-movement.use-case.ts` pro porquê os demais
+ * tipos ficam de fora (efeito colateral em outra entidade).
+ */
+const CANCELLABLE_CONFIRMED_TYPES: readonly SafeMovementType[] = [
+  "SANGRIA",
+  "MANUAL_ADJUSTMENT",
+];
 
 /**
  * Além dos botões inline na tabela, o Drawer aberto ao clicar na linha
@@ -31,19 +43,28 @@ import { CancelSafeMovementDialog } from "./cancel-safe-movement-dialog";
 export function SafeMovementDetailDrawer({
   movement,
   canConfirm,
+  canCancelConfirmed,
   open,
   onOpenChange,
 }: {
   movement: SafeMovementResponseDTO | null;
   canConfirm: boolean;
+  /** `treasury:manual-adjustment` (Admin/Owner) — estornar um lançamento já confirmado é correção, não conferência de rotina. */
+  canCancelConfirmed: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancellingConfirmed, setCancellingConfirmed] = useState(false);
   const isIn = movement ? isMovementIn(movement) : false;
   const showActions =
     canConfirm && movement !== null && movement.status === "PENDING";
+  const showCancelConfirmedAction =
+    canCancelConfirmed &&
+    movement !== null &&
+    movement.status === "CONFIRMED" &&
+    CANCELLABLE_CONFIRMED_TYPES.includes(movement.type);
 
   return (
     <>
@@ -99,6 +120,26 @@ export function SafeMovementDetailDrawer({
                 />
               )}
 
+              {movement.status === "CANCELLED" &&
+                movement.cancelledByUserName && (
+                  <Field
+                    label="Cancelado por"
+                    value={
+                      <span className="text-destructive">
+                        {movement.cancelledByUserName}
+                        <span className="text-muted-foreground ml-2 text-xs font-normal">
+                          em {formatDateTimeBR(movement.cancelledAt!)}
+                        </span>
+                        {movement.cancelReason && (
+                          <span className="text-muted-foreground mt-1 block text-xs font-normal">
+                            {movement.cancelReason}
+                          </span>
+                        )}
+                      </span>
+                    }
+                  />
+                )}
+
               <Field label="Descrição" value={describeMovement(movement)} />
             </div>
           )}
@@ -124,6 +165,20 @@ export function SafeMovementDetailDrawer({
               </Button>
             </div>
           )}
+
+          {showCancelConfirmedAction && (
+            <div className="border-t p-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive hover:text-destructive w-full"
+                onClick={() => setCancellingConfirmed(true)}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Cancelar movimentação
+              </Button>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
 
@@ -137,6 +192,12 @@ export function SafeMovementDetailDrawer({
         movement={cancelling ? movement : null}
         open={cancelling}
         onOpenChange={setCancelling}
+        onCancelled={() => onOpenChange(false)}
+      />
+      <CancelConfirmedSafeMovementDialog
+        movement={cancellingConfirmed ? movement : null}
+        open={cancellingConfirmed}
+        onOpenChange={setCancellingConfirmed}
         onCancelled={() => onOpenChange(false)}
       />
     </>

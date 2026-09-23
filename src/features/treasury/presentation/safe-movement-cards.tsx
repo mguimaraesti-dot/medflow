@@ -49,9 +49,11 @@ const DIRECTION_BORDER_CLASS: Record<string, string> = {
 export function SafeMovementCards({
   filter,
   canConfirm,
+  canCancelConfirmed,
 }: {
   filter: Omit<SafeMovementsFilter, "page" | "pageSize">;
   canConfirm: boolean;
+  canCancelConfirmed: boolean;
 }) {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<SafeMovementResponseDTO | null>(
@@ -212,6 +214,7 @@ export function SafeMovementCards({
       <SafeMovementDetailDrawer
         movement={selected}
         canConfirm={canConfirm}
+        canCancelConfirmed={canCancelConfirmed}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
       />

@@ -217,6 +217,30 @@ export class SafeMovementNotPendingError extends DomainError {
   }
 }
 
+export class SafeMovementNotConfirmedError extends DomainError {
+  readonly code = "SAFE_MOVEMENT_NOT_CONFIRMED";
+  readonly httpStatus = 409;
+
+  constructor(safeMovementId: string) {
+    super(
+      "Esta movimentação não está confirmada — só é possível cancelar movimentações já confirmadas.",
+      { safeMovementId },
+    );
+  }
+}
+
+export class SafeMovementTypeNotCancellableError extends DomainError {
+  readonly code = "SAFE_MOVEMENT_TYPE_NOT_CANCELLABLE";
+  readonly httpStatus = 409;
+
+  constructor(safeMovementId: string, type: string) {
+    super(
+      "Este tipo de movimentação não pode ser cancelado por aqui — afeta outras entidades (fechamento de caixa ou conta a pagar) que este cancelamento não atualizaria.",
+      { safeMovementId, type },
+    );
+  }
+}
+
 export class InsufficientSafeBalanceError extends DomainError {
   readonly code = "INSUFFICIENT_SAFE_BALANCE";
   readonly httpStatus = 409;

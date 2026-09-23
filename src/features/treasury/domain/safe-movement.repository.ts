@@ -49,11 +49,15 @@ export interface SafeMovementRepository {
   ): Promise<PaginatedResult<SafeMovement>>;
 
   /**
-   * Usado no fechamento de caixa: sem `status`, descontar sangrias do
-   * dia do Dinheiro Esperado; com `status: "CONFIRMED"`, somar
-   * recolhimentos (`CASH_REGISTER_HANDOFF`) já confirmados pelo Gerente
-   * neste dia — inclui reaberturas, já que todas compartilham o mesmo
-   * `cashRegisterDayId`.
+   * Usado no fechamento de caixa: com `status: "CONFIRMED"`, descontar
+   * sangrias do dia do Dinheiro Esperado (uma sangria cancelada não
+   * pode continuar descontando — ver
+   * `cancel-confirmed-safe-movement.use-case.ts`) ou somar recolhimentos
+   * (`CASH_REGISTER_HANDOFF`) já confirmados pelo Gerente neste dia —
+   * inclui reaberturas, já que todas compartilham o mesmo
+   * `cashRegisterDayId`. Os dois call sites de `SANGRIA` sempre passam
+   * `"CONFIRMED"` explicitamente; `status` continua opcional aqui só
+   * porque a assinatura é genérica.
    */
   sumByCashRegisterDayAndType(
     cashRegisterDayId: string,
@@ -64,7 +68,14 @@ export interface SafeMovementRepository {
   /** Confirma uma movimentação `PENDING` — só o fechamento de caixa (`CASH_REGISTER_HANDOFF`) chega nesse estado. */
   confirm(id: string, confirmedByUserId: string): Promise<SafeMovement>;
 
-  /** Cancela (rejeita) uma movimentação `PENDING` — exige justificativa, nunca afeta o saldo. */
+  /**
+   * Cancela uma movimentação — exige justificativa. Dois chamadores com
+   * pré-condições diferentes (verificadas por eles, não aqui):
+   * `cancelSafeMovementUseCase` rejeita uma conferência ainda `PENDING`
+   * (nunca afetou o saldo); `cancelConfirmedSafeMovementUseCase` estorna
+   * uma `SANGRIA`/`MANUAL_ADJUSTMENT` já `CONFIRMED` (reverte um efeito
+   * real no saldo do Cofre).
+   */
   cancel(
     id: string,
     cancelledByUserId: string,

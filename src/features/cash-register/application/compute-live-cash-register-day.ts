@@ -30,7 +30,14 @@ export async function computeLiveCashRegisterDay(
   const [sums, cashSums, sangriaTotal] = await Promise.all([
     deps.cashFlowEntryRepository.sumByCashRegisterDay(day.id),
     deps.cashFlowEntryRepository.sumCashOnlyByCashRegisterDay(day.id),
-    deps.safeMovementRepository.sumByCashRegisterDayAndType(day.id, "SANGRIA"),
+    // "CONFIRMED" explícito: uma sangria cancelada (ver
+    // cancel-confirmed-safe-movement.use-case.ts) não pode continuar
+    // descontando do Dinheiro Esperado.
+    deps.safeMovementRepository.sumByCashRegisterDayAndType(
+      day.id,
+      "SANGRIA",
+      "CONFIRMED",
+    ),
   ]);
 
   const expectedCashAmount = new Prisma.Decimal(day.openingBalance)

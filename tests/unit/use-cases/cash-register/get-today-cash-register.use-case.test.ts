@@ -48,8 +48,9 @@ describe("getTodayCashRegisterUseCase", () => {
         .mockResolvedValue({ totalIn: "80.00", totalOut: "20.00" }),
     } as unknown as CashFlowEntryRepository;
 
+    const sumByCashRegisterDayAndType = vi.fn().mockResolvedValue("10.00");
     const safeMovementRepository = {
-      sumByCashRegisterDayAndType: vi.fn().mockResolvedValue("10.00"),
+      sumByCashRegisterDayAndType,
     } as unknown as SafeMovementRepository;
 
     const result = await getTodayCashRegisterUseCase("org-1", {
@@ -67,6 +68,13 @@ describe("getTodayCashRegisterUseCase", () => {
     // Entradas só em dinheiro, pro resumo do fechamento (Entradas em
     // Dinheiro x Entradas PIX).
     expect(result?.cashIn?.toFixed(2)).toBe("80.00");
+    // "CONFIRMED" explícito: uma sangria cancelada não pode continuar
+    // descontando do Dinheiro Esperado.
+    expect(sumByCashRegisterDayAndType).toHaveBeenCalledWith(
+      "day-1",
+      "SANGRIA",
+      "CONFIRMED",
+    );
   });
 
   it("caixa CLOSED: retorna sem chamar soma ao vivo", async () => {

@@ -112,6 +112,9 @@ export function PendingHandoffsSection({
       <SafeMovementDetailDrawer
         movement={selected}
         canConfirm={canConfirm}
+        // Esta seção só lista PENDING (ver docstring do arquivo) — nunca
+        // há uma movimentação CONFIRMED pra cancelar aqui.
+        canCancelConfirmed={false}
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
       />
