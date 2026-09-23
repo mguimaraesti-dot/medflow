@@ -59,9 +59,13 @@ export async function closeCashRegisterUseCase(
       deps.cashFlowEntryRepository.sumCashOnlyByCashRegisterDay(
         openRegister.id,
       ),
+      // "CONFIRMED" explícito: uma sangria cancelada (ver
+      // cancel-confirmed-safe-movement.use-case.ts) não pode continuar
+      // descontando do Dinheiro Esperado do fechamento.
       deps.safeMovementRepository.sumByCashRegisterDayAndType(
         openRegister.id,
         "SANGRIA",
+        "CONFIRMED",
       ),
       deps.cashFlowEntryRepository.sumByCashRegisterDay(openRegister.id),
       deps.safeMovementRepository.sumByCashRegisterDayAndType(

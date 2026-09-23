@@ -14,8 +14,11 @@ export type SafeMovementStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
  * Ledger do Cofre — `amount`/`type`/os `relatedX` nunca mudam depois de
  * criados e a linha nunca é excluída fisicamente (mesmo princípio de
  * `CashFlowEntry`, Coding Standards 18.1). A única exceção é a transição
- * de `status` (via confirm-safe-movement/cancel-safe-movement), exclusiva
- * de movimentações `PENDING`. `amount` é sempre positivo, exceto em
+ * de `status`: `confirm-safe-movement`/`cancel-safe-movement` (rejeitar),
+ * exclusivas de `PENDING`, ou `cancel-confirmed-safe-movement` (estornar
+ * um lançamento errado já confirmado — só `SANGRIA`/`MANUAL_ADJUSTMENT`,
+ * ver esse use case pro porquê dos demais tipos ficarem de fora).
+ * `amount` é sempre positivo, exceto em
  * `MANUAL_ADJUSTMENT` (único tipo sem direção implícita pelo próprio
  * `type` — ver ADR Seção 6.1/item 3 das decisões confirmadas).
  */
