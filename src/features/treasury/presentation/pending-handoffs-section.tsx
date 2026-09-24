@@ -35,10 +35,19 @@ export function PendingHandoffsSection({
   const [cancelTarget, setCancelTarget] =
     useState<SafeMovementResponseDTO | null>(null);
 
+  // pageSize nunca pode passar de 100 — teto de `paginationSchema`
+  // (shared/lib/pagination.ts), compartilhado por toda listagem
+  // paginada do projeto. 200 aqui sempre violou esse limite: a API
+  // respondia 400 (VALIDATION_ERROR) em toda chamada, e como o erro é
+  // só engolido (`if (!data) return null`), a seção nunca apareceu —
+  // parecia "sem pendências" mesmo quando havia. Achado em produção via
+  // Network tab, não em teste (não existe teste de componente React
+  // neste projeto — só de use case). 100 sobra: a lista costuma ter 0-1
+  // item.
   const { data } = useSafeMovements({
     status: "PENDING",
     page: 1,
-    pageSize: 200,
+    pageSize: 100,
   });
 
   if (!data || data.items.length === 0) return null;

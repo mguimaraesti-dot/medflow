@@ -78,10 +78,15 @@ export function SafeMovementsTable({
     pageSize: 12,
   });
 
+  // pageSize <= 100 (teto de paginationSchema, shared/lib/pagination.ts)
+  // — 200 aqui sempre estourava a validação da API (400), silenciado
+  // pelo `?? []` abaixo: alwaysPendingIds ficava sempre vazio, sem
+  // excluir nada da lista. Ver pending-handoffs-section.tsx pro relato
+  // completo (achado em produção via Network tab).
   const { data: pendingData } = useSafeMovements({
     status: "PENDING",
     page: 1,
-    pageSize: 200,
+    pageSize: 100,
   });
   const alwaysPendingIds = new Set(
     (pendingData?.items ?? []).map((movement) => movement.id),
