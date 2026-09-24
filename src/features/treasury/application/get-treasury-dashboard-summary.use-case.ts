@@ -1,4 +1,4 @@
-import { startOfDayInTz, endOfDayInTz } from "@/shared/lib/business-day";
+import { startOfDayInstant, endOfDayInstant } from "@/shared/lib/business-day";
 import type { SafeRepository } from "../domain/safe.repository";
 import type { SafeMovementRepository } from "../domain/safe-movement.repository";
 import type { TreasuryDashboardSummaryResponseDTO } from "./dtos/treasury-dashboard-summary.response-dto";
@@ -27,8 +27,13 @@ export async function getTreasuryDashboardSummaryUseCase(
   deps: Deps,
   range?: { from: Date; to: Date },
 ): Promise<TreasuryDashboardSummaryResponseDTO> {
-  const from = range?.from ?? startOfDayInTz(new Date(), TIMEZONE);
-  const to = range?.to ?? endOfDayInTz(new Date(), TIMEZONE);
+  // Instante real, não rótulo — filtra SafeMovement.createdAt (DateTime
+  // de verdade). Ver business-day.ts: usar o rótulo aqui excluía por
+  // engano movimentações entre ~21h e meia-noite local (bug real:
+  // "Entradas/Saídas do Dia" não contavam sangria/handoff das 21h47/
+  // 21h51, mesma causa raiz do filtro "Hoje" da tabela de movimentações).
+  const from = range?.from ?? startOfDayInstant(new Date(), TIMEZONE);
+  const to = range?.to ?? endOfDayInstant(new Date(), TIMEZONE);
 
   const [balance, periodSums, pending, lastConfirmed] = await Promise.all([
     deps.safeRepository.getBalance(organizationId),
