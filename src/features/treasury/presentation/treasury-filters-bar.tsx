@@ -3,7 +3,11 @@
 import { Search } from "lucide-react";
 import { Input } from "@/shared/ui/input";
 import { cn } from "@/shared/lib/utils";
-import { startOfDayInTz } from "@/shared/lib/business-day";
+import {
+  startOfDayInTz,
+  labelToStartInstant,
+  labelToEndInstant,
+} from "@/shared/lib/business-day";
 import type {
   SafeMovementType,
   SafeMovementStatus,
@@ -14,18 +18,6 @@ import type {
  * pontos do sistema (MVP opera com uma única clínica, ver CLAUDE.md).
  */
 const TIMEZONE = "America/Sao_Paulo";
-
-/**
- * Fim do dia representado por um rótulo de data JÁ correto (não um
- * instante real) — aritmética pura, sem reconverter timezone. Mesmo
- * cuidado do `period-selector.tsx`: passar um rótulo de novo por
- * `startOfDayInTz`/`endOfDayInTz` desloca a data pra trás.
- */
-function endOfDayLabel(date: Date): Date {
-  const result = new Date(date);
-  result.setUTCHours(23, 59, 59, 999);
-  return result;
-}
 
 export type QuickPeriod = "TODAY" | "YESTERDAY" | "7D" | "30D";
 
@@ -168,23 +160,44 @@ export function TreasuryFiltersBar({
   );
 }
 
+/**
+ * `from`/`to` viram instante real (`labelToStart/EndInstant`) só no
+ * retorno — todo o resto é aritmética de calendário pura sobre o
+ * RÓTULO (`todayLabel`), nunca reconvertendo um rótulo já calculado
+ * de volta por `startOfDayInTz` (ver `business-day.ts`). Filtra
+ * `SafeMovement.createdAt`, uma coluna `DateTime` de verdade — usar o
+ * rótulo direto aqui (como antes) excluía por engano qualquer
+ * movimentação entre ~21h e meia-noite local (já virava "amanhã" em
+ * UTC): bug real de produção, sangria/handoff das 21h47/21h51 sumiam
+ * do filtro "Hoje".
+ */
 export function computeQuickPeriodRange(period: QuickPeriod): {
   from: Date;
   to: Date;
 } {
-  const todayStart = startOfDayInTz(new Date(), TIMEZONE);
-  const todayEnd = endOfDayLabel(todayStart);
+  const todayLabel = startOfDayInTz(new Date(), TIMEZONE);
 
-  if (period === "TODAY") return { from: todayStart, to: todayEnd };
+  if (period === "TODAY") {
+    return {
+      from: labelToStartInstant(todayLabel, TIMEZONE),
+      to: labelToEndInstant(todayLabel, TIMEZONE),
+    };
+  }
 
   if (period === "YESTERDAY") {
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
-    return { from: yesterdayStart, to: endOfDayLabel(yesterdayStart) };
+    const yesterdayLabel = new Date(todayLabel);
+    yesterdayLabel.setUTCDate(yesterdayLabel.getUTCDate() - 1);
+    return {
+      from: labelToStartInstant(yesterdayLabel, TIMEZONE),
+      to: labelToEndInstant(yesterdayLabel, TIMEZONE),
+    };
   }
 
   const daysAgo = period === "7D" ? 6 : 29;
-  const from = new Date(todayStart);
-  from.setUTCDate(from.getUTCDate() - daysAgo);
-  return { from, to: todayEnd };
+  const fromLabel = new Date(todayLabel);
+  fromLabel.setUTCDate(fromLabel.getUTCDate() - daysAgo);
+  return {
+    from: labelToStartInstant(fromLabel, TIMEZONE),
+    to: labelToEndInstant(todayLabel, TIMEZONE),
+  };
 }

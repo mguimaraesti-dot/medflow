@@ -30,13 +30,18 @@ describe("getTreasuryDashboardSummaryUseCase", () => {
       safeMovementRepository,
     });
 
-    // Antes do fix: "hoje" vinha de Date.UTC(now.getUTCFullYear(), ...),
-    // que às 22h locais já lê 15/07 (dia UTC seguinte) — os cards
-    // mostravam a janela errada perto da meia-noite UTC.
+    // Instante UTC REAL do dia local 14/07 em Brasília (UTC-3), não o
+    // RÓTULO (que seria 2026-07-14T00:00:00.000Z/23:59:59.999Z — 3h
+    // adiantado do limite real). Bug real de produção corrigido junto
+    // com este teste: usar o rótulo direto contra `createdAt` (uma
+    // coluna `DateTime` de verdade) excluía por engano qualquer
+    // movimentação entre ~21h e meia-noite local, que já virava "amanhã"
+    // em UTC — ver business-day.test.ts (`startOfDayInstant`/
+    // `endOfDayInstant`) para o caso completo.
     expect(sumSignedByDateRangeAndStatus).toHaveBeenCalledWith(
       "org-1",
-      new Date("2026-07-14T00:00:00.000Z"),
-      new Date("2026-07-14T23:59:59.999Z"),
+      new Date("2026-07-14T03:00:00.000Z"),
+      new Date("2026-07-15T02:59:59.999Z"),
       "CONFIRMED",
     );
   });
